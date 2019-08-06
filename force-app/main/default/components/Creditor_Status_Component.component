@@ -1,0 +1,129 @@
+<apex:component controller="CreditorComponentController">
+    <apex:attribute name="recordId" type="String" description="Parent Program Id" required="true" />
+    
+    <apex:slds />
+    
+    <style>
+        .creditor-active {
+            background-color: #11FF55;
+        }
+        
+        .creditor-inactive {
+            background-color: #FFFF22;
+        }
+        
+        .creditor-legal {
+            background-color: #800080;
+        }
+        
+        .creditor-legal td {
+            color: white;
+        }
+        
+        .creditor-legal a {
+            color: white !important;
+        }
+        
+        
+    </style>
+    
+    <table class="slds-table slds-table_bordered slds-table_fixed-layout slds-no-row-hover">
+        <thead>
+            <tr class="slds-text-title--caps">
+                <th>Name</th>
+                <th>Sales Creditor Name</th>
+                <th>Original Balance</th>
+                <th>Verified Balance</th>
+                <th>Original Creditor</th>
+            </tr>
+        </thead>
+        <tbody id="creditorTable_tbody">
+            
+        </tbody>
+    </table>
+    
+    
+    <script>
+        (function() {
+        
+            var activeClass = ' creditor-active';
+            var inactiveCalss = ' creditor-inactive';
+            var legalCreditorClass = ' creditor-legal';
+        
+            function init() {
+                CreditorComponentController.getCreditors('{!recordId}', function(response, event) {
+                    if(event) {
+                        console.log('CreditorComponentController', response);
+                        createCrediotrsTable(response);
+                    } else {
+                        console.log('CreditorComponentController Error!', event);
+                    }
+                });
+            }
+            
+            function createCrediotrsTable(creditorList) {
+                
+                var creditorTable_tbody = document.getElementById("creditorTable_tbody");
+                
+                creditorTable_tbody.innerHTML = '';
+            
+                if(creditorList && creditorList.length) {
+                    
+                    for(var i = 0; i < creditorList.length; i++) {
+                        
+                        creditorTable_tbody.appendChild(createCreditorRow(creditorList[i]));
+                    }
+                } else {
+                
+                    creditorTable_tbody.appendChild(createEmptyRow('No record(s) found.', 5));
+                }
+            }
+           
+            
+            function createCreditorRow(creditor) {
+            
+                var tr = document.createElement('tr');
+                
+                var creditorColorClass = '';
+               
+                if(creditor.verifiedBalance != null && creditor.originalCreditor != null) {
+                
+                    creditorColorClass = activeClass;
+                } else if(creditor.verifiedBalance != null || creditor.originalCreditor != null) {
+                
+                    creditorColorClass = inactiveCalss;
+                } 
+                console.log('**** curentstahe', creditor.currentStage);
+                if(creditor.currentStage == 'Legal') {
+                
+                    creditorColorClass = legalCreditorClass;
+                } 
+                 
+                tr.className = creditorColorClass;
+                
+                //Name
+                tr.appendChild(createAnchorTagElement(creditor.name, creditor.recordId));
+                
+                //Sales Creditor Name
+                tr.appendChild(createCell(creditor.salesCreditorName));
+                
+                //Original Balance
+                tr.appendChild(createCell(creditor.originalBalance));
+                
+                //Verified Balance
+                tr.appendChild(createCell(creditor.verifiedBalance));
+                
+                //Original Creditor
+                tr.appendChild(createCell(creditor.originalCreditor));
+                
+                return tr;
+            }
+            
+            init();
+            
+        })();
+        
+        
+    </script>
+    
+</apex:component>

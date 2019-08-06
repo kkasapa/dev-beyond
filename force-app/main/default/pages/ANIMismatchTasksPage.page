@@ -1,0 +1,35 @@
+<apex:page standardController="nu_dse__Prospect__c" extensions="ANIMismatchTasksController">
+    <apex:form id="theForm">
+        <apex:pageBlock id="pageBlockId">
+            <apex:pageMessages />
+            <apex:pageBlockTable value="{!taskWrapperList}" var="tsk" id="pageBlockTableId">
+                
+                <apex:column >
+                    <apex:commandLink style="color:#015ba7" value="Edit" action="{!editTaskTable}" rendered="{!!tsk.isEditable}" reRender="pageBlockId">
+                        <apex:param name="taskIdValEdit" value="{!tsk.programTask.Id}"/>
+                    </apex:commandLink>
+                    <apex:commandLink style="color:#015ba7" value="Save   |" action="{!saveTaskInstance}" rendered="{!tsk.isEditable}" reRender="pageBlockId">
+                        <apex:param name="taskIdValSave"  value="{!tsk.programTask.Id}"/>
+                    </apex:commandLink>
+                    <apex:commandLink style="color:#015ba7" value="  Cancel" action="{!cancelEditTable}" rendered="{!tsk.isEditable}" reRender="pageBlockId">
+                        <apex:param name="taskIdValCancel" value="{!tsk.programTask.Id}"/>
+                    </apex:commandLink>
+                    <apex:facet name="header">Action</apex:facet>
+                </apex:column>
+                
+                <apex:column >
+                    <apex:outputField value="{!tsk.programTask.Five9__Five9ANI__c}" rendered="{!!tsk.isEditable}"/>
+                    <apex:inputField value="{!tsk.programTask.Five9__Five9ANI__c}" rendered="{!tsk.isEditable}"/>
+                    <apex:facet name="header">ANI Phone</apex:facet>
+                </apex:column>
+                
+                <apex:column >
+                    <apex:outputField value="{!tsk.programTask.WhatId}" rendered="{!!tsk.isEditable}"/>
+                    <apex:inputField styleClass="relatedToId" value="{!tsk.programTask.WhatId}" rendered="{!tsk.isEditable}"/>
+                    <apex:facet name="header">Program</apex:facet>
+                </apex:column>
+                
+            </apex:pageBlockTable>
+        </apex:pageBlock> 
+    </apex:form>
+</apex:page>

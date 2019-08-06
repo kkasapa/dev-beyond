@@ -1,0 +1,28 @@
+<apex:page >
+    <head>
+        <apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js" />
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+         <script>
+         $(document).ready(function(){
+            $("p").click(function(){
+            $(this).hide();
+           } );
+             
+             $("span").click(function(){ 
+                
+                 $(this).hide(); 
+                  
+              });
+         });
+          </script>
+    </head>
+   
+    <body>
+         <p>
+             Head
+        </p>
+        <span>test</span>
+        <input type="button" value="load" onClick="addComment();return false;"/>
+    </body>
+    
+</apex:page>

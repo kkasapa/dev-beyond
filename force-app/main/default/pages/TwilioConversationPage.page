@@ -1,0 +1,26 @@
+<apex:page renderAs="pdf" applyHtmlTag="false" showHeader="false">
+    <head>
+        <style>
+        #borderRadius
+        {
+             border-radius: 10px;  
+        }
+        </style>
+    </head>
+    <div>
+        <div id="borderRadius" style="text-align: center; padding: 10px; background-color: #d3d3d3;"> 
+            +1 {!$CurrentPage.parameters.phone}
+        </div>
+    </div>
+   
+    <div >
+        <span style="width: 100%; padding-top: 15px;"> 
+            <p style="border: solid; border-width: thin; border-radius: 7px; padding: 5px; display: inline-block;"> 
+                {!$CurrentPage.parameters.smsbody}            
+            </p>
+        </span>
+    </div>
+    <div>
+        <span style="float: right; border: solid; border-width: thin; border-radius: 7px; padding: 5px;"> {!$CurrentPage.parameters.response}  </span>
+    </div>    
+</apex:page>

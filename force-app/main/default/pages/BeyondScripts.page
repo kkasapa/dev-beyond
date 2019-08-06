@@ -1,0 +1,169 @@
+<apex:page standardController="nu_dse__Program__c" sidebar="false" showHeader="false">
+<apex:pageBlock id="block1" >
+
+    <apex:pageBlockSection id="section1" columns="1" collapsible="true" rendered="{!IF(nu_dse__Program__c.Program_Phase__c =='Planning',true,false)}">
+    
+   <b>New Client Packet Review and General Overview</b>
+   <ul>
+   <li>Congratulate the client on taking first step</li>
+   <li>Go Over NCP</li>
+   <li>Verify Demographics/Program Specifics</li>
+   <li>Review Check List Items</li>
+   <li>Referral Program</li>
+   <li>Referral Program</li>
+   <li>Our Contact Info w/office hours</li>
+   </ul>
+   <b>Program Payment Reminder and Importance of Sending in Creditor Statements</b>
+   <ul>
+   <li>Go over payment/importance of making payments on time-in full</li>
+   <li>Creditor Statements</li>
+   <li>Preferred method of contact</li>
+   </ul>
+   <b>Review Incomplete Checklist Items and General File Overview</b>
+<i>(Prior to calling the client the CSR is to open the CSD Checklist items Issue)</i>
+<ul>
+<li>Review Check List Items</li>
+<li>Review issue to ensure LOA, Voided Check, ALL statements are appended</li>
+<li>Co-App</li>
+<li>Financials</li>
+<li>Ensure financials are “Set As Actual” once updated</li>
+</ul>
+<b>Program Payment Reminder and Discuss Creditor Calls</b>
+<ul>
+<li>Go over payment/importance of making payments on time-in full</li>
+<li>Discuss creditor calls</li>
+<li>Preferred method of contact</li>
+</ul>
+<b>Program Payment Reminder and Introduction to the Preparation Phase</b>
+<ul>
+<li>Go over payment/importance of making payments on time-in full</li>
+<li>Introduction to Phase 2</li>
+<li>Stress importance of sending in settlement letters/correspondence</li>
+</ul>
+    </apex:pageBlockSection>
+    
+    <apex:pageBlockSection id="section2" columns="1" collapsible="true" rendered="{!IF(nu_dse__Program__c.Program_Phase__c =='Preparation',true,false)}">
+    
+  <b>Program Payment Reminder and Introduction to the Next Phase</b>
+  <ul>
+<li>Go over payment</li>
+<li>Congratulate client on completing Phase 1</li>
+<li>Reiterate importance of sending in creditor correspondence</li>
+<li>Allowing us to control dialog</li>
+<li>Preferred method of contact</li>
+</ul>
+
+<b>Program Payment Reminder, Program Progress Update, and Potential Settlement</b>
+<ul>
+<li>Go over payment</li>
+<li>Confirm information for accuracy</li>
+<li>Check to see if there is/are any settlement(s)</li>
+<li>Check all open issues</li>
+<li>Check that statements are being received</li>
+<li>Settlement update : No settlement/one settlement/multiple settlements</li>
+<li>Pitch additional funds</li>
+</ul>
+<b>Program Payment Reminder and Review Financials</b>
+<ul>
+<li>Go over payment</li>
+<li>Review financials</li>
+<li>Pitch Additional funds</li>
+<li>Preferred method of contact</li>
+</ul>
+<b>Program Payment Reminder, Program Progress Update and Transferred Accounts</b>
+<ul>
+<li>Go over payment</li>
+<li>Review Checklist Items</li>
+<li>Confirm information for accuracy</li>
+<li>Check to see if there is/are any settlement(s)</li>
+<li>Check all open issues</li>
+<li>Check that statements are being received</li>
+<li>Discuss possibility of accounts being transferred to third party</li>
+<li>Discuss statements/ letters still to be sent in</li>
+<li>Preferred method of contact</li>
+</ul>
+
+<b>Program Payment Reminder and Program Progress Update</b>
+<ul>
+<li>Go over payment</li>
+<li>Review Checklist Items</li>
+<li>Confirm information for accuracy</li>
+<li>Check to see if there is/are any settlement(s)</li>
+<li>Check all open issues</li>
+<li>Check that statements are being received</li>
+<li>Preferred method of contact</li>
+</ul>
+
+<b>Program Payment Reminder and Introduction to the Final Phase</b>
+<ul>
+<li>Go over payment</li>
+<li>Introduction to final phase</li>
+<li>Recap settled accounts</li>
+<li>Preferred method of contact</li>
+</ul>
+
+    </apex:pageBlockSection>
+    <apex:pageBlockSection id="section3" columns="1" collapsible="true" rendered="{!IF(nu_dse__Program__c.Program_Phase__c =='Deployment',true,false)}">
+    
+<b> Program Payment Reminder and Introduction to the Final Phase</b>
+<ul>
+<li>Go over Payment</li>
+<li>Introduction to final phase</li>
+<li>Go over potential reduction in creditor calls</li>
+<li>Creditor correspondence to be sent in</li>
+<li>Preferred method of contact</li>
+</ul>
+<b>Program Payment Reminder and Review Program Progress (for 2,7,8,10,12)</b>
+<ul>
+<li>Go over payment</li>
+<li>Review Checklist Items</li>
+<li>Confirm information for accuracy</li>
+<li>Check to see if there is/are any settlement(s)</li>
+<li>Check all open issues</li>
+<li>Check that statements are being received</li>
+<li>Preferred method of contact</li>
+</ul>
+
+<b>Program Payment Reminder, Review Financials and Discuss Importance of Budgeting</b>
+<ul>
+<li>Go over payment</li>
+<li>Review financial tab</li>
+<li>Pitch additional funds if appropriate</li>
+<li>Discuss importance of budgeting</li>
+<li>Preferred method of contact </li>
+</ul>
+
+<b>Program Payment Reminder, Review Program Progress,Discuss using debit cards in lieu of credit cards</b>
+<ul>
+<li>Go over payment</li>
+<li>Review Checklist Items</li>
+<li>Confirm information for accuracy</li>
+<li>Check to see if there is/are any settlement(s)</li>
+<li>Check all open issues</li>
+<li>Check that statements are being received</li>
+<li>Discuss using debit cards in lieu of credit cards</li>
+<li>Preferred method of contact</li>
+</ul>
+<b>Program Payment Reminder, Review Program Progress,General Overview of Credit</b>
+<ul>
+<li>Go over payment</li>
+<li>Review Checklist Items</li>
+<li>Confirm information for accuracy</li>
+<li>Check to see if there is/are any settlement(s)</li>
+<li>Check all open issues</li>
+<li>Check that statements are being received</li>
+<li>Discuss Credit</li>
+<li>Preferred method of contact</li>
+</ul>
+<b>Program Payment Reminder, Review Financials and Update Financials</b>
+<ul>
+<li>Go over payment</li>
+<li>Review financial tab</li>
+<li>Pitch additional funds if appropriate</li>
+<li>Discuss importance of budgeting</li>
+<li>Preferred method of contact</li>
+</ul>
+
+    </apex:pageBlockSection>
+    </apex:pageblock>
+    </apex:page>

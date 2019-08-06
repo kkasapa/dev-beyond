@@ -1,0 +1,92 @@
+<apex:component controller="CampaignCallsComponentController">
+  
+    <apex:attribute name="recordId" type="String" description="Parent Program Id" />
+    
+    <apex:slds />
+    
+    <table class="slds-table slds-table_bordered slds-table_fixed-layout slds-no-row-hover">
+        <thead>
+            <tr class="slds-text-title--caps">
+                <th>Subject</th>
+                <th>Activity Date</th>
+                <th>Call Result</th>
+                <th>Call Type</th>
+                <th>Five9 Agent</th>
+                <th>Campaign</th>
+                <th>Handle Time</th>
+               
+            </tr>
+        </thead>
+        <tbody id="campaignTasksTable_tbody">
+            
+        </tbody>
+    </table>
+    <script>
+        (function() {
+            
+            function createCampaignTasksTable(campaignTasksResult) {
+                
+                var campaignTasksTable_tbody = document.getElementById("campaignTasksTable_tbody");
+                
+                campaignTasksTable_tbody.innerHTML = '';
+            
+                if(campaignTasksResult && campaignTasksResult.length) {
+                    
+                    for(var i = 0; i < campaignTasksResult.length; i++) {
+                        
+                        campaignTasksTable_tbody.appendChild(createTaskRow(campaignTasksResult[i]));
+                    }
+                } else {
+                
+                    campaignTasksTable_tbody.appendChild(createEmptyRow('No record(s) found.', 3));
+                }
+            }
+            
+            function populateCampaignTasks() {
+            
+                Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.CampaignCallsComponentController.getCampaignTasks}', '{!recordId}', function(response, event) {
+                    
+                    if(event.statusCode == 200) {
+                        
+                        createCampaignTasksTable(response);
+                    } 
+                });
+            }
+            
+            function createTaskRow(task) {
+            
+                var tr = document.createElement('tr');
+                
+                //Subject
+                tr.appendChild(createAnchorTagElement(task.subject, task.recordId));
+                
+                //Activity Date
+                tr.appendChild(createCell(task.activitydateString));
+                
+                //Call Result
+                tr.appendChild(createCell(task.callDisposition));
+                
+                //Call Type
+                tr.appendChild(createCell(task.callType));
+                
+                //Five9 Agent
+                tr.appendChild(createCell(task.five9Agent));
+                
+                //Campaign
+                
+                tr.appendChild(createCell(task.Campaign));
+               
+                
+                //Handle Time
+                
+                tr.appendChild(createCell(task.HandleTime));
+                
+                return tr;
+            }
+            
+            populateCampaignTasks();
+        })();
+        
+    </script>
+</apex:component>

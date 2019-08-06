@@ -1,0 +1,45 @@
+<apex:component controller="PaymentInfoController">
+    <apex:attribute name="recordId" type="Id" required="true" description="Parent Program Id." />
+    
+    <table class="slds-table">
+        <tbody id="paymentInfo_tbody">
+            
+        </tbody>
+    </table>
+    
+    <script>
+        (function() {
+            function init() {
+                PaymentInfoController.getPaymentsInfo('{!recordId}', function(response, event){
+                    if(event.status) {
+                        console.log('payment info', response);
+                        renderTable(response);
+                    } else {
+                        console.log('error', event);
+                    }
+                });
+            }
+            
+            function renderTable(info) {
+                var table = document.getElementById('paymentInfo_tbody');
+                var tableData = '';
+                tableData += showRow('Payment Frequency', info.paymentFrequency);
+                tableData += showRow('Program Length', info.programLength);
+                tableData += showRow('Total Draft Payments', info.draftPayments);
+                tableData += showRow('Total Cleared Settlement Payments', info.clearedPayments);
+                tableData += showRow('Total Completed Drafts', info.completedPayments);
+                tableData += showRow('Total Pending Drafts', info.pendingPayments);
+                tableData += showRow('Outstanding Failed Drafts', info.failedPayments);
+                
+                table.innerHTML = tableData;
+            }
+            
+            function showRow(label, value) {
+                return '<tr><td><strong>' + label + '</strong></td><td>' + value + '</td></tr>';
+            }
+            
+            init();
+        })()
+    </script>
+    
+</apex:component>

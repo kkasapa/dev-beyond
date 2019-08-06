@@ -1,0 +1,140 @@
+<apex:page showHeader="false" >
+    
+    <script>
+    
+        function openRecordInNewTab(sobjectId) {
+            
+            if(sobjectId) {
+            
+                window.open('/' + sobjectId, '_blank');
+            }
+        }
+        
+        function createAnchorTagElement(data, sobjectId) {
+                
+            var td = document.createElement('td');
+            td.className = 'slds-cell-wrap';
+            var anchorTagElement = document.createElement('a');                        
+            anchorTagElement.innerHTML = data;
+            
+            anchorTagElement.addEventListener(
+                'click', function() { 
+                   
+                   window.open('/' + sobjectId, '_blank');
+                },
+                false
+            );
+            td.appendChild(anchorTagElement);
+            return td;
+        }
+        
+        function createEmptyRow(message, colspan) {
+            
+            var tr = document.createElement('tr');
+            var td = document.createElement('td');
+            td.setAttribute('colspan', colspan);
+            td.style.textAlign = 'center';
+            td.style.fontWeight = '800';
+            var t = document.createTextNode(message);
+            td.appendChild(t);
+
+            tr.appendChild(td);
+            return tr;
+        }
+        
+        function createCell(text) {
+        
+            var td = document.createElement('td');
+            td.className = 'slds-cell-wrap';
+            if(text != null && text != undefined) {
+                
+                var t = document.createTextNode(text);
+                td.appendChild(t);
+            }
+            
+            return td;
+        }
+        
+    </script>   
+    
+    <p>
+        <c:LanguageDetails record="{!$CurrentPage.parameters.pid}" />
+    </p>
+    <p>
+        <strong>Sticky Note</strong>
+        <c:Sticky_Note recordId="{!$CurrentPage.parameters.pid}" />
+    </p>
+    <br />
+    <br />
+         
+    <p>
+        <strong>Payments Info</strong>
+        <c:Payments_Info recordId="{!$CurrentPage.parameters.pid}" />
+    </p>
+    <br />
+    <br />
+    
+     <p>
+        <strong>Payment Status</strong>
+        <c:Payment_Status_Component recordId="{!$CurrentPage.parameters.pid}" />
+    </p>
+    <br />
+    <br />
+    
+   
+    
+    <p>
+        <c:Task_View_Component recordId="{!$CurrentPage.parameters.pid}"/>
+    </p>
+    <br />
+    <br />
+    
+    
+    
+   
+    <p>
+        <strong>Campaign Calls</strong>
+        <c:Campaign_Calls_Component recordId="{!$CurrentPage.parameters.pid}" />
+    </p>
+   
+    
+    <br />
+    <br />
+    
+      
+    <p>
+        <strong>Creditor Status</strong>
+        <c:Creditor_Status_Component recordId="{!$CurrentPage.parameters.pid}" />
+    </p>
+    <br />
+    <br />
+    
+    
+    <p>
+        <strong>Active Settlements</strong>
+        <c:Active_Settlements_Component recordId="{!$CurrentPage.parameters.pid}" />
+    </p>
+    
+     <br />
+    <br />
+    
+   
+    
+    <p>
+        <strong>Offer Status</strong>
+        <c:Offer_Status_Component recordId="{!$CurrentPage.parameters.pid}" />
+    </p>
+    
+    <br />
+    <br />
+   
+    
+    <p>
+        <strong>Status Component</strong>
+        <c:Status_Component recordId="{!$CurrentPage.parameters.pid}" />
+    </p>
+    
+    <br />
+    <br />
+   
+</apex:page>

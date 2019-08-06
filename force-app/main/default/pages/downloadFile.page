@@ -1,0 +1,21 @@
+<apex:page standardController="AWS_Document__c" extensions="DocumentDownloadExtension">
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1.12.min.js"></script>
+    
+    <script type="text/javascript">
+        
+        AWS.config.update(
+            {
+                accessKeyId: "{!key}",
+                secretAccessKey: "{!secret}",
+                region_config: "us-east-1" 
+            }
+        );
+    var s23 = new AWS.S3();
+    var y="{!fileName}";
+   
+    var params = {Bucket: '{!bucketName}', Key: y};
+    s23.getSignedUrl('getObject', params, function (err, url) {
+        window.open(url,"_self");
+    });
+    </script>
+</apex:page>

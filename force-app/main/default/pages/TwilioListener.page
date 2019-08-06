@@ -1,0 +1,10 @@
+<!--Visualforce Page-->
+<!--This is a simple page that calls the init method when  it loads-->
+<apex:page controller="TwilioListenerController" action="{!init}" showHeader="false" sidebar="false">
+   <!--<apex:form >
+       <apex:actionFunction name="getSMS" action="{!init}"/>
+       <apex:pageBlock title="Twilio Request Listener"></apex:pageBlock>
+       <button label="Get SMS" onclick="getSMS"> Get SMS </button>
+   </apex:form> -->
+   
+</apex:page>

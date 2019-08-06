@@ -1,0 +1,81 @@
+<apex:component controller="ActiveSettlementsComponentController">
+  
+    <apex:attribute name="recordId" type="String" description="Parent Program Id" />
+    
+    <apex:slds />
+    
+    <table class="slds-table slds-table_bordered slds-table_fixed-layout slds-no-row-hover">
+        <thead>
+            <tr class="slds-text-title--caps">
+                <th>Name</th>
+                <th>Creditor Name</th>
+                <th>Transaction method</th>
+                <th>Schedule Date</th>
+                <th>Total Amount</th>
+            </tr>
+        </thead>
+        <tbody id="paymentStatusTable_tbody">
+            
+        </tbody>
+    </table>
+    <script>
+        (function() {
+            
+            function createSettlementPaymentsTable(settlementPaymentResult) {
+                
+                var settlementPaymentsTable_tbody = document.getElementById("paymentStatusTable_tbody");
+                
+                settlementPaymentsTable_tbody.innerHTML = '';
+            
+                if(settlementPaymentResult && settlementPaymentResult.length) {
+                    
+                    for(var i = 0; i < settlementPaymentResult.length; i++) {
+                        
+                        settlementPaymentsTable_tbody.appendChild(createPaymentRow_Payments(settlementPaymentResult[i]));
+                    }
+                } else {
+                
+                    settlementPaymentsTable_tbody.appendChild(createEmptyRow('No record(s) found.', 4));
+                }
+            }
+            
+            function populateSettlementPayments() {
+            
+                Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.ActiveSettlementsComponentController.getSettlmentPayments}', '{!recordId}', function(response, event) {
+                    
+                    if(event.statusCode == 200) {
+                        
+                        createSettlementPaymentsTable(response);
+                    } 
+                });
+            }
+            
+            function createPaymentRow_Payments(payment) {
+            
+                var tr = document.createElement('tr');
+                
+                //Name
+                tr.appendChild(createAnchorTagElement(payment.name, payment.paymentsOfferId));
+                
+                //Creditor
+                tr.appendChild(createCell(payment.creditorName));
+                
+                //transaction method
+                tr.appendChild(createCell(payment.transactionmethod));
+                
+                //Schedule Date
+                tr.appendChild(createCell(payment.dateString));
+                
+                //Total Amount
+                tr.appendChild(createCell('$' + payment.totalAmount));
+                
+                return tr;
+            }
+            
+            
+            populateSettlementPayments();
+        })();
+        
+    </script>
+</apex:component>

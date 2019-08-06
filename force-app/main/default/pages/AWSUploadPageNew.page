@@ -1,0 +1,282 @@
+<apex:page standardcontroller="nu_dse__Program__c" extensions="AwsPageUploadNew" sidebar="true" showHeader="true" showChat="false" showQuickActionVfHeader="false" standardStylesheets="true" setup="false" >
+    
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous"/>
+        
+        <apex:includeScript value="{!URLFOR($Resource.IDR_AWS, '/IDR_AWS/Scripts/jquery1_11_3_min.js')}" />
+        <apex:includeScript value="{!URLFOR($Resource.IDR_AWS, '/IDR_AWS/Scripts/jquery_1_11_4-ui.js')}" />
+        <apex:stylesheet value="{!URLFOR($Resource.IDR_AWS, '/IDR_AWS/CSS/jquery_1_11_4-ui.css')}"/> 
+        
+        <apex:includeScript value="{!URLFOR($Resource.IDR_AWS, '/IDR_AWS/Scripts/aws-sdk-2.1.12.min.js')}" />
+        <apex:includeScript value="{!URLFOR($Resource.IDR_AWS, '/IDR_AWS/Scripts/ajax-jquery-1.11.3.min.js')}" />
+     
+<apex:form id="formId">
+    <c:MessageComponent ></c:MessageComponent>
+    <apex:outputPanel id="pageMessagePanel">
+        <div id = "pageMessageId">
+            <apex:pageMessages ></apex:pageMessages>
+        </div>
+    </apex:outputPanel>
+    <form action="#" method="post" enctype="multipart/form-data" id="uploadForm">
+    <apex:pageBlock id="pageBlockId" title="Upload New Document" mode="edit">
+        <apex:pageBlockButtons location="top">
+            <apex:outputpanel id="btnpnl">
+                <apex:outputpanel rendered="{!!Uploaded}">
+                    <apex:commandButton id="btn_submit" value="Upload" onclick="uploadDocument();"/>
+                    <apex:commandButton value="Cancel" action="{!redirectToRetUrl}" immediate="true"/>
+                </apex:outputpanel>
+                
+                <apex:outputpanel rendered="{!Uploaded}">
+                    <h4> File Upload Complete</h4>
+                </apex:outputpanel>
+            </apex:outputpanel>
+        </apex:pageBlockButtons>
+        
+        <apex:pageBlockButtons location="bottom">
+            
+            <apex:outputpanel id="btnpnlBottom">
+                <apex:outputpanel rendered="{!!Uploaded}">
+                    <apex:commandButton id="btn_submit" value="Upload" onclick="uploadDocument();"/>
+                    <apex:commandButton value="Cancel" action="{!redirectToRetUrl}" immediate="true"/>
+                </apex:outputpanel>
+            </apex:outputpanel>
+            <apex:outputpanel id="doneButtonPanelId">
+                <apex:outputpanel rendered="{!Uploaded}">
+                    <apex:commandButton value="Done" onclick="redirectToParent();" reRender="none"/>
+                    <!-- <apex:commandButton value="Done" action="{!cancel}"/> -->
+                </apex:outputpanel>
+            </apex:outputpanel>
+        </apex:pageBlockButtons>
+        
+        
+        <apex:pageBlockSection id="pageBlockSectionId" title="Select the file for upload" columns="1">
+            <!---
+            <apex:pageBlockSectionItem >
+                
+               <!---<apex:outputPanel rendered="{!isPortalUser == false}"></apex:outputpanel> 
+                    <apex:outputlabel value="Is Private:"/>
+                    <input type="checkbox" checked="true" id="isPrivateCheckbox" />
+                
+            </apex:pageBlockSectionItem>
+            <br />
+            --->
+            <apex:pageBlockSectionItem id="pageBkSecFile">
+                
+                <apex:outputLabel value="File to upload" />
+                <input type="file" size="50" name="file" id="file" onchange="getFileDetails();" style="fileClass"/>
+                
+            </apex:pageBlockSectionItem>
+            <br />
+            
+            <apex:pageBlockSectionItem id="pageBkSecFileNameId">
+                <apex:outputLabel value="Destination File Name" for="objName" />
+                <apex:inputField value="{!awsDocument.Name}"
+                                     id="objName" required="true"  styleclass="form-field fileName" />
+            </apex:pageBlockSectionItem>
+            <br />
+            
+            <apex:pageBlockSectionItem id="pageBkSecCategoryId">
+                <apex:outputLabel value="Category" for="objCategory" />
+                <apex:inputField value="{!awsDocument.Category__c}"
+                    id="objCategory" required="true" styleclass="form-field" />
+            </apex:pageBlockSectionItem>
+            <br/>
+            
+            <apex:pageBlockSectionItem >
+                <div class="progress" align="center" >
+                    <div class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"  id="Upload1" style="width:0%">
+                        <span class="sr-only">20% Complete</span>
+                    </div>
+                </div>
+            </apex:pageBlockSectionItem>
+        </apex:pageBlockSection>
+        
+    </apex:pageBlock>
+    <apex:actionfunction name="refreshAFterUpload" action="{!refreshPageMessage}" rerender="pageMessagePanel">
+    <apex:param name="message" value="" />
+    </apex:actionfunction>
+    <apex:actionfunction name="redirectToParent" action="{!redirectToRetUrl}"/>
+    <apex:actionfunction name="rerender" action="{!updatebutton}" rerender="btnpnl, doneButtonPanelId, inptpnl, pageMessagePanel, btnpnlBottom" />
+    </form>
+</apex:form>
+
+<!-- Aws S3 Upload code -->
+<script>
+      
+      var fileSize;
+      var pageMessage = document.getElementById('pageMessageId');
+      pageMessage.style.display = "none";
+      
+      var parentId = '{!$CurrentPage.parameters.id}';
+      var fileName;
+      var docFileName;
+      /*
+      function fileSelected(){
+          
+          callMethod1();
+      }
+      */
+      var docName = '';
+      var doctype = '';
+      /*
+      function assginValues_Folder(docNameString, docTypeString) {
+          
+          docName = docNameString;
+          doctype = docTypeString;
+      }    
+      */
+      
+      function createrecordsFn(){
+          
+          console.log('fileName-->',fileName);
+          //var communityUser = document.getElementById('isPrivateCheckbox');
+          //var isPrivateChecked = false;
+          /*
+          if(communityUser && communityUser.checked) {
+          
+              isPrivateChecked = true;
+          }
+          */
+          
+          console.log('****objectName-->', document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecFileNameId.objName}").value);
+          console.log('****objectCategory-->', document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecCategoryId.objCategory}").value);
+          
+          var objectName = document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecFileNameId.objName}").value;
+          var objectCategory = document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecCategoryId.objCategory}").value;
+          var size = fileSize;
+          //console.log('**** checkbox', isPrivateChecked);
+          Visualforce.remoting.Manager.invokeAction(
+            '{!$RemoteAction.AwsPageUploadNew.createDocLibraryNew}',
+            parentId, fileName, objectName, objectCategory, size,
+            function(result, event){
+                console.log('**** result', result);
+                console.log('*** event', event);
+                
+                if (event.status) {
+                    
+                    if (result) {
+                        
+                        console.log('**** result', result);
+                        
+                        var pageMessage = document.getElementById('pageMessageId');
+                        pageMessage.style.display = "block";
+                        refreshAFterUpload(result);
+                    
+                    }
+                    
+                } else if (event.type === 'exception') {
+                    
+                    var pageMessage = document.getElementById('pageMessageId');
+                    pageMessage.style.display = "block";
+                    refreshAFterUpload();
+                    
+                } else {
+                    //document.getElementById("responseErrors").innerHTML = event.message;
+                }
+            }, 
+            {escape: true}
+          );
+          console.log('Refresh');
+          
+    }
+      
+      
+    AWS.config.update(
+    {
+        accessKeyId: '{!awsCredentialWrapperInstance.accessKey}',
+        secretAccessKey: '{!awsCredentialWrapperInstance.secretValue}',
+        region_config: '{!awsCredentialWrapperInstance.regionConfig}'
+    });
+        
+    var FolderCreated = '{!FolderCreated}';
+    if(!FolderCreated)
+    folderCreation();
+
+    function uploadDocument() {
+    
+    console.log('**** btn clicked');
+    event.preventDefault();
+    
+    var bucket = new AWS.S3({params: {Bucket: 'prod-salesforce-upload'}}); 
+    
+    var fileChooser = document.getElementById('file');
+    var file = fileChooser.files[0];
+    docFileName = fileChooser.files[0];
+    if (file) {
+    
+    console.log('**parentId-->',parentId);
+    console.log('**file-->',file);
+    fileSize = file.size;
+    fileName = '{!parentName}'+'-'+file.name;
+    fileName = 'Program/'+'{!parentName}'+'/'+fileName;
+    //fileName = '{!parentName}';
+    console.log('**fileName',fileName);
+    console.log('**file-->',file.type);
+    
+    var params = {Key:fileName, ContentType: file.type, Body: file};
+    bucket.upload(params).on('httpUploadProgress', function(evt) {
+            console.log("Uploaded :: " + parseInt((evt.loaded * 100) / evt.total)+'%');
+            var per=parseInt((evt.loaded * 100) / evt.total)+'%';
+            document.getElementById("Upload1").style.width=per ;
+      
+        }).send(function(err, data) {
+          console.log('**** err', err);
+          console.log('*** a=data', data);
+            if(!err) {
+              // alert("File uploaded Successfully");
+               //createrecords1(fileName);
+               createrecordsFn();
+               rerender();
+            } else {
+                
+                console.log('*** show message called');
+                showMessage_Toast(err, 'error');
+            }                         
+              
+            });
+            
+    }
+        return false;
+    }
+    
+    function folderCreation(){
+        var s3Client = new AWS.S3();
+        
+        var folderName = 'Program/'+'{!parentName}'+'/';
+        console.log('**folderName-->',folderName);
+        //var folderName = parentId+'/';
+        var folderparams = { Bucket: 'prod-salesforce-upload', Key: folderName, ACL: 'public-read', Body:'body does not matter' };
+        s3Client.upload(folderparams, function (err, data) {
+            if (err) {
+            alert("Error creating the folder: "+err);
+            } else {
+               alert("Successfully created a folder on S3");
+            }
+        });
+    }
+    
+    function closemodal() {
+        
+        console.log('***** before closer modal');
+        window.parent.dialogClose();
+        //window.parent.closeDialog();
+        console.log('entered console')
+    }
+    
+    function getFileDetails() {
+        
+        console.log('x-->',document.getElementById("file"))
+        var x = document.getElementById("file").value;
+        console.log('x-->',x);
+        x = x.replace('C:\\fakepath\\', '');
+        
+        document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecFileNameId.objName}").value = x;
+    }
+    
+    function redirectToParentRecord() {
+    
+        redirectToParent();
+    }
+</script>
+<!-- Aws S3 upload ends -->
+
+</apex:page>

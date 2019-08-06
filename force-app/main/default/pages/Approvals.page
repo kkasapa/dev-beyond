@@ -1,0 +1,561 @@
+<apex:page controller="ApprovalsController" readOnly="true">
+
+    <link rel="stylesheet" href="{!URLFOR($Resource.nu_dse__SLDS_221, '/assets/styles/salesforce-lightning-design-system.min.css')}" />
+    <head>
+        <script src="{!URLFOR($Resource.nu_dse__jQueryDataTable, '/js/jquery-1-11-1-min.js')}" ></script>
+        <script src="{!URLFOR($Resource.nu_dse__jQueryDataTable, '/js/jquery-ui.js')}" ></script>
+        <link rel="stylesheet" href="{!URLFOR($Resource.nu_dse__jQueryDataTable, '/css/jquery-ui.css')}"/>
+        <script src="{!URLFOR($Resource.nu_dse__jQueryDataTable, '/js/jquery-dataTables-min.js')}" ></script>
+        <apex:stylesheet value="{!URLFOR($Resource.nu_dse__jQueryDataTable, '/css/jquery-dataTables.css')}" />
+    </head> 
+    <style>
+        .reference-field-style input[type="text"] {     
+      
+                width: 93%;       
+                min-height: calc(1.875rem + (1px * 1));
+                padding: 0 1rem 0 .5rem;        
+          }
+          
+          .required-true.fieldRequired, .required-true.error {
+              box-shadow: 0 0 2px 1px rgba(255, 0, 0, 1);
+          }
+          
+          .requiredInput .errorMsg {
+              display: none;
+          }
+          
+          .datePicker {
+              z-index: 9004;
+          }
+          
+          .slds-panel {
+          
+              padding-bottom:0.75rem; 
+              color:black;
+          }
+          
+          .slds-table-show {
+          
+              display:table-row;
+          }
+          
+          .sldsSpinner {
+            z-index: 9003;
+            position: fixed;
+          }
+          
+          .textarea-field-style textarea {
+          
+                background-color: #fff;
+                color: #16325c;
+                border: 1px solid #d8dde6;
+                border-radius: .25rem;
+                width: 100%;
+                transition: border .1s linear,background-color .1s linear;
+                resize: vertical;
+                padding: .5rem .75rem;
+          }
+          
+          .string-field-style input[type="text"],
+          .double-field-style input[type="text"], 
+          .currency-field-style input[type="text"] {
+             
+                background-color: #fff;
+                color: #16325c;
+                border: 1px solid #d8dde6;
+                border-radius: .25rem;
+                width: 100%;
+                transition: border .1s linear,background-color .1s linear;
+                display: inline-block;
+                padding: 0 1rem 0 .75rem;
+                line-height: 1.875rem;
+                min-height: calc(1.875rem + (1px * 2));
+          }
+          
+          .picklist-field-style select {
+              
+                background-color: #fff;
+                color: #16325c;
+                border: 1px solid #d8dde6;
+                border-radius: .25rem;
+                width: 100%;
+                transition: border .1s linear,background-color .1s linear;
+                height: calc(1.875rem + (1px * 2));
+          }
+          
+          .reference-field-style input[type="text"] {     
+                width: 93%;       
+                min-height: calc(1.875rem + (1px * 1));
+                padding: 0 1rem 0 .5rem;        
+            }
+          
+           .textarea-field-style textarea {
+          
+                background-color: #fff;
+                color: #16325c;
+                border: 1px solid #d8dde6;
+                border-radius: .25rem;
+                width: 100%;
+                transition: border .1s linear,background-color .1s linear;
+                resize: vertical;
+                padding: .5rem .75rem;
+           }
+          
+          .string-field-style input[type="text"],
+          .double-field-style input[type="text"], 
+          .currency-field-style input[type="text"],
+          .date-field-style input[type="text"],
+          .datetime-field-style input[type="text"],
+          .combobox-field-style input[type="text"] {
+                background-color: #fff;
+                color: #16325c;
+                border: 1px solid #d8dde6;
+                border-radius: .25rem;
+                width: 100%;
+                transition: border .1s linear,background-color .1s linear;
+                display: inline-block;
+                padding: 0 1rem 0 .75rem;
+                line-height: 1.875rem;
+                min-height: calc(1.875rem + (1px * 2));
+          }
+          
+          .date-field-style input[type="text"],
+          .datetime-field-style input[type="text"] {
+              width: 50%;
+          }
+          
+          .combobox-field-style a {
+              display: none;
+          }
+          
+          .picklist-field-style select {
+                background-color: #fff;
+                color: #16325c;
+                border: 1px solid #d8dde6;
+                border-radius: .25rem;
+                width: 100%;
+                transition: border .1s linear,background-color .1s linear;
+                height: calc(1.875rem + (1px * 2));
+          }
+          
+          .nudebt-activity-description, .nudebt-activity-subject {
+              position: relative;
+          }
+          
+          .nudebt-activity-description-popup, .nudebt-activity-subject-popup {
+              position: absolute;
+              bottom: 100%;
+              display: none;
+          }
+          
+          .nudebt-activity-description:hover .nudebt-activity-description-popup,
+          .nudebt-activity-subject:hover .nudebt-activity-subject-popup {
+              display: unset;
+          }
+          
+          .nudebt-activity-description-popup .slds-popover__body,
+          .nudebt-activity-subject-popup .slds-popover__body {
+              white-space: normal;   
+              white-space: -moz-normal;    
+              white-space: -normal;   
+              white-space: -o-normal;    
+              word-wrap: break-word;
+          }
+          
+          .sldsSpinner {
+            z-index: 9003;
+            position: fixed;
+         }
+         
+         .console-tab {
+             margin: 0;
+         }
+         
+         .slds-truncate {
+             white-space: normal;
+         }
+         
+         img {
+           max-width: 1000px
+         }
+        
+         .sidebarCell, #sidebarDiv {
+           width: 222px;
+         }
+        
+        
+        .data-table .dataTables_wrapper .dataTables_filter {
+            
+            padding-right: 10px;
+            padding-bottom: 10px;
+        }
+        
+        .data-table .dataTables_wrapper .dataTables_filter input,
+        .data-table .dataTables_wrapper .dataTables_length select {
+        
+            color:black !important;
+        }
+        
+        .data-table thead {
+        
+            color:black !important;
+        }
+        
+        .data-table .dataTables_wrapper .dataTables_length, 
+        .data-table .dataTables_wrapper .dataTables_filter, 
+        .data-table .dataTables_wrapper .dataTables_info, 
+        .data-table .dataTables_wrapper .dataTables_processing, 
+        .data-table .dataTables_wrapper .dataTables_paginate {
+        
+            color : black !important;
+        }
+        
+        .data-table .dataTables_wrapper .dataTables_info,
+        .data-table .dataTables_wrapper .dataTables_length {
+        
+            padding-left: 20px;
+            
+        }
+        
+        .data-table .dataTables_wrapper .dataTables_paginate .paginate_button {
+        
+            color : black !important;
+        }
+        
+        .data-table .dataTables_wrapper .dataTables_paginate .paginate_button.current, 
+        .data-table .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+        
+            color: #333333 !important;
+            
+        }
+        
+        .data-table .dataTables_wrapper .dataTables_paginate .paginate_button.disabled, 
+        .data-table .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover, 
+        .data-table .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:active {
+            
+            color: #666 !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            
+            color: white !important;
+        }
+        
+        .data-table table.dataTable thead th, table.dataTable thead td {
+        
+            //padding-left : 10px !important;
+        }
+         
+        .dataTables_wrapper {
+             
+            background-color: white !important;
+            padding-top: 1%;
+        }
+        .hide {
+            display: none;
+        }
+        .showApprovalsTr_false {
+            dsiplay: none;
+        }
+        
+        .nudebt-section-header-primary {
+            background-color: rgb(34,54,117);
+        }
+        
+        .approval-set--section {
+            margin-top: 20px;
+        }
+        
+        .approval-ser--approval-work-row {
+            margin-top: 20px;
+            position: relative;
+        }
+        
+        .approval-set--approval-work-row.approval-set--approval-status-Approved {
+            background-color: #99CC00;
+        }
+        
+        .approval-set--approval-work-row.approval-set--approval-status-Rejected {
+            background-color: #ECA299;
+        }
+        
+        .approval-set--approval-work-row.approval-set--approval-status-Pending {
+            background-color: #62C2CC;
+        }
+        
+        .approval-set--approval-work-row.approval-set--approval-status-Removed {
+            background-color: #CCC;
+        }
+        
+        .approval-set--approval-name {
+            _display: inline-block;
+            font-weight: bold;
+        }
+        
+        .approval-set--record-name {
+            display: inline-block;
+        }
+        
+        .approval-set--object-name {
+            display: inline-block;
+        }
+        
+        .approval-set--approval-set-status {
+            position: absolute;
+            right: 300px;
+            top: 10px;
+            font-size: 15px;
+        }
+        
+        .approval-set--buttons {
+            position: absolute;
+            display: inline-block;
+            float: right;
+            right: 20px;
+            top: 10px;
+        }
+        
+        .approval-set--aprove-button {
+            display: inline-block;
+            margin-right: 5px;
+        }
+        
+        .approval-set--recall-button {
+            display: inline-block;
+            margin-right: 5px;
+        }
+        
+        .approval-set--approval-steps {
+            _display: inline-block;
+            _float: right;
+        }
+        
+        .font-color-white {
+            color: white;
+        }
+        
+        .radio label {
+            color:white;
+            margin-right: 3rem;
+            vertical-align: text-bottom;
+        }
+        
+        .slds-card__header {
+            margin-bottom: .25rem;
+            margin-right: -0.75rem;
+            margin-top: -0.5rem;
+        }
+        
+        .diabled-anchor {
+        
+            pointer-events: none;
+            cursor: default;
+            color: #5f5f5f;
+        }
+        
+        #Spinner {
+    
+            z-index: 10000;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            background-color: rgba(230, 233, 239, 0.91);
+            position:fixed;
+        }
+        
+        input {
+        
+            
+        }         
+    </style>
+   
+    <div>
+        <div id="Spinner" class="slds-spinner_container">
+            <div class="slds-spinner--brand slds-spinner slds-spinner--medium" role="alert">
+                <span class="slds-assistive-text">Loading</span>
+                <div class="slds-spinner__dot-a"></div>
+                <div class="slds-spinner__dot-b"></div>
+            </div>
+        </div>
+    </div>
+
+   
+    <apex:form >
+        
+        <apex:actionFunction name="filterApprovals" action="{!onFilterChange}" rerender="tableData" oncomplete="applyJQueryTable();  hideSpinner();">
+            <apex:param name="filterBy" value="" />
+        </apex:actionFunction>
+        <apex:actionFunction name="approval_refreshApprovals" action="{!renderApprovals}" rerender="tableData" oncomplete="applyJQueryTable(); hideSpinner();"/>
+        <apex:outputPanel id="page">
+            <div class="slds">
+                <div class="slds-card nudebt-section-header-primary">
+                    <div class="slds-card__header slds-grid">
+                        <header class="slds-media slds-media--center slds-has-flexi-truncate">
+                            <h2>
+                                <a href="javascript:void(0);" class="slds-card__header-link slds-truncate">
+                                    <span class="slds-text-heading--small font-color-white" >Approval Processes</span>
+                                </a>
+                            </h2>
+                        </header>
+                        
+                        <div>
+                            <br/>
+                            <apex:selectRadio value="{!selectedRadio}" styleClass="radio">
+                                <apex:selectOption itemLabel="Prospect" itemValue="nu_dse__Prospect__c"/>
+                                <apex:selectOption itemLabel="Offer" itemValue="nu_dse__Offer__c"/>
+                                <apex:actionSupport event="onchange" action="{!renderApprovals}" reRender="tableData" onsubmit="showSpinner();" oncomplete="applyJQueryTable(); hideSpinner();"/>
+                            </apex:selectRadio>
+                        </div>
+                        <div class="slds-no-flex">                        
+                            <div class="slds-form-element">
+                              <label class="slds-form-element__label font-color-white" for="select-01">Filter Approvals</label>
+                              <div class="slds-form-element__control">
+                                <div class="slds-select_container">
+                                  <select class="slds-select" id="select-01" onchange="onFilterChange()" > 
+                                    <option value="all">All</option>
+                                    <option value="me">Assigned To me</option>
+                                    <option value="queue">Assigned To Queue</option>
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-card__body slds-panel">
+                        <apex:outputPanel id="tableData">
+                            <div>
+                                <table class="slds-table slds-table--bordered" id="approvalsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Actions</th>
+                                            <th>Approval</th>
+                                            <th>Submitted By</th>
+                                            <th>Assigned To</th>
+                                            <th>Submit Status</th>
+                                            <th>Time in Queue (HH:MM)</th>
+                                            <th>Completed Date</th>
+                                            <th>Status</th>
+                                            
+                                        </tr>
+                                    </thead>
+                                    <tbody class="approval-set--section">
+                                        <apex:repeat value="{!approvalSets}" var="approvalSet">
+                                            <tr class="approval-set--approval-steps">
+                                                <td>
+                                                    <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator') && approvalSet.workItemId != null}">
+                                                        <span class="approval-set--aprove-button">
+                                                            <a href="{!'/p/process/ProcessInstanceWorkitemWizardStageManager?id=' + approvalSet.workItemId + '&retURL=%2F' + recordId}" target="_blank" >Approve/Reject</a>
+                                                        </span>
+                                                    </apex:outputPanel>
+                                                    <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator') && approvalSet.workItemId != null}">
+                                                        <span class="approval-set--aprove-button">
+                                                            <a disabled="true" class="diabled-anchor">Approve/Reject</a>
+                                                        </span>
+                                                    </apex:outputPanel>
+                                                </td>
+                                                <td >
+                                                    <div class="approval-set--approval-name">{!approvalSet.approvalName}</div>
+                                                    <div class="approval-set--record-name">
+                                                        <a href="{!'/' + approvalSet.recordId}" target="_blank">{!approvalSet.recordName}</a><!-- - <a href="{!'/' + approvalSet.tradelineid}" target="_blank">Tradeline</a> -->
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <a href="{! '/' + approvalSet.approval.submittedBy}" target="_blank" >{!approvalSet.approval.submittedByName}</a>
+                                                </td>
+                                                <td>
+                                                    <a href="{! '/' + approvalSet.approval.asignedTo}" target="_blank" >{!approvalSet.approval.asignedToName}</a>
+                                                </td>
+                                                <td>{!approvalSet.approval.submitStatus}</td>
+                                                <td>
+                                                    <center>
+                                                        {!IF(LEN(TEXT(approvalSet.approval.elapsedHours)) == 1, LPAD(TEXT(approvalSet.approval.elapsedHours), 2, '0'), approvalSet.approval.elapsedHours)}:{!IF(LEN(TEXT(approvalSet.approval.elapsedMins)) == 1, LPAD(TEXT(approvalSet.approval.elapsedMins), 2, '0'), approvalSet.approval.elapsedMins)}
+                                                    </center>
+                                                </td>
+                                                <td><center>{!approvalSet.approval.completedDate}</center></td>
+                                                <td>{!approvalSet.status}</td> 
+                                            </tr>
+                                        </apex:repeat>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </apex:outputPanel>
+                    </div>
+                    <div class="slds-card__footer">
+                        
+                    </div>
+                </div>
+            </div>
+        </apex:outputPanel>
+        <script>
+                                            
+            function onFilterChange() {
+                showSpinner();
+                console.log('changed to ->',event.currentTarget.value);
+                let filter = event.currentTarget.value;
+                if (filter) {
+                
+                    filterApprovals(filter);
+                }
+            }
+        </script>
+        
+        <script>
+        
+            function showSpinner() {
+        
+                var spinner = document.getElementById('Spinner');
+                if(spinner && spinner.style.setProperty) {
+                    spinner.style.setProperty('display', 'block');
+                } else {
+                    spinner.style.display = 'block';
+                }
+                var dBody = document.body;
+                if(dBody && dBody.style.setProperty) {
+                    dBody.style.setProperty('overflow', 'hidden');
+                } else {
+                    dBody.style.overflow = 'hidden';
+                }
+                
+            }
+            
+            function hideSpinner() {
+                var spinner = document.getElementById('Spinner');
+                if(spinner && spinner.style.setProperty) {
+                    spinner.style.setProperty('display', 'none');
+                } else {
+                    spinner.style.display = 'none';
+                }
+                var dBody = document.body;
+                if(dBody && dBody.style.setProperty) {
+                    dBody.style.setProperty('overflow', 'auto');
+                } else {
+                    dBody.style.overflow = 'auto';
+                }
+            }
+
+        
+            showSpinner();
+            function approval_getApprovals() {
+                console.log('calling approval_refreshApprovals function.');
+                window.setTimeout(function() {
+                    approval_refreshApprovals();
+                    applyJQueryTable();
+                }, 0);
+            }
+            
+            (function() {
+                approval_getApprovals();
+            })();
+
+            function applyJQueryTable() {
+            
+                $(document).ready( function () {
+                    $('#approvalsTable').DataTable();
+                } );
+            }
+            
+            
+        </script>
+    </apex:form>  
+</apex:page>

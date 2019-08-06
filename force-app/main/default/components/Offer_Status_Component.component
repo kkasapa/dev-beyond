@@ -1,0 +1,135 @@
+<apex:component controller="OfferStatusComponentController">
+    <apex:attribute name="recordId" type="String" required="true" description="Record Id of the Parnel Program." />
+    <apex:slds />
+    
+    <style>
+        .active-offer {
+            background-color: #11FF55;
+        }
+        
+        .inactive-offer {
+            background-color: #FFFF22;
+        }
+        
+        .cancelled-offer {
+            background-color: #FF2222;
+        }
+        
+    </style>
+    
+    <table class="slds-table slds-table_bordered slds-table_fixed-layout slds-no-row-hover">
+        <thead>
+            <tr class="slds-text-title--caps">
+                <th>Name</th>
+                <th>Status</th>
+                <th>Sub Status</th>
+                <th>Offer Amount</th>
+                <th>Program Fee</th>
+                <th>No. Of Payments</th>
+                <th>No. Of Fee Payments</th>
+                <th>Creditor Name</th>
+                <th>Account Number</th>
+            </tr>
+        </thead>
+        <tbody id="offerTable_tbody">
+            
+        </tbody>
+    </table>
+    
+    <script>
+        (function () {
+            
+            var activeOfferClass = ' active-offer';
+            var inactiveOfferClass = ' inactive-offer';
+            var cancelledOfferClass = ' cancelled-offer';
+            
+            function init() {
+                
+                OfferStatusComponentController.getOffer('{!recordId}', function(response, event) {
+                    if(event.status) {
+                        console.log('OfferStatusComponentController', response);
+                        createOfferTable(response);
+                    } else {
+                        console.log('OfferStatusComponentController', event)
+                    }
+                });
+            }
+            
+            function createOfferTable(offerList) {
+                
+                var offerTable_tbody = document.getElementById("offerTable_tbody");
+                
+                offerTable_tbody.innerHTML = '';
+            
+                if(offerList && offerList.length) {
+                    
+                    for(var i = 0; i < offerList.length; i++) {
+                        
+                        offerTable_tbody.appendChild(createOfferRow(offerList[i]));
+                    }
+                } else {
+                
+                    offerTable_tbody.appendChild(createEmptyRow('No record(s) found.', 7));
+                }
+            }
+            
+            function createOfferRow(offer) {
+            
+                var tr = document.createElement('tr');
+                
+                var offerClassName = '';
+                    
+                if(offer.offerStatus == 'Accepted' && offer.offerSubStatus == 'Out For Authorization') {
+                    
+                    offerClassName  = inactiveOfferClass;activeOfferClass
+                } else if(offer.offerStatus == 'Accepted' && offer.offerSubStatus == 'Authorization Obtained') {
+                    
+                    offerClassName  = activeOfferClass;
+                } else if(offer.offerStatus == 'Canceled') {
+                
+                    offerClassName  = cancelledOfferClass;
+                }                
+                tr.className = offerClassName;
+                
+                //Name
+                tr.appendChild(createAnchorTagElement(offer.name, offer.recordId));
+                
+                //Status
+                tr.appendChild(createCell(offer.offerStatus));
+                
+                 //Sub Status
+                tr.appendChild(createCell(offer.offerSubStatus));
+                
+                //Offer Amount
+                tr.appendChild(createCell(offer.offerAmount));
+                
+                //Program Fee
+                tr.appendChild(createCell(offer.programFee));
+                
+                //No. Of Payments
+                tr.appendChild(createCell(offer.noOfPayments));
+                
+                //No. Of Fee Payments
+                tr.appendChild(createCell(offer.noOfFeePayments));
+                
+                //Creditor Name
+                tr.appendChild(createCell(offer.creditorName));
+                
+                //Account Number
+                tr.appendChild(createCell(offer.accountNumber));
+                
+                return tr;
+            }
+            
+            init();
+        })()
+        
+        
+        window.viewOffer = function(offerId) {
+            window.location = '/' + offerId;
+        }
+        
+    </script>
+    
+    
+</apex:component>

@@ -1,0 +1,483 @@
+<apex:page controller="PreLeadCtrl" docType="HTML-5.0">
+    <apex:slds />
+    <div class="slds-scope" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+        
+    <style>
+    
+        #Spinner {
+    
+            z-index: 10000;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            background-color: rgba(230, 233, 239, 0.91);
+            position:fixed;
+        }
+        
+    </style>
+    
+    <div>
+        <div id="Spinner" class="slds-spinner_container">
+            <div class="slds-spinner--brand slds-spinner slds-spinner--medium" role="alert">
+                <span class="slds-assistive-text">Loading</span>
+                <div class="slds-spinner__dot-a"></div>
+                <div class="slds-spinner__dot-b"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        
+        function showSpinner() {
+        
+            var spinner = document.getElementById('Spinner');
+            if(spinner && spinner.style.setProperty) {
+                spinner.style.setProperty('display', 'block');
+            } else {
+                spinner.style.display = 'block';
+            }
+            var dBody = document.body;
+            if(dBody && dBody.style.setProperty) {
+                dBody.style.setProperty('overflow', 'hidden');
+            } else {
+                dBody.style.overflow = 'hidden';
+            }
+            
+        }
+        
+        function hideSpinner() {
+            var spinner = document.getElementById('Spinner');
+            if(spinner && spinner.style.setProperty) {
+                spinner.style.setProperty('display', 'none');
+            } else {
+                spinner.style.display = 'none';
+            }
+            var dBody = document.body;
+            if(dBody && dBody.style.setProperty) {
+                dBody.style.setProperty('overflow', 'auto');
+            } else {
+                dBody.style.overflow = 'auto';
+            }
+        }
+        
+        window.onload = function() {
+        
+            hideSpinner();
+        }
+        
+        function redirectPage(prospectId) {
+        
+            if (prospectId != null && prospectId != '') {
+            
+                window.top.location.href = '/' + prospectId;
+            }
+        }
+        
+    </script>
+        
+    <apex:pagemessages id="messages" />
+    <apex:form >
+        <!--<apex:actionFunction action="{!save}" name="save2" id="btn" />-->
+        <apex:actionFunction name="invokeOpenModalAF" action="{!showEditModal}" rerender="detail" oncomplete="hideSpinner()">
+            <apex:param name="preLeadWrap" assignTo="{!selectedPreLeadWrapperId}" value="" />
+        </apex:actionFunction>
+        <apex:actionFunction name="invokeCloseModalAF" action="{!hideEditModal}" rerender="detail" oncomplete="hideSpinner()"/>
+        <apex:actionFunction name="doPostCall" action="{!postBack}" rerender="detail, table" oncomplete="hideSpinner();redirectPage('{!redirectProspectId}');"/>
+        
+        <article class="slds-card">
+            <div class="slds-card__header ">
+                <header class="slds-media slds-media--center slds-has-flexi-truncate">
+                    <div class="slds-media__figure">
+                        <span class="slds-icon_container slds-icon-standard-lead" title="description of icon when needed">
+                            <svg class="slds-icon slds-icon--medium" aria-hidden="true">
+                                <use xlink:href="{!URLFOR($Asset.SLDS, 'assets/icons/standard-sprite/svg/symbols.svg#lead')}"></use>
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="slds-media__body">
+                        <h2>
+                          <a href="javascript:void(0);" class="slds-card__header-link slds-truncate">
+                            <span class="slds-text-heading--small">PreLeads</span>
+                          </a>
+                        </h2>
+                    </div>
+                </header>
+   
+         <div id="input-form" class="" >
+             <fieldset class="slds-form--compound">
+             <div class="slds-form-element__group">
+                <div class="slds-form-element__row">
+                    <div class="slds-form-element slds-size--1-of-4">
+                       <label class="slds-form-element__label" for="mailerId">Mailer Id</label>
+                          <apex:inputText value="{!mailerIdValue}" id="mailerId123"  styleClass="slds-input" />
+                      </div>
+                        <div class="slds-form-element slds-size--1-of-4">
+                      <label class="slds-form-element__label" for="fn">First name</label>
+                        <apex:inputText value="{!firstName}" id="fn"   styleClass="slds-input"  />
+                       </div>
+                       <div class="slds-form-element slds-size--1-of-4">
+                      <label class="slds-form-element__label" for="ln">Last name</label>
+                       <apex:inputText value="{!lastName}" id="ln" styleClass="slds-input" />
+                      </div>
+                      <div class="slds-form-element slds-size--1-of-4">
+                      <label class="slds-form-element__label" for="ln">Zip Code</label>
+                       <apex:inputText value="{!zipCode}" id="zc" styleClass="slds-input" />
+                      </div>
+                     
+                </div>
+              </div>   
+          </fieldset>
+          <div class="slds-align--absolute-center">
+              <apex:commandButton action="{!getPreLeads}" value="Submit"  reRender="table,errMsgBlockForGetCall" onclick="showSpinner()" oncomplete="hideSpinner()"/>
+         </div>
+      </div>     
+  </div>
+     
+       <div class="slds-card__body">
+        <apex:outputpanel id="table">
+        
+            <apex:outputPanel rendered="{!IF(ISNULL(pre_leads) , false , true)}">
+             
+             <div>
+                  <table class="slds-table slds-table--bordered slds-table--cell-buffer">
+            
+            <thead>
+               
+              <tr class="slds-text-title--caps">
+                  <th scope="col">
+                     <div class="slds-truncate" title="mailerId">
+                         Id
+                      </div>
+                  </th>
+                  <th scope="col">
+                     <div class="slds-truncate" title="mailerId">
+                         Mailer Id
+                      </div>
+                  </th>
+                  <th scope="col">
+                     <div class="slds-truncate" title="mailerDate">
+                         Mailer Date
+                      </div>
+                  </th>
+                  <th scope="col">
+                     <div class="slds-truncate" title="isqualified">
+                         is Qualified 
+                      </div>
+                  </th>
+                   <th scope="col">
+                     <div class="slds-truncate" title="First Name">
+                         First Name
+                      </div>
+                  </th>
+                   <th scope="col">
+                     <div class="slds-truncate" title="Last Name">
+                         Last Name
+                      </div>
+                  </th>
+                   <th scope="col">
+                     <div class="slds-truncate" title="Address1">
+                        Address1
+                      </div>
+                  </th>
+                   <th scope="col">
+                     <div class="slds-truncate" title="Address2">
+                         Address2
+                      </div>
+                  </th>
+                  <th scope="col">
+                     <div class="slds-truncate" title="City">
+                         City
+                      </div>
+                  </th>
+                    <th scope="col">
+                     <div class="slds-truncate" title="State">
+                         State
+                      </div>
+                  </th>
+                   <th scope="col">
+                     <div class="slds-truncate" title="Zip">
+                         Zip
+                      </div>
+                  </th>
+                   
+                   
+              </tr>
+            </thead>
+          
+            <tbody>
+               <apex:repeat value="{!pre_leads}" id="preLeadList" var="lead">
+                  <tr onclick='invokeOpenModalAF({!lead.Id});showSpinner();'>
+                      
+                      <td data-label="Id">
+                       <div class="slds-truncate" title="Id">{!lead.id}</div>
+                      </td>
+                      
+                     <td data-label="Mailer Id">
+                       <div class="slds-truncate" title="mailerId">{!lead.MailerId}</div>
+                      </td>
+                    
+                    <td data-label="Mailer Date">
+                       <div class="slds-truncate" title="MailDate">
+                       <apex:outputText value="{0,date,MM/dd/yyyy}">
+                           <apex:param value="{!lead.MailDate}" />
+                       </apex:outputText>
+                       </div>
+                      </td>
+                    
+                     <td data-label="Is Mailer Qualified">
+                       <div class="slds-truncate" title="isQualified"><apex:inputCheckBox value="{!lead.isQualified}"></apex:inputCheckBox></div>
+                      </td>
+                    
+                      <td data-label="FirstName">
+                       <div class="slds-truncate" title="FirstName">{!lead.Firstname}</div>
+                      </td>
+                    
+                    <td data-label="lastname">
+                       <div class="slds-truncate" title="LastName">{!lead.LastName}</div>
+                      </td>
+                     <td data-label="Address1">
+                       <div class="slds-truncate" title="Address1">{!lead.Address1}</div>
+                      </td>
+                    <td data-label="Address2">
+                       <div class="slds-truncate" title="Address2">{!lead.Address2}</div>
+                      </td>
+                    <td data-label="City">
+                       <div class="slds-truncate" title="City">{!lead.City}</div>
+                      </td>
+                    <td data-label="State">
+                       <div class="slds-truncate" title="State">{!lead.State}</div>
+                      </td>
+                    <td data-label="Zip">
+                       <div class="slds-truncate" title="Zip">{!lead.Zip}</div>
+                      </td> 
+                      
+                </tr>
+                
+                </apex:repeat>
+                
+            </tbody>
+            
+        </table>
+             </div>
+            </apex:outputPanel>
+           <apex:outputPanel id="errMsgBlockForGetCall">
+            <apex:outputPanel rendered="{!hasErrorinGetAPI}">
+            <div class="slds-notify_container slds-is-relative">
+                <div class="slds-notify slds-notify_toast slds-theme_error" role="alert" style="width: 100%; background-color: transparent;">
+                  <div class="slds-notify__content" style="width: 100%; text-align: center; color: #000;">
+                    <h2 class="slds-text-heading_small ">{!errorMessageinGetAPI}</h2>
+                  </div>
+                </div>
+              </div>
+              </apex:outputPanel>
+              </apex:outputPanel>
+            
+        </apex:outputpanel>
+       </div>
+      </article>    
+           
+    <!--<apex:outputPanel id="detail">
+        <apex:outputpanel rendered="{!showModal}"> 
+            <div role="dialog" tabindex="-1" id="PaymentModal" aria-labelledby="header43" class="slds-modal slds-fade-in-open" >
+                <div class="slds-modal__container" >
+                    <div class="slds-modal__header">
+                        <h2 id="header43" class="slds-text-heading--medium">Update PreLead Form:</h2>
+                    </div>
+                    <div class="slds-card__body">
+                        <fieldset class="slds-form--compound">
+                            <div class="slds-form-element__group">
+                                <div class="slds-form-element__row">
+                                    <div class="slds-form-element slds-size--1-of-3">
+                                        <label class="slds-form-element__label" for="mailerId">Mailer Id</label>
+                                        <apex:inputText value="{!mailer_Id}" id="mailerId2"  styleClass="slds-input" />
+                                    </div>
+                                    <div class="slds-form-element slds-size--1-of-3">
+                                        <label class="slds-form-element__label" for="fn">First name</label>
+                                        <apex:inputText value="{!firstName}" id="fn2"   styleClass="slds-input"  />
+                                    </div>
+                                    <div class="slds-form-element slds-size--1-of-3">
+                                        <label class="slds-form-element__label" for="ln">Last name</label>
+                                        <apex:inputText value="{!lastName}" id="ln2" styleClass="slds-input" />
+                                    </div>
+                                </div>
+                                <div class="slds-form-element__row">
+                                    <div class="slds-form-element slds-size--1-of-3">
+                                        <label class="slds-form-element__label" for="phonenumber">Phone Number</label>
+                                        <apex:inputText value="{!mailer_Id}" id="phonenumber"  styleClass="slds-input" />
+                                    </div>
+                                    <div class="slds-form-element slds-size--1-of-3">
+                                        <label class="slds-form-element__label" for="Address1">Address 1</label>
+                                        <apex:inputText value="{!mailer_Id}" id="Address1"  styleClass="slds-input" />
+                                    </div>
+                                    <div class="slds-form-element slds-size--1-of-3">
+                                        <label class="slds-form-element__label" for="Address2">Address 2</label>
+                                        <apex:inputText value="{!mailer_Id}" id="Address2"  styleClass="slds-input" />
+                                    </div>
+                                </div>
+                                <div class="slds-form-element__row"></div>
+                                <div class="slds-form-element__row"></div>
+                                <div class="slds-form-element__row"></div>
+                            </div>  
+                        </fieldset>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-backdrop slds-backdrop--open" id="PaymentBackdrop"></div> 
+        </apex:outputpanel>
+    </apex:outputPanel>-->
+    
+    <apex:outputPanel id="detail">
+        <apex:outputpanel rendered="{!showModal}">
+              <div class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                  <div class="slds-modal__header">
+                    <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Edit PreLead Form</h2>
+                  </div>
+                  <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                    <div class="slds-card__body">
+                        
+                        <!--<apex:outputPanel id="errorMsgInModal">-->
+                            <apex:outputPanel rendered="{!hasError}">
+                            <div class="slds-notify_container slds-is-relative">
+                                <div class="slds-notify slds-notify_toast slds-theme_error" role="alert">
+                                  <span class="slds-assistive-text">error</span>
+                                  <div class="slds-notify__content">
+                                    <h2 class="slds-text-heading_small ">{!errorMessage}</h2>
+                                  </div>
+                                </div>
+                              </div>
+                              </apex:outputPanel>
+                        <!--</apex:outputPanel>-->
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="firstname">First Name:</label>
+                                <br/>
+                                <apex:inputText styleClass="slds-input" value="{!preLeadWrapper.FirstName}" id="FirstName" />
+                            </div>
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="middlename">Middle Name:</label>
+                                <apex:inputText styleClass="slds-input" value="{!preLeadWrapper.MiddleName}" id="MiddleName" />
+                            </div>
+                        </div><br/>
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="lastname">*Last Name:</label>
+                                <apex:inputText styleClass="slds-input" value="{!preLeadWrapper.LastName}" id="LastName" />
+                            </div>
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="emailaddress">*Email Address:</label>
+                                <apex:input type="email" styleClass="slds-input" value="{!preLeadWrapper.EmailAddress}" id="EmailAddress" />
+                            </div>
+                        </div><br/>
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="phonenumber">Phone Number:</label>
+                                <apex:inputText styleClass="slds-input" value="{!preLeadWrapper.PhoneNumber}" id="PhoneNumber" />
+                            </div>
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="address1">Address 1:</label>
+                                <apex:inputText styleClass="slds-input" id="Address1" value="{!preLeadWrapper.Address1}" />
+                            </div>
+                        </div><br/>
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="address2">Address 2:</label>
+                                <apex:inputText styleClass="slds-input" value="{!preLeadWrapper.Address2}" id="nAddress2" />
+                            </div>
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="city">City:</label>
+                                <apex:inputText styleClass="slds-input" value="{!preLeadWrapper.City}" id="nCity" />
+                            </div>
+                        </div><br/>
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="state">State:</label>
+                                <apex:inputText styleClass="slds-input" value="{!preLeadWrapper.State}" id="nState" />
+                            </div>
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="zip">Zip:</label>
+                                <apex:inputText styleClass="slds-input" value="{!preLeadWrapper.Zip}" id="nZip" />
+                            </div>
+                        </div><br/>
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="expirationdate">Expiration Date:</label>
+                                <apex:input type="date" styleClass="slds-input" value="{!preLeadWrapper.ExpirationDate}" id="ExpirationDate" />
+                            </div>
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="maildate">Mail Date:</label>
+                                <apex:input type="date" styleClass="slds-input" value="{!preLeadWrapper.MailDate}" id="MailDate" />
+                            </div>
+                        </div><br/>
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="expirationdate">Insert Date:</label>
+                                    <apex:input type="date" styleClass="slds-input" value="{!preLeadWrapper.InsertDate}" id="InsertDate" />
+                            </div>
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="unsecureddebtamount">UnSecured Debt Amount:</label>
+                                    <apex:input type="number" styleClass="slds-input" value="{!preLeadWrapper.UnsecuredDebtAmount}" id="UnsecuredDebtAmount" />
+                            </div>
+                        </div><br/>
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="besttimetocall">Best time to Call:</label>
+                                    <apex:inputText styleClass="slds-input" value="{!preLeadWrapper.BestTimeToCall}" id="BestTimeToCall" />
+                            </div>
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="HasIncomeSource">Has Income Source:</label>
+                                    <apex:inputtext styleClass="slds-input" value="{!preLeadWrapper.HasIncomeSource}" id="HasIncomeSource" />
+                            </div>
+                        </div><br/>
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="pardotid">Pardot Id:</label>
+                                    <apex:inputText styleClass="slds-input" value="{!preLeadWrapper.PardotId}" id="PardotId" />
+                            </div>
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="StateQualification">State Qualification:</label>
+                                    <apex:inputText styleClass="slds-input" value="{!preLeadWrapper.StateQualification}" id="StateQualification" />
+                            </div>
+                        </div><br/>
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                                <label for="DebtAmountQualification">Debt Amount Qualification:</label>
+                                    <apex:inputText styleClass="slds-input" value="{!preLeadWrapper.DebtAmountQualification}" id="DebtAmountQualification" />
+                        </div>
+                        <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+                            <label for="Qualified">Qualified:</label>
+                            <br/>
+                            <apex:inputCheckbox styleClass="" value="{!preLeadWrapper.isQualified}"/>
+                            </div>
+                            
+                           
+                        </div>
+                        <br/>
+                       <div class="slds-grid slds-wrap">
+
+                       <div class="slds-truncate slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2" title="Preferred Language">   
+                           <label for="Qualified">Preferred Language</label>
+                            <br/>
+                           <apex:selectList value="{!preLeadWrapper.preferredLanguage}" id="pf" styleClass="slds-input" multiselect="false" size="1" >
+                           <apex:selectOptions value="{!preferredLanguages}"></apex:selectOptions>
+                          </apex:selectList>
+                          </div>
+                        </div>
+                        <br/>
+                    <!--</div> --> 
+                    </div>
+                  </div>
+                  <div class="slds-modal__footer">
+                    <input type="button" value="Cancel" class="slds-button slds-button_neutral" onclick="invokeCloseModalAF();showSpinner();"/>
+                    <input type="button" value="Save" class="slds-button slds-button_brand" onclick="doPostCall();showSpinner();save2();"/>
+                  </div>
+                </div>
+              </div>
+              <div class="slds-backdrop slds-backdrop_open"></div>
+        </apex:outputpanel>
+    </apex:outputPanel>
+    </apex:form>
+       
+    </div>
+</apex:page>

@@ -1,0 +1,129 @@
+<apex:component >
+    
+    <style>
+        
+        .text-message-success {
+        
+            color: green !important;
+            font-weight:900 !important;
+            padding:10px;
+        }
+        
+        .text-message-error {
+        
+            color: red !important;
+            font-weight:900 !important;
+            padding:10px;
+        }
+        
+        /* toast message css */
+        .messageClass-error {
+            
+            background-color : red !important;
+            color : white !important;
+        }
+        
+        .messageClass-success {
+            
+            background-color : green !important;
+            color : white !important;
+        }
+        
+        .messageClass {
+            
+            background-color : black !important;
+        }
+        
+        /* End of toast message css */
+    </style>
+    
+    <div id="messagePanel" class="slds-hide">
+    
+        <span id="textMessage"></span>
+    </div>
+    
+    <!-- Toast message block -->
+    <div id="toastmessage_container" class="slds-notify_container" style="display:none;">
+        <div id="message_toast-theme" class="slds-notify slds-notify_toast " role="alert">
+            <span class="slds-assistive-text">success</span>
+            <button class="slds-button slds-notify__close slds-button--icon-inverse" onclick="hideMessage_Toast();" type="button">
+                <span style="font-family: Arial,Helvetica,sans-serif;">X</span>
+            </button>
+            <div id="toastmessage-content" class="slds-notify__content" style="font-family: Arial,Helvetica,sans-serif;"></div>
+        </div>
+    </div>
+    
+    <script>
+        
+        function showMessage_CMP(message, isError) {
+            
+            var messagePanelElement = document.getElementById("messagePanel");
+            var textMessageElement = document.getElementById("textMessage");
+            
+            var messageClassName = 'text-message-success';
+            if(isError) {
+            
+                messageClassName = 'text-message-error';
+            } 
+            
+            messagePanelElement.setAttribute('class', 'slds-show');
+            textMessageElement.setAttribute('class', messageClassName);
+            textMessageElement.innerHTML = message;
+            
+            setTimeout(function() { 
+                
+                hideMessage_CMP();
+            }, 5000);
+        
+        }
+        
+        function hideMessage_CMP() {
+        
+            var messagePanelElement = document.getElementById("messagePanel");
+            messagePanelElement.setAttribute('class', 'slds-hide');
+        }
+        
+        /* Toast message script */
+        
+        function showMessage_Toast(message, type) {
+            
+            if(message) {
+                
+                var dafaultTheme = 'slds-theme_';
+                var dafaultTheme = 'messageClass';
+                if(type) {
+                    
+                    dafaultTheme += '-error';
+                    
+                } else {
+                
+                    dafaultTheme += '-success';
+                }
+                
+                var messageContainer = document.getElementById('toastmessage_container');
+                var messageTheme = document.getElementById('message_toast-theme');
+                var messageContent = document.getElementById('toastmessage-content');
+                
+                messageContent.innerHTML = message;
+                messageContent.className = dafaultTheme;
+                messageTheme.className = 'slds-notify slds-notify_toast ' + dafaultTheme;
+                messageContainer.style.display = 'block';
+                setTimoutClose();
+                
+            }
+        }
+        
+        function hideMessage_Toast() {
+                
+            document.getElementById('toastmessage_container').style.display = 'none';
+        }
+        
+        function setTimoutClose() {
+            var timeId = window.setTimeout(function (){
+                hideMessage_Toast();
+            }, 5000);
+        }
+        
+        /* End of Toast message script */
+    </script>
+</apex:component>

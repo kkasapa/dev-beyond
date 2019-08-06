@@ -1,0 +1,179 @@
+<apex:component controller="LanguageDetailsController" allowDML="true">
+    
+    <apex:attribute name="record" type="Id" assignTo="{!recordId}" description="Parent record Id"  />
+    
+    <apex:slds />
+    
+    <style>
+            
+            .language-panel {
+                
+                background: white !important;
+                //margin-left: 1rem !important;
+                margin-right: 1rem !important;
+                padding-bottom: 10px !important;
+            }
+  .toggle-check-input {
+      width: 1px;
+      height: 1px;
+      position: absolute;
+      pointer-events:none;
+    }
+    
+    .toggle-check-text {
+      display: inline-block;
+      position: relative;
+      text-transform: uppercase;
+      background: #CCC;
+      padding: 0.25em 0.5em 0.25em 2em;
+      border-radius: 1em;
+      min-width: 2em;
+      color: #FFF;
+      cursor: not-allowed; 
+      transition: background-color 0.15s;
+    }
+    
+    .toggle-check-text:after {
+      content: ' ';
+      display: block;
+      background: #FFF;
+      width: 1.1em;
+      height: 1.1em;
+      border-radius: 1em;
+      position: absolute;
+      left: 0.3em;
+      top: 0.25em;
+      transition: left 0.15s, margin-left 0.15s;
+    }
+    
+    .toggle-check-text:before {
+      content: 'No';
+    }
+    
+    .toggle-check-input:checked ~ .toggle-check-text {
+      background: #8ad869;
+      padding-left: 0.5em;
+      padding-right: 2em;
+    }
+    
+    .toggle-check-input:checked ~ .toggle-check-text:before {
+      content: 'Yes';
+    }
+    
+    .toggle-check-input:checked ~ .toggle-check-text:after {
+      left: 100%;
+      margin-left: -1.4em;
+    }
+    label{
+        font-weight:bold;
+    }
+    
+    .slds-box {
+        border:none  !important;
+    }
+             
+    </style>
+    
+    <apex:form id="formId">
+    
+    <!--<div class="slds-form slds-form_compound">
+        <fieldset class="slds-form-element">
+            <div class="slds-form-element__group">
+                <div class="slds-form-element__row">
+                    <div class="slds-form-element slds-size_1-of-1">
+                        <label class="slds-form-element__label" for="input-01">Select Language</label>
+                        <apex:inputField styleClass="slds-select infoPanel-select" value="{!programInstance.Language__c}">
+                            <apex:actionSupport action="{!updateProgram}" event="onchange" rerender="none" />
+                        </apex:inputField>
+                    </div>     
+                    
+                    <div class="slds-form-element slds-size_1-of-2" style="margin-left: 20px;">
+                            <label class="slds-form-element__label" for="input-02">Discover Included</label><br/>
+                            <label class="toggle-check">
+                          <apex:inputField styleclass="toggle-check-input" value="{!programInstance.Discover_Included__c}" html-disabled="true"/>
+                          <span class="toggle-check-text"></span>
+                        </label>
+                    </div> 
+                                 
+                </div>
+            </div>
+        </fieldset>
+    </div> -->
+    
+    
+    <div class="slds-grid slds-wrap slds-grid--pull-padded slds-m-bottom--x-small">
+        
+        <div class="slds-p-horizontal--small slds-size--1-of-5 " >
+            <div class="slds-form-element">
+                <label class="slds-form-element__label" for="inputSample2">Select Language:</label>
+                <div class="slds-form-element__control">
+                    <apex:inputField styleClass="slds-select infoPanel-select" value="{!programInstance.Language__c}">
+                        <apex:actionSupport action="{!updateProgram}" event="onchange" rerender="none" />
+                    </apex:inputField>
+                </div>
+            </div>
+        </div>
+        <div class="slds-p-horizontal--small slds-size--1-of-5 " >
+            <div class="slds-form-element">
+                <label class="slds-form-element__label" for="inputSample2">Enrolled Date:</label>
+                <div class="slds-form-element__control">
+                    <div class="slds-box slds-box--x-small slds-theme--shade">
+                        <apex:outputField value="{!programInstance.Enrolled_Date__c}"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-p-horizontal--small slds-size--1-of-5 ">
+            <div class="slds-form-element">
+                <label class="slds-form-element__label" for="inputSample2">Original Program Length:</label>
+                <div class="slds-form-element__control">
+                    <div class="slds-box slds-box--x-small slds-theme--shade">
+                        <apex:outputField value="{!programInstance.Original_Program_Length__c}"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="slds-p-horizontal--small slds-size--1-of-5 ">
+            <div class="slds-form-element">
+            
+                <label class="slds-form-element__label" for="input-02">Wet LOA Completed:</label><br/>
+                <label class="toggle-check">
+                    <apex:inputField styleclass="toggle-check-input" value="{!programInstance.Wet_LOA_Completed__c}" html-disabled="true"/>
+                    <span class="toggle-check-text"></span>
+                </label>
+            </div>
+        </div>      
+        
+        <div class="slds-p-horizontal--small slds-size--1-of-5 ">
+            <div class="slds-form-element">
+            
+                <label class="slds-form-element__label" for="input-02">Discover Included:</label><br/>
+                <label class="toggle-check">
+                    <apex:inputField styleclass="toggle-check-input" value="{!programInstance.Discover_Included__c}" html-disabled="true"/>
+                    <span class="toggle-check-text"></span>
+                </label>
+            </div>
+        </div>          
+    </div>
+    
+    
+<!--
+            <div class="slds-panel language-panel">
+                <strong>Select Language</strong>
+                <div class="slds-form-element__control">
+                    <apex:inputField styleClass="slds-select infoPanel-select" value="{!programInstance.Language__c}">
+                        <apex:actionSupport action="{!updateProgram}" event="onchange"  rerender="none"/>
+                    </apex:inputField>
+                </div>
+                <strong>Discover Included</strong>
+                <div class="slds-form-element__control">
+                    <apex:outputField styleClass="slds-select infoPanel-select" value="{!programInstance.Discover_Included__c}"/>
+                </div>
+            </div>
+        </p>
+        
+-->        
+        
+    </apex:form>
+    
+</apex:component>

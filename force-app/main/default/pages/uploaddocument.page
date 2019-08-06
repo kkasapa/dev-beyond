@@ -1,0 +1,46 @@
+<apex:page standardController="AWS_Document__c" extensions="AWSDocumentExtension">
+    <style type="text/css">
+        .form-field { width: 200px; }
+    </style>
+    <apex:pageMessages />
+    <apex:form enctype="multipart/form-data">
+        <apex:pageBlock title="Upload New Document" mode="edit">
+            <apex:pageBlockButtons >
+                <apex:commandButton action="{!saveFile}" value="Upload" >
+                    
+                    </apex:commandButton>
+                <apex:commandButton action="{!cancel}" value="Cancel" ></apex:commandButton>
+                </apex:pageBlockButtons>
+                <apex:pageBlockSection title="Select the file for upload" columns="1">
+                    <apex:pageBlockSectionItem >
+                        <apex:outputLabel value="File to upload" />
+                        <apex:inputFile id="postFileId" fileName="{!fileName}"  styleclass="form-field" fileSize="{!fileSize}" contentType="{!contentType}" value="{!fileBlob}" onchange="setDefaultName(this);" title="File to upload to S3" />
+                    </apex:pageBlockSectionItem>
+                    <br />
+                    <apex:pageBlockSectionItem >
+                        <apex:outputLabel value="Destination File Name" for="objName" />
+                        <apex:inputField value="{!AWS_Document__c.Name}"
+                                         id="objName" required="true"  styleclass="form-field fileName" />
+                    </apex:pageBlockSectionItem>
+                    <br />
+                    <apex:pageBlockSectionItem >
+                        <apex:outputLabel value="Category" for="objCategory" />
+                        <apex:inputField value="{!AWS_Document__c.Category__c}"
+                                         id="objCategory" required="true" styleclass="form-field" />
+                    </apex:pageBlockSectionItem>
+                    
+                </apex:pageBlockSection>
+                
+            </apex:pageBlock>
+        </apex:form>
+        <script type="text/javascript">
+        
+        function setDefaultName(file)
+        {
+            fileName  = file.value;
+            fileName = fileName.replace(/.*[\/\\]/, '');
+            fileName = fileName.replace(/\..+$/, '');
+            document.getElementsByClassName("fileName")[0].value = fileName;       
+        }
+        </script>
+    </apex:page>
