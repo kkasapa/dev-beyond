@@ -1,0 +1,18 @@
+<aura:component controller="OfferPaymentMethodUpdateController">
+    <aura:attribute name="currentOfferId" type="String"/>
+    <aura:attribute name="ancillaryFees" type="Array"/>
+    <aura:attribute name="settlementPayments" type="Array"/>
+    <aura:handler name="init" action="{!c.doInit}" value="{!this}"/>
+    <c:ApexActionService aura:id="apexService"/>
+    <!--<p>This Comp updates Transaction Method of this {!v.currentOfferId}</p>-->
+    <aura:if isTrue="{!not(empty(v.ancillaryFees))}">
+        <lightning:select name="paymentMethod" label="Payment Method" onchange="{!c.updatePayments}">
+            <option value="">choose one...</option>
+            <aura:iteration items="{!v.ancillaryFees}" var="ancillaryFee" >
+                <option value="{!ancillaryFee.nu_dse__Transaction_Method_API_Name__c}">
+                    {!ancillaryFee.nu_dse__Transaction_Method_API_Name__c}
+                </option>
+            </aura:iteration>
+        </lightning:select>
+    </aura:if>
+</aura:component>

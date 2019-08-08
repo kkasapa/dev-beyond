@@ -1,0 +1,18 @@
+<apex:page sidebar="false" standardController="nu_dse__Program__c" showHeader="false">
+    <apex:includeLightning />
+    <script>
+        $Lightning.use("c:CSDDashApp", function() {
+        $Lightning.createComponent(
+            "c:CSDDash",
+            {}
+            ,
+            "myDivId",
+            function(cmp) {
+                console.log('component created');
+                console.log(cmp);
+            });
+        });
+    
+    </script>
+    <div id="myDivId"></div>
+</apex:page>

@@ -1,0 +1,118 @@
+<aura:component controller="CSDDashCls">
+    <aura:attribute name="infoMessage" type="string" />
+    <aura:attribute name="Gridwrap" type="CSDDashCls.CSDDashwrap" />
+    
+    
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" /> 
+    
+    <div class="slds-page-header" role="banner">
+        <div class="slds-grid">
+            <div class="slds-col slds-has-flexi-truncate">
+                <p class="slds-line-height_reset">Miguel</p>
+                <h1 class="slds-page-header__title slds-truncate" title="My Accounts">{!v.infoMessage}</h1>
+            </div>
+        </div>
+        <div class="slds-grid">
+            
+        </div>
+    </div>	
+    <lightning:card class="slds-box slds-theme_shade">
+        <lightning:layout horizontalAlign="spread" pullToBoundary="small" multipleRows="true">
+            <lightning:layoutItem size="6" flexibility="grow" padding="around-small">
+                <div class="slds-box slds-theme_default">
+                    <h3 class="slds-section-title--divider">Payment Savings</h3>
+                    <div class="slds-form--stacked slds-p-around--medium slds-m-bottom--x-small">                        
+                        <div class="slds-p-horizontal--small slds-size--1-of-1">
+                            <div class="slds-form-element__control" style="min-height: 18px;">
+                                <label class="slds-form-element__label"> Payment Savings </label>
+                                <ui:outputCurrency  class="slds-output floatRight" value="{!v.Gridwrap.paymentSavings}" />
+                            </div>
+                            <div class="slds-form-element__control" style="min-height: 18px;">
+                                <label class="slds-form-element__label"> Program Length </label>
+                                <ui:outputText class="slds-output floatRight" value="{!v.Gridwrap.pgmLen}" />
+                            </div>
+                            <div class="slds-form-element__control" style="min-height: 18px;">
+                                <label class="slds-form-element__label"> Total Payment Savings </label>
+                                <ui:outputCurrency class="slds-output floatRight" value="{!v.Gridwrap.paymentSavings}" />
+                            </div>
+                        </div>  
+                    </div>
+                </div>
+            </lightning:layoutItem>
+            <lightning:layoutItem size="6" flexibility="grow" padding="around-small">         
+                <div class="slds-box slds-theme_default">
+                    <h3 class="slds-section-title--divider">Payment Information</h3>
+                    <div class="slds-form--stacked slds-p-around--medium slds-m-bottom--x-small">
+                        <div class="slds-p-horizontal--small slds-size--1-of-1">
+                            <div class="slds-form-element__control" style="min-height: 18px;">
+                                <label class="slds-form-element__label"> Last Payment Amount </label>
+                                <ui:outputCurrency class="slds-output floatRight" value="{!v.Gridwrap.lastPayAmt}" />
+                            </div>
+                            <div class="slds-form-element__control" style="min-height: 18px;">
+                                <label class="slds-form-element__label"> Last Payment Date </label>
+                                <ui:outputText class="slds-output floatRight" value="{!v.Gridwrap.lastPayDue}" />
+                            </div>
+                            <div class="slds-form-element__control" style="min-height: 18px;">
+                                <label class="slds-form-element__label"> Next Payment Amount </label>
+                                <ui:outputCurrency class="slds-output floatRight" value="{!v.Gridwrap.nextpayAmt}"/>
+                            </div>
+                            <div class="slds-form-element__control" style="min-height: 18px;">
+                                <label class="slds-form-element__label"> Next Payment Date  </label>
+                                <ui:outputText class="slds-output floatRight" value="{!v.Gridwrap.nextpayDt}" />
+                            </div>                            
+                        </div>
+                    </div>
+                </div>
+            </lightning:layoutItem>
+            <lightning:layoutItem size="6" flexibility="grow" padding="around-small">
+                <div class="slds-box slds-theme_default">
+                    <h3 class="slds-section-title--divider">Program Savings</h3>
+                    <div class="slds-form--stacked slds-p-around--medium slds-m-bottom--x-small">
+                        <div class="slds-p-horizontal--small slds-size--1-of-1">
+                            <div class="slds-form-element__control" style="min-height: 18px;">
+                                <label class="slds-form-element__label"> Debt Savings </label>
+                                <ui:outputCurrency class="slds-output floatRight" value="{!v.Gridwrap.debtSavings}" />
+                            </div>
+                            <div class="slds-form-element__control" style="min-height: 18px;">
+                                <label class="slds-form-element__label"> Interest Savings </label>
+                                <ui:outputCurrency class="slds-output floatRight" value="{!v.Gridwrap.interestSavings}" />
+                            </div>
+                            <div class="slds-form-element__control" style="min-height: 18px;">
+                                <label class="slds-form-element__label"> Total Program Savings </label>
+                                <ui:outputCurrency class="slds-output floatRight" value="{!v.Gridwrap.tpgmSavings}" />
+                            </div>
+                        </div>  
+                    </div>
+                </div>
+            </lightning:layoutItem>
+            <lightning:layoutItem size="6" flexibility="grow" padding="around-small">
+                <div class="slds-box slds-theme_default">
+                    <h3 class="slds-section-title--divider">CFT Account Balance <ui:outputCurrency class="slds-output floatRight" value="{!v.Gridwrap.CFTactBal}" /></h3>
+                    
+                    
+                </div>
+            </lightning:layoutItem>
+            <lightning:layoutItem size="6" flexibility="grow" padding="around-small">
+                <div class="slds-box slds-theme_default">
+                    <h3 class="slds-section-title--divider">Time Savings</h3>
+                    <div class="slds-form--stacked slds-p-around--medium slds-m-bottom--x-small">
+                        <div class="slds-p-horizontal--small slds-size--1-of-1">
+                            <div class="slds-form-element__control" style="min-height: 18px;">
+                                <label class="slds-form-element__label"> Program length </label>
+                                <ui:outputText class="slds-output floatRight" value="{!v.Gridwrap.timePgmLen}"/>
+                            </div>
+                            <div class="slds-form-element__control" style="min-height: 18px;">
+                                <label class="slds-form-element__label"> Program length with Minimums</label>
+                                <ui:outputText class="slds-output floatRight" value="{!v.Gridwrap.pgmLenWithMinimums}" />
+                            </div>
+                            <div class="slds-form-element__control" style="min-height: 18px;">
+                                <label class="slds-form-element__label"> Time savings of program </label>
+                                <ui:outputText class="slds-output floatRight" value="{!v.Gridwrap.timeSavingspgm}" />
+                            </div>
+                        </div> 
+                    </div>
+                </div>
+            </lightning:layoutItem>
+        </lightning:layout>  
+    </lightning:card>      
+</aura:component>
