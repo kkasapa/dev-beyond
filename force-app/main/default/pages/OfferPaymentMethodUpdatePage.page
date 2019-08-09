@@ -1,7 +1,5 @@
 <apex:page standardController="nu_dse__Offer__c">
-    <p>
-        This page contains a Lightning Comp
-    </p>
+  <apex:slds />
     <apex:includeLightning />
 
     <div id="lightning" />
