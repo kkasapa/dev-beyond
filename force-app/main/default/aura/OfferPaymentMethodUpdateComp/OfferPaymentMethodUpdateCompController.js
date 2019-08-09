@@ -1,5 +1,6 @@
 ({
 	doInit : function(component, event, helper) {
+		component.set('v.showSpinner', true);
 		helper.setPaymentColumns(component);
 		const apexService = component.find("apexService");
 		apexService.callServer(
@@ -15,16 +16,19 @@
 				}
 				console.log('response->',serverResponse);
 				console.log('stringResponse',JSON.stringify(response));
+				component.set('v.showSpinner', false);
                 //component.set('v.memPreference', response);
             }),
             $A.getCallback(function(response) { // Error callback
 				console.log('response->',JSON.parse(response));
-                //component.set('v.memPreference', response);
+				//component.set('v.memPreference', response);
+				component.set('v.showSpinner', false);
             })
         );
 	},
 
 	updatePayments : function(component, event, helper) {
+		component.set('v.showSpinner', true);
 		var selectedPaymentMethod;
 		let paymentMethodSelect = component.find('paymentMethodSelect');
 		if(Array.isArray(paymentMethodSelect)){
@@ -35,16 +39,17 @@
 		console.log('Selected Value',selectedPaymentMethod);
 
 		let paymentsList = component.get('v.settlementPayments');
-		paymentsList.forEach(element => {
-			if (element.nu_dse__Transaction_Status__c 
-				&& element.nu_dse__Transaction_Status__c != 'Completed'
-				&& element.nu_dse__Transaction_Status__c != 'Cleared'
-				&& element.nu_dse__Transaction_Status__c != 'Cancelled') {
-					element.nu_dse__Transaction_Method__c = selectedPaymentMethod;
-			}
+		paymentsList.forEach(payment => {
+			if (payment.nu_dse__Transaction_Status__c 
+				&& payment.nu_dse__Transaction_Status__c != 'Completed'
+				&& payment.nu_dse__Transaction_Status__c != 'Cleared'
+				&& payment.nu_dse__Transaction_Status__c != 'Cancelled') {
+					payment.nu_dse__Transaction_Method__c = selectedPaymentMethod;
+			}	
 		});
 		console.log('updatedPayments',paymentsList);
 		const apexService = component.find("apexService");
+		const toastComp = component.find("showToast");
 		apexService.callServer(
             component.get("c.updatePaymentTransactionMethod"), // Action
             {"paymentListStr": JSON.stringify(paymentsList)}, // Action parameters
@@ -53,11 +58,15 @@
 				console.log('response->',serverResponse);
 				console.log('stringResponse',JSON.stringify(response));
 				component.set('v.settlementPayments', paymentsList);
-                //component.set('v.memPreference', response);
+				//component.set('v.memPreference', response);
+				component.set('v.showSpinner', false);
+				toastComp.showToastModel('Payment updated successfully!', 'success');
+				
             }),
             $A.getCallback(function(response) { // Error callback
 				console.log('response->',JSON.parse(response));
-                //component.set('v.memPreference', response);
+				//component.set('v.memPreference', response);
+				component.set('v.showSpinner', false);
             })
         );
 	}

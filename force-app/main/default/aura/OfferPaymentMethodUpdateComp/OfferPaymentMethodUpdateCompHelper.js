@@ -8,5 +8,6 @@
             {label: 'Transaction Status', fieldName: 'nu_dse__Transaction_Status__c', type: 'text'},
             {label: 'Transaction Method', fieldName: 'nu_dse__Transaction_Method__c', type: 'text'}
         ]);
-}
+    }
+
 })

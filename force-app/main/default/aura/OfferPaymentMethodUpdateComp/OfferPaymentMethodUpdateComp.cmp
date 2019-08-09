@@ -3,8 +3,16 @@
     <aura:attribute name="ancillaryFees" type="List"/>
     <aura:attribute name="paymentColumns" type="List"/>
     <aura:attribute name="settlementPayments" type="List"/>
+    <aura:attribute name="showSpinner" type="Boolean" default="false"/>
     <aura:handler name="init" action="{!c.doInit}" value="{!this}"/>
     <c:ApexActionService aura:id="apexService"/>
+    <c:CustomToast aura:id="showToast"/>
+    <aura:if isTrue="{!v.showSpinner}">
+        <div >
+            <lightning:spinner alternativeText="Loading" variant="brand" size="medium" />
+        </div>
+    </aura:if>
+    
     <!--<p>This Comp updates Transaction Method of this {!v.currentOfferId}</p>-->
     <lightning:card title="Payment Transaction Method Update" iconName="utility:money">
         <aura:set attribute="actions">
