@@ -11,8 +11,8 @@
         <aura:attribute name="messageType" type="String" access="public"/>
     </aura:method>
     
-    <div aura:id="toastModel" style="height: 4rem;" class="slds-hide">
-        <div class="slds-notify_container slds-is-relative">
+    <div aura:id="toastModel"  class="slds-hide">
+        <div class="slds-slide-up-open slds-notify_container slds-is-relative">
             <div class="{!'slds-notify slds-notify_toast slds-theme_'+v.messageType}" role="status">
                 <span class="slds-assistive-text">{!v.messageType}</span>
               	<span class="{!'slds-icon_container slds-icon-utility-'+v.messageType+' slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top'}" title="{!v.message}">

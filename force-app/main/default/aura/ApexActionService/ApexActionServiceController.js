@@ -21,7 +21,7 @@
             else if (state === 'ERROR') {
                 const errors = response.getError();
                 console.log('Error->',errors);
-                //helper.handleErrors(params, errors);
+                helper.handleErrors(component, params, errors);
                 // Call custom error callback if applicable
                 if (params.errorCallback) {
                     params.errorCallback(errors);

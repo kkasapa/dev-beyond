@@ -20,7 +20,7 @@
                 <div class="">
                     <lightning:select aura:id="paymentMethodSelect" name="paymentMethod" 
                         label="Payment Transaction Method" class="slds-size--4-of-12 slds-form_inline slds-show_inline-block slds-m-horizontal--medium" 
-                        variant="label-inline">
+                        variant="label-inline" >
                         <option value="">--None--</option>
                         <aura:iteration items="{!v.ancillaryFees}" var="ancillaryFee" >
                             <option value="{!ancillaryFee.nu_dse__Transaction_Method_API_Name__c}">
@@ -35,7 +35,7 @@
         </aura:set>
         
         <!---->
-        <div style="height: 300px" class="slds-m-top--x-large">
+        <div class="slds-m-top--x-large">
             <aura:if isTrue="{!not(empty(v.settlementPayments))}">
                 <lightning:datatable
                 keyField="Id"

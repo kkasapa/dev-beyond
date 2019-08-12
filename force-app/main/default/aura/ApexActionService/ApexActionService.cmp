@@ -5,4 +5,5 @@
         <aura:attribute name="successCallback" type="Function" description="Optional callback for handling successful server response"/>
         <aura:attribute name="errorCallback" type="Function" description="Optional callback for handling server errors"/>
     </aura:method>
+    <c:CustomToast aura:id="customToast"/>
 </aura:component>
