@@ -1,0 +1,18 @@
+<apex:page standardController="nu_dse__Program__c" extensions="NotesAttachmentRelatedListExtension">
+    
+	<apex:pageBlock >
+        
+            <apex:pageBlockTable value="{!NotesList}" var="n" >
+                <apex:column headerValue="Type" >
+                    <apex:outputText rendered="{!n.isnote}" >Note</apex:outputText>
+                    <apex:outputText rendered="{!NOT(n.isnote)}" >Attachment</apex:outputText>
+                </apex:column>
+                <apex:column headerValue="Title" value="{!n.title}" />
+                <apex:column headerValue="Last Modified" value="{!n.LastModifiedDate}" />
+                <apex:column headerValue="Created By" value="{!n.createdby.name}" />
+            </apex:pageBlockTable>
+        
+        
+    </apex:pageBlock>    
+    
+</apex:page>

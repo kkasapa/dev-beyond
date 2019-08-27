@@ -8,7 +8,7 @@
         action.setParams({'strPgmId': pgmId}); 
         action.setCallback(this, function(response) {
             if (response.getState() == "SUCCESS") {
-            	component.set("v.Gridwrap", response.getReturnValue());         
+            	component.set("v.fldDetails", response.getReturnValue());         
             }else if (response.getState() === "ERROR") {            	   
             }else{}       
         });

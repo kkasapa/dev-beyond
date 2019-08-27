@@ -45,6 +45,7 @@ public class ComvestDataSyncTriggerHandler extends TriggerHandler {
         }   
     }
     
+    @future
     public static void UpdatePrgmsAndPayments(set<Id> SetOfComVestIds,boolean isInsert){
         
         set<Id> setOfErrorCmvest = new set<Id>();

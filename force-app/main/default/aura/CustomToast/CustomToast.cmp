@@ -10,7 +10,9 @@
         <aura:attribute name="message" type="String" access="public"/>
         <aura:attribute name="messageType" type="String" access="public"/>
     </aura:method>
-    
+
+    <aura:method name="closeToast" action="{!c.closeModel}" access="public"/>
+
     <div aura:id="toastModel"  class="slds-hide">
         <div class="slds-slide-up-open slds-notify_container slds-is-relative">
             <div class="{!'slds-notify slds-notify_toast slds-theme_'+v.messageType}" role="status">

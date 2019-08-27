@@ -33,6 +33,7 @@
 	},
     
 	closeModel : function(component, event, helper) {
+        console.log('closing the toast of->',component.find( 'toastModel' ));
 		$A.util.addClass( component.find( 'toastModel' ), 'slds-hide' );
         component.set("v.messageType", "");
         component.set("v.messageType", "");

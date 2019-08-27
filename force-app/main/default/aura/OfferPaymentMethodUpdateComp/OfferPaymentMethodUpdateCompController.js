@@ -4,7 +4,7 @@
 		helper.setPaymentColumns(component);
 		const apexService = component.find("apexService");
 		apexService.callServer(
-            component.get("c.getAncillaryFees"), // Action
+            component.get("c.getPageData"), // Action
             {"offerId": component.get('v.currentOfferId')}, // Action parameters
 			$A.getCallback(function(response) { // Success callback
 				let serverResponse = JSON.parse(response);
@@ -29,6 +29,10 @@
 
 	updatePayments : function(component, event, helper) {
 		const toastComp = component.find("showToast");
+		if(Array.isArray(toastComp)){
+			toastComp = toastComp[0];
+		} 
+		//toastComp.closeToast();
 		var selectedPaymentMethod;
 		let paymentMethodSelect = component.find('paymentMethodSelect');
 		if(Array.isArray(paymentMethodSelect)){

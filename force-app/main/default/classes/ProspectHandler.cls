@@ -42,6 +42,26 @@ public class ProspectHandler extends TriggerHandler {
     
     public override void beforeUpdate() {
         
+        for (nu_dse__Prospect__c recallProspect : (List<nu_dse__Prospect__c>)Trigger.New)
+        {
+            Boolean RecalledApproval = recallProspect.Recalled_Approval__c;
+            recallProspect.Recalled_Approval__c = false;
+            if (RecalledApproval){
+                List<ProcessInstance> instances = [SELECT Id FROM ProcessInstance WHERE TargetObjectId=:recallProspect.Id AND Status='Pending' LIMIT 1];
+                if (!instances.isEmpty()){
+                    ProcessInstance instance = instances[0];
+                    List<ProcessInstanceWorkitem> workItems = [SELECT Id FROM ProcessInstanceWorkitem where ProcessInstanceId=:instance.Id LIMIT 1];
+                    if (!workItems.isEmpty()){
+                        ProcessInstanceWorkitem workItem = workItems[0];
+                        Approval.ProcessWorkItemRequest req = new Approval.ProcessWorkItemRequest();
+                        req.setWorkItemId(workItem.Id);
+                        req.setAction('Removed');
+                        req.setComments('Recalled Approval from ACE');
+                        Approval.ProcessResult result = Approval.process(req);
+                    }
+                }
+            }
+        }
         for (nu_dse__Prospect__c newProspect : (List<nu_dse__Prospect__c>)Trigger.New) {  
             // Update Uuid in Prospect records 
             updateUuIdProspects(newProspect);

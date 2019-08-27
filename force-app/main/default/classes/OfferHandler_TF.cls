@@ -5,22 +5,81 @@
 *
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 * @author         Ashwin Bretto   <abretto@selastech.com>
-* @modifiedBy     Ashwin Bretto   <abretto@selastech.com>
+* @modifiedBy     Vlad Polotvtsev   <vpolovtsev@beyondfinance.com>
 * @maintainedBy   Ashwin Bretto   <abretto@selastech.com>
 * @version        1.0
 * @created        2019-05-16
-* @modified       2019-05-16
+* @modified       2019-08-12
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
 public class OfferHandler_TF extends TriggerHandler {
     
     private Map<Id, nu_dse__Offer__c> newOfferMap;
     private Map<Id, nu_dse__Offer__c> oldOfferMap;
+    private Set<ID> offerIds;
 
     public OfferHandler_TF() {
         this.newOfferMap = (Map<Id, nu_dse__Offer__c>) Trigger.newMap;
         this.oldOfferMap = (Map<Id, nu_dse__Offer__c>) Trigger.oldMap;
+        this.offerIds = trigger.newMap.keySet();
     }
+
+    public override void afterInsert()
+    {
+        //Run the savings calculator after offer create
+        savingsCalc(offerIds);
+    }
+	
+    @future(callout=true)
+    public static void savingsCalc(Set<ID> recordIds)
+    {   
+        List<nu_dse__Offer__c> offers = [SELECT Name,Enrolled_Balance__c FROM nu_dse__Offer__c WHERE Id IN :recordIds];
+        Double debt;
+        Double payment;
+        Double rate;
+        SavingsCalcService api = new SavingsCalcService();
+        HttpRequest send = new HttpRequest();
+        //extract relevant info, run savings calc, and store value for each offer that triggered.
+        for (nu_dse__Offer__c newOffer: offers)
+        {
+          	debt = newOffer.Enrolled_Balance__c;
+            payment = 0.02*debt;
+            send = api.BuildQuery(debt, payment);
+            HttpResponse response = api.sendRequest(send);
+            String resp = response.getStatus();
+            String body = response.getBody();
+            System.debug(body);
+            Double saved; 
+            if (resp != 'OK')
+            {
+                newOffer.Savings_Calculation__c = 0;
+                //try{
+                update newOffer;
+                //} catch (DmlException e){
+                //process exception
+                //}
+            }
+            else
+            {
+                JSONParser parser = JSON.createParser(body);
+                while (parser.nextToken() != null)
+                {
+                    if(parser.getText() == 'total-savings')
+                    {
+                            parser.nextToken();
+                            saved = parser.getDoubleValue();
+                            newOffer.Savings_Calculation__c = saved;
+                        	//try{
+                                update newOffer;
+                            //} catch (DmlException e){
+                                //process exception
+                            //}
+                    }
+                }
+            }
+        } 
+    }
+
             
     public override void beforeInsert(){
     
@@ -81,7 +140,17 @@ public class OfferHandler_TF extends TriggerHandler {
         Set<Id> badDeptOfferIdSet= new Set<Id>();
         Set<Id> accepOffTradeLineIdSet = new Set<Id>();
         Set<Id> offerProgramIdSet = new Set<Id>();
-                
+        
+        //run savings calculator ONLY if enrolled balance is changed.
+        for( Id offerId : offerIds)
+        {
+            if(oldOfferMap.get(offerId).Enrolled_Balance__c != newOfferMap.get(offerId).Enrolled_Balance__c)
+            {
+                Set<ID> toUpdate = new Set<ID>();
+                toUpdate.add(offerId);
+                savingsCalc(toUpdate);    
+            }
+        }
         for (nu_dse__Offer__c newOffer: (List<nu_dse__Offer__c>)Trigger.New) {
         
             system.debug('newOffer.nu_dse__Status__c::'+newOffer.nu_dse__Status__c);

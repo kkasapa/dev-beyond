@@ -1,10 +1,8 @@
 public with sharing class OfferPaymentMethodUpdateController {
-    public OfferPaymentMethodUpdateController() {
-
-    }
-
+    
+    //returns a Wrapper class list that has ancillary fees and settlement payments
     @AuraEnabled
-    public static string getAncillaryFees(Id offerId){
+    public static string getPageData(Id offerId){
         
         if(String.isNotBlank(offerId)) {
             AncillaryFeeAndSettlementPaymentsWrap responseWrap = new AncillaryFeeAndSettlementPaymentsWrap();
@@ -21,6 +19,7 @@ public with sharing class OfferPaymentMethodUpdateController {
         }
     }
 
+    //Updates transaction status of settlements payments underneath the offer
     @AuraEnabled
     public static void updatePaymentTransactionMethod(String paymentListStr){
         try {
@@ -31,10 +30,15 @@ public with sharing class OfferPaymentMethodUpdateController {
         }
     }
 
-    public static List<nu_dse__Payment__c> getsettlementPaymentsList(String offerId) {
-        return offerId != null ? [SELECT Id, Name, nu_dse__Amount__c, nu_dse__Total_Amount__c, nu_dse__Transaction_Status__c, nu_dse__Transaction_Method__c 
+    //returns list of settlement payments under a particular offer
+    public static List<nu_dse__Payment__c> getsettlementPaymentsList(String offerId) { 
+        return offerId != null ? [SELECT Id, Name, nu_dse__Amount__c, nu_dse__Schedule_Date__c, nu_dse__CFT_Synced__c,
+                                    nu_dse__External_CFT_Id__c, nu_dse__Payment_Type__c,
+                                    nu_dse__Total_Amount__c, nu_dse__Transaction_Status__c, nu_dse__Transaction_Method__c 
                                     FROM nu_dse__Payment__c WHERE nu_dse__Offer__c =:offerId] : null;
     }
+
+    //wrapper class for holding page data onload
     public class AncillaryFeeAndSettlementPaymentsWrap{
 
         List<nu_dse__Ancillary_Fee__c> ancillaryFeesList;

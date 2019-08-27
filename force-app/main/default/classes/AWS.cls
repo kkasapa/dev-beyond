@@ -212,6 +212,7 @@ public abstract class AWS {
         HttpResponse response = new HttpResponse();  
         string strResBody;
         integer statusCode;
+        System.debug('reqObj-->'+reqObj);
         if(!Test.isRunningTest()){
             response = new Http().send(reqObj );
             strResBody = response.getBody();
@@ -220,7 +221,7 @@ public abstract class AWS {
             strResBody  = 'Testing';
             statusCode  = 200;
         }
-                
+        System.debug('strResBody-->'+strResBody);
         if(!validCodes.contains(statusCode )) {
             if(strResBody   != null) {
                throw new ServiceException(response.getBodyDocument().getRootElement());

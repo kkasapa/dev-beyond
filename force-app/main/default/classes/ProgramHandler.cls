@@ -29,6 +29,7 @@ public class ProgramHandler extends TriggerHandler {
     Map<String, Id> queueMap; // map of Queue Name and Its Id
     Map<String, Id> comuTempNameIdMap; // map of communication Template Name and Its Id
     Set<Id> velocifyProspectIds = new Set<Id>(); // Set of Prosepct Ids send for Velocify
+    List<BLP_Bus__e> BLPBUSEvents = new List<BLP_Bus__e>();
 
     public override void afterInsert() {
 
@@ -37,12 +38,18 @@ public class ProgramHandler extends TriggerHandler {
             createCCGroupTask(newProgram, null);    
             // Collect Prospect List for velocify
             collectProspectList(newProgram); 
+            // publishing Platform Event BLP Bus for triggering sync with BLP
+            createBLP_BusList(newProgram, null);
         }
         upsert groupTaskList nu_dse__Unique_Identifier__c; // Upsert Group Task based on unique Identifier
 
         if(velocifyProspectIds.isEmpty() == false) {
             //Pushes fields from prospect to velocify based on datamapping record named "Velocifyleads"
             VelocifyLeadHandler.modifyLeads_Async(velocifyProspectIds);
+        }
+
+        if (BLPBUSEvents.isEmpty() == false) {
+            EventBus.publish(BLPBUSEvents); // implementing the 
         }
     }
 
@@ -68,15 +75,37 @@ public class ProgramHandler extends TriggerHandler {
             createGraduatedActivity(newProgram, oldProgramMap.get(newProgram.Id));
             // Create Group Task for Programs Status as Termination Pending
             createTermPendingGroupTask(newProgram, oldProgramMap.get(newProgram.Id)); 
+            // publishing Platform Event BLP Bus for triggering sync with BLP
+            createBLP_BusList(newProgram, oldProgramMap.get(newProgram.Id));
+
         }
         if(terminatedProgramIds.isEmpty() == false) {
             // Update Scheduled Payments as cancelled for Terminated Programs
             updatePaymentStatus();
         }
+
+        if (BLPBUSEvents.isEmpty() == false) {
+            EventBus.publish(BLPBUSEvents);
+        }
+
         upsert groupTaskList nu_dse__Unique_Identifier__c; // Upsert Group Task based on unique Identifier
         upsert upsertTaskMap.values() Unique_Identifier__c; // Upsert Task based on unique Identifier
         update updatedProspectList; // Prospects to be updated 
         update updatePaymentsList; // Payments to be updated
+    }
+
+    //filters Programs that are to be synced with BLP
+    public void createBLP_BusList(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram) {
+
+        if (String.isNotBlank(newProgram.nu_dse__Fee_Template__c) == true 
+                && newProgram.Legal_Plan_Included__c == true) {
+            //create BLP Bus events and append to scope variable.
+            if (Trigger.isInsert) {
+                BLPBUSEvents.add(new BLP_Bus__e(action__c='create', program_id__c=newProgram.Id));
+            } else if (newProgram.nu_dse__Program_Status__c != oldProgram.nu_dse__Program_Status__c) {
+                BLPBUSEvents.add(new BLP_Bus__e(action__c='update', program_id__c=newProgram.Id));
+            }
+        } 
     }
     // Create Group Task for Termination Pending Programs based on Involuntary Termination
     public void createTermPendingGroupTask(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram) {
