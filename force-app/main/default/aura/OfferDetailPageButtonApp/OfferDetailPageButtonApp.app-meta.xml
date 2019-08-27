@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AuraDefinitionBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>46.0</apiVersion>
+    <description>This App is used inside a VF page for updating an offer&#39;s child Payment&#39;s Transaction method. The VF page will be invoked as a detail page button.</description>
+</AuraDefinitionBundle>
