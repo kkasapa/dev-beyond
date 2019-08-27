@@ -15,11 +15,14 @@
 global with sharing class UnsubscribeComm{
 
     @HttpPost
-    global static String unsubscribe(){
+    global static void unsubscribe(){
         RestRequest req = RestContext.request;
+
+        List<EmailSubscriptionService.UnsubscriptionResponse> unsubscriptionResponse = EmailSubscriptionService.unsubscribe(req);
+        //String unSubscribeStatus = EmailSubscriptionService.unsubscribe(req);
+        
         RestResponse res = Restcontext.response;
-        String reqBody = req.requestBody.toString();
-        EmailSubscriptionService.unsubscribe(req);
-        return 'Request Received';
+        res.StatusCode = EmailSubscriptionService.API_StatusCode;
+        res.responseBody = Blob.valueOf(JSON.serialize(unsubscriptionResponse));
    }
 }
