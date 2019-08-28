@@ -421,6 +421,9 @@
                               </div>
                             </div>
                         </div>
+                        <div>
+                            <button class="slds-button slds-button_brand">Refresh</button>
+                        </div>
                     </div>
                     <div class="slds-card__body slds-panel">
                         <apex:outputPanel id="tableData">

@@ -170,7 +170,7 @@ public with sharing class ApprovalsController {
                                                 WHERE TargetObject.Type = :selectedValue
                                                 AND (Status = 'Rejected' OR Status = 'Removed')
                                                 AND TargetObjectId IN :targetObjectIdSet
-                                                ORDER By CreatedDate DESC]){
+                                                ORDER By CreatedDate ASC]){
 
                 String targetObjId_ProcDefId = '';
                 

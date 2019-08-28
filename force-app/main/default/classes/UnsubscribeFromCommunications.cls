@@ -11,18 +11,16 @@
 * @Layer          REST API 
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
-@RestResource(urlMapping='/unsubscribe/')
-global with sharing class UnsubscribeComm{
+@RestResource(urlMapping='/v1/email/unsubscribe/')
+global with sharing class UnsubscribeFromCommunications{
 
     @HttpPost
     global static void unsubscribe(){
         RestRequest req = RestContext.request;
 
-        List<EmailSubscriptionService.UnsubscriptionResponse> unsubscriptionResponse = EmailSubscriptionService.unsubscribe(req);
-        //String unSubscribeStatus = EmailSubscriptionService.unsubscribe(req);
-        
+        List<CommunicationSubscriptionService.UnsubscriptionResponse> unsubscriptionResponse = CommunicationSubscriptionService.unsubscribe(req);        
         RestResponse res = Restcontext.response;
-        res.StatusCode = EmailSubscriptionService.API_StatusCode;
+        res.StatusCode = CommunicationSubscriptionService.API_StatusCode;
         res.responseBody = Blob.valueOf(JSON.serialize(unsubscriptionResponse));
    }
 }
