@@ -1,0 +1,18 @@
+<apex:page standardController="nu_dse__Program__c" extensions="TradelineRelatedListExtension">
+    
+    <apex:pageBlock >
+        
+            <apex:pageBlockTable value="{!lstOfTradeLines}" var="n" >
+                <apex:column headerValue="TL Name" value="{!n.name}" />
+                <apex:column headerValue="Original Creditor" value="{!n.nu_dse__Original_Creditor__r.Name}" />
+                <apex:column headerValue="New Creditor" value="{!n.nu_dse__New_Creditor__r.Name}" />
+                <apex:column headerValue="Original Balance" value="{!n.nu_dse__Original_Debt__c}" />
+                <apex:column headerValue="Verified Balance" value="{!n.nu_dse__Verified_Balance__c}" />
+                <apex:column headerValue="Current Balance" value="{!n.VerifiedBalance__c}" />
+                <apex:column headerValue="Offer Name" value="{!n.name}" />
+            </apex:pageBlockTable>
+        
+        
+    </apex:pageBlock>    
+    
+</apex:page>

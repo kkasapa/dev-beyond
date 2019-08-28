@@ -27,6 +27,18 @@ public class ProspectTrigger_Test implements HttpCalloutMock {
         prospectInstance1.uuid__c = '187.55';
         insert prospectInstance1;
     }
+    static testMethod void validateProspectHandler()
+    {
+        nu_dse__Prospect__c testp = new nu_dse__Prospect__c(nu_dse__First_Name__c='Test Prospect', nu_dse__Last_Name__c='Prospect');
+        insert testp;
+        nu_dse__Prospect__c testProspect = [SELECT Id FROM nu_dse__Prospect__c WHERE nu_dse__First_Name__c = 'Test Prospect' AND nu_dse__Last_Name__c= 'Prospect' LIMIT 1];
+        Approval.ProcessSubmitRequest app = new Approval.ProcessSubmitRequest();
+        app.setObjectId(testProspect.id);
+        app.setNextApproverIds(new Id[] {UserInfo.getUserId()});
+        Approval.ProcessResult result = Approval.process(app);
+        testProspect.Recalled_Approval__c = true;
+        update testProspect;
+    }
     
     //testing trigger updates on Disposition Email Type
     @isTest

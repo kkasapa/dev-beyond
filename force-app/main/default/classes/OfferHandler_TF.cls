@@ -45,38 +45,51 @@ public class OfferHandler_TF extends TriggerHandler {
           	debt = newOffer.Enrolled_Balance__c;
             payment = 0.02*debt;
             send = api.BuildQuery(debt, payment);
-            HttpResponse response = api.sendRequest(send);
-            String resp = response.getStatus();
-            String body = response.getBody();
-            System.debug(body);
-            Double saved; 
-            if (resp != 'OK')
-            {
-                newOffer.Savings_Calculation__c = 0;
-                //try{
-                update newOffer;
-                //} catch (DmlException e){
-                //process exception
-                //}
-            }
-            else
-            {
-                JSONParser parser = JSON.createParser(body);
-                while (parser.nextToken() != null)
+            HttpResponse response;
+            try{
+                response = api.sendRequest(send);
+                String resp = response.getStatus();
+                String body = response.getBody();
+                System.debug(resp);
+                Double saved; 
+                if (resp != 'OK')
                 {
-                    if(parser.getText() == 'total-savings')
+                    newOffer.Savings_Calculation__c = 0;
+                    newOffer.Update_Savings_Calc__c = false;
+                    update newOffer;
+                    //try{
+                    //} catch (DmlException e){
+                    //process exception
+                    //}
+                }
+                else
+                {
+                    JSONParser parser = JSON.createParser(body);
+                    while (parser.nextToken() != null)
                     {
-                            parser.nextToken();
-                            saved = parser.getDoubleValue();
-                            newOffer.Savings_Calculation__c = saved;
-                        	//try{
-                                update newOffer;
-                            //} catch (DmlException e){
-                                //process exception
-                            //}
+                        if(parser.getText() == 'total-savings')
+                        {
+                                parser.nextToken();
+                                saved = parser.getDoubleValue();
+                                newOffer.Savings_Calculation__c = saved;
+                                //try{
+                                newOffer.Update_Savings_Calc__c = false;
+                            	newOffer.Savings_Calc_Error__c = '';
+                                    update newOffer;
+                                //} catch (DmlException e){
+                                    //process exception
+                                //}
+                        }
                     }
                 }
+            }catch(CalloutException e){
+                system.debug('whoops');
+                newOffer.Savings_Calculation__c = 0;
+                newOffer.Update_Savings_Calc__c = false;
+                newOffer.Savings_Calc_Error__c = e.getTypeName()+ ' ' +e.getMessage();
+                update newOffer;
             }
+            
         } 
     }
 
@@ -144,8 +157,10 @@ public class OfferHandler_TF extends TriggerHandler {
         //run savings calculator ONLY if enrolled balance is changed.
         for( Id offerId : offerIds)
         {
-            if(oldOfferMap.get(offerId).Enrolled_Balance__c != newOfferMap.get(offerId).Enrolled_Balance__c)
+            system.debug('savings calc');
+            if(newOfferMap.get(offerId).Update_Savings_Calc__c)
             {
+                system.debug('savings calc 2');
                 Set<ID> toUpdate = new Set<ID>();
                 toUpdate.add(offerId);
                 savingsCalc(toUpdate);    

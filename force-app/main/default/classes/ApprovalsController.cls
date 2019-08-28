@@ -97,7 +97,7 @@ public with sharing class ApprovalsController {
         
         Map<String, ApprovalSet> processInstApprovalsMap = new Map<String, ApprovalSet>();
         Set<Id> targetObjectIdSet = new Set<Id>();
-        
+
         for(ProcessInstance procInstance : [SELECT Id,Status,LastActor.Name, CompletedDate, ElapsedTimeInDays, ElapsedTimeInHours, 
                                             ElapsedTimeInMinutes,LastActorId, ProcessDefinitionId,ProcessDefinition.Name, TargetObjectId, 
                                             TargetObject.Name,CreatedDate, SubmittedById, SubmittedBy.Name,
@@ -165,7 +165,7 @@ public with sharing class ApprovalsController {
 
         if(targetObjectIdSet.isEmpty() == false) {
            
-            for(ProcessInstance procInstance : [SELECT ProcessDefinitionId, TargetObjectId 
+            for(ProcessInstance procInstance : [SELECT ProcessDefinitionId, TargetObjectId, LastActor.Name 
                                                 FROM ProcessInstance 
                                                 WHERE TargetObject.Type = :selectedValue
                                                 AND (Status = 'Rejected' OR Status = 'Removed')
@@ -180,7 +180,7 @@ public with sharing class ApprovalsController {
                     if (processInstApprovalsMap.containsKey(targetObjId_ProcDefId)) {
                         
                         processInstApprovalsMap.get(targetObjId_ProcDefId).approval.submitStatus = 'Resubmit';
-
+                        processInstApprovalsMap.get(targetObjId_ProcDefId).approval.rejectedBy = procInstance.LastActor.Name;
                     }
                 }
 
@@ -264,6 +264,7 @@ public with sharing class ApprovalsController {
         public String approvalType { get; set;}
         public String submitStatus { get; set;}
         public Boolean showActions {get; set;}
+        public String rejectedBy { get; set;}
         
         public ApprovalRecord(ProcessInstance processInstance, Id userId) {
             this.approvalType = 'WORKITEM';

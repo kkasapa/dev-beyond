@@ -3,17 +3,18 @@
 * Handler class for ProspectTrigger, extends the TriggerHandler. 
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 * @author         Vignesh Sadhasivam   <vsadhasivam@selastech.com>
-* @modifiedBy     Vignesh Sadhasivam   <vsadhasivam@selastech.com>
+* @modifiedBy     Vladislav Polovtsev   <vpolovtsev@beyondfinance.com>
 * @maintainedBy   Vignesh Sadhasivam   <vsadhasivam@selastech.com>
 * @version        1.1
 * @created        2019-05-23
-* @modified       2019-07-19
+* @modified       2019-08-27
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
 public class ProspectHandler extends TriggerHandler {        
     
     private Map<Id, nu_dse__Prospect__c> newProspectMap;
     private Map<Id, nu_dse__Prospect__c> oldProspectMap;
+    private Set<Id> prospectIds;
     
     public ProspectHandler() {
         this.newProspectMap = (Map<Id, nu_dse__Prospect__c>) Trigger.newMap;
@@ -42,26 +43,7 @@ public class ProspectHandler extends TriggerHandler {
     
     public override void beforeUpdate() {
         
-        for (nu_dse__Prospect__c recallProspect : (List<nu_dse__Prospect__c>)Trigger.New)
-        {
-            Boolean RecalledApproval = recallProspect.Recalled_Approval__c;
-            recallProspect.Recalled_Approval__c = false;
-            if (RecalledApproval){
-                List<ProcessInstance> instances = [SELECT Id FROM ProcessInstance WHERE TargetObjectId=:recallProspect.Id AND Status='Pending' LIMIT 1];
-                if (!instances.isEmpty()){
-                    ProcessInstance instance = instances[0];
-                    List<ProcessInstanceWorkitem> workItems = [SELECT Id FROM ProcessInstanceWorkitem where ProcessInstanceId=:instance.Id LIMIT 1];
-                    if (!workItems.isEmpty()){
-                        ProcessInstanceWorkitem workItem = workItems[0];
-                        Approval.ProcessWorkItemRequest req = new Approval.ProcessWorkItemRequest();
-                        req.setWorkItemId(workItem.Id);
-                        req.setAction('Removed');
-                        req.setComments('Recalled Approval from ACE');
-                        Approval.ProcessResult result = Approval.process(req);
-                    }
-                }
-            }
-        }
+        
         for (nu_dse__Prospect__c newProspect : (List<nu_dse__Prospect__c>)Trigger.New) {  
             // Update Uuid in Prospect records 
             updateUuIdProspects(newProspect);
@@ -76,7 +58,34 @@ public class ProspectHandler extends TriggerHandler {
     }
 
     public override void afterUpdate() {
-
+        
+        this.prospectIds = trigger.newMap.keySet();
+        List<nu_dse__Prospect__c> prospects = [SELECT ID,Recalled_Approval__c FROM nu_dse__Prospect__c WHERE Id IN :prospectIds];
+        Boolean RecalledApproval;
+        for (nu_dse__Prospect__c newProspect: prospects)
+        {
+            RecalledApproval = newProspect.Recalled_Approval__c;
+            newProspect.Recalled_Approval__c = false;
+            if(RecalledApproval)
+            {
+                List<ProcessInstance> instances = [SELECT Id FROM ProcessInstance WHERE TargetObjectId=:newProspect.Id AND Status='Pending' LIMIT 1];
+                if (!instances.isEmpty())
+                {
+                    ProcessInstance instance = instances[0];
+                    List<ProcessInstanceWorkitem> workItems = [SELECT Id FROM ProcessInstanceWorkitem WHERE ProcessInstanceId=:instance.Id LIMIT 1];
+                    if (!workItems.isEmpty())
+                    {
+                        ProcessInstanceWorkItem workItem = workItems[0];
+                        Approval.ProcessWorkItemRequest req = new Approval.ProcessWorkItemRequest();
+                        req.setWorkItemId(workItem.Id);
+                        req.setAction('Removed');
+                        req.setComments('Recalled Approval from ACE');
+                        Approval.ProcessResult result = Approval.process(req);
+                    }
+                }
+            }
+        }
+        
         for(nu_dse__Prospect__c newProspect : (List<nu_dse__Prospect__c>)Trigger.New) {
             //collect prospect Ids of all prospects when prospect status is changed
             collectVelocifyLeadIds(newProspect, oldProspectMap.get(newProspect.Id));

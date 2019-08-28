@@ -433,8 +433,9 @@
                                             <th>Submitted By</th>
                                             <th>Assigned To</th>
                                             <th>Submit Status</th>
+                                            <th>Rejected By</th>
                                             <th>Time in Queue (HH:MM)</th>
-                                            <th>Completed Date</th>
+                                            <th>Created Date</th>
                                             <th>Status</th>
                                             
                                         </tr>
@@ -443,16 +444,23 @@
                                         <apex:repeat value="{!approvalSets}" var="approvalSet">
                                             <tr class="approval-set--approval-steps">
                                                 <td>
-                                                    <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator') && approvalSet.workItemId != null}">
+                                                    <div>
+                                                        <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator') && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a href="{!'/p/process/ProcessInstanceWorkitemWizardStageManager?id=' + approvalSet.workItemId + '&retURL=%2F' + recordId}" target="_blank" >Approve/Reject</a>
+                                                            </span>
+                                                        </apex:outputPanel>
+                                                        <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator') && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a disabled="true" class="diabled-anchor">Approve/Reject</a>
+                                                            </span>
+                                                        </apex:outputPanel>
+                                                    </div>
+                                                    <div>
                                                         <span class="approval-set--aprove-button">
-                                                            <a href="{!'/p/process/ProcessInstanceWorkitemWizardStageManager?id=' + approvalSet.workItemId + '&retURL=%2F' + recordId}" target="_blank" >Approve/Reject</a>
+                                                            <a href="{!'/'+ approvalSet.workItemId + '/e?et=REASSIGN&retURL=%2F' + recordId}" target="_blank" >Reassign</a>
                                                         </span>
-                                                    </apex:outputPanel>
-                                                    <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator') && approvalSet.workItemId != null}">
-                                                        <span class="approval-set--aprove-button">
-                                                            <a disabled="true" class="diabled-anchor">Approve/Reject</a>
-                                                        </span>
-                                                    </apex:outputPanel>
+                                                    </div>                                                  
                                                 </td>
                                                 <td >
                                                     <div class="approval-set--approval-name">{!approvalSet.approvalName}</div>
@@ -467,12 +475,13 @@
                                                     <a href="{! '/' + approvalSet.approval.asignedTo}" target="_blank" >{!approvalSet.approval.asignedToName}</a>
                                                 </td>
                                                 <td>{!approvalSet.approval.submitStatus}</td>
+                                                <td>{!approvalSet.approval.rejectedBy}</td>
                                                 <td>
                                                     <center>
                                                         {!IF(LEN(TEXT(approvalSet.approval.elapsedHours)) == 1, LPAD(TEXT(approvalSet.approval.elapsedHours), 2, '0'), approvalSet.approval.elapsedHours)}:{!IF(LEN(TEXT(approvalSet.approval.elapsedMins)) == 1, LPAD(TEXT(approvalSet.approval.elapsedMins), 2, '0'), approvalSet.approval.elapsedMins)}
                                                     </center>
                                                 </td>
-                                                <td><center>{!approvalSet.approval.completedDate}</center></td>
+                                                <td><center>{!approvalSet.approval.createdDate}</center></td>
                                                 <td>{!approvalSet.status}</td> 
                                             </tr>
                                         </apex:repeat>
