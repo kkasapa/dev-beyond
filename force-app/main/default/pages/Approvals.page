@@ -401,18 +401,19 @@
                         
                         <div>
                             <br/>
-                            <apex:selectRadio value="{!selectedRadio}" styleClass="radio">
+                            <apex:selectRadio value="{!selectedRadio}" styleClass="radio" onchange="onFilterChange()">
                                 <apex:selectOption itemLabel="Prospect" itemValue="nu_dse__Prospect__c"/>
                                 <apex:selectOption itemLabel="Offer" itemValue="nu_dse__Offer__c"/>
-                                <apex:actionSupport event="onchange" action="{!renderApprovals}" reRender="tableData" onsubmit="showSpinner();" oncomplete="applyJQueryTable(); hideSpinner();"/>
+                                <!-- <apex:actionSupport event="onchange" action="{!renderApprovals}" reRender="tableData" onsubmit="showSpinner();" oncomplete="applyJQueryTable(); hideSpinner();"/> -->
                             </apex:selectRadio>
                         </div>
-                        <div class="slds-no-flex">                        
-                            <div class="slds-form-element">
+                        <div class="slds-no-flex">            
+                            <!-- Added refresh button to render recent changes in lead without reload whole page[SF-62] -->            
+                            <div class="slds-form-element" style="display: inline-block;">
                               <label class="slds-form-element__label font-color-white" for="select-01">Filter Approvals</label>
                               <div class="slds-form-element__control">
                                 <div class="slds-select_container">
-                                  <select class="slds-select" id="select-01" onchange="onFilterChange()" > 
+                                  <select class="slds-select" id="filterSelect" onchange="onFilterChange()" > 
                                     <option value="all">All</option>
                                     <option value="me">Assigned To me</option>
                                     <option value="queue">Assigned To Queue</option>
@@ -420,9 +421,7 @@
                                 </div>
                               </div>
                             </div>
-                        </div>
-                        <div>
-                            <button class="slds-button slds-button_brand">Refresh</button>
+                            <button class="nudebt-button slds-button slds-button--neutral slds-m-left--xx-large" onclick="onFilterChange();" type="button">Refresh</button>
                         </div>
                     </div>
                     <div class="slds-card__body slds-panel">
@@ -436,8 +435,10 @@
                                             <th>Submitted By</th>
                                             <th>Assigned To</th>
                                             <th>Submit Status</th>
+                                            <!-- Added new RejectedBy column in Table [SF-62]-->
                                             <th>Rejected By</th>
                                             <th>Time in Queue (HH:MM)</th>
+                                            <!-- Changed Completed Date to created Date column in Table [SF-62]-->
                                             <th>Created Date</th>
                                             <th>Status</th>
                                             
@@ -447,6 +448,7 @@
                                         <apex:repeat value="{!approvalSets}" var="approvalSet">
                                             <tr class="approval-set--approval-steps">
                                                 <td>
+                                                    <!-- Added new Reassign action in Actions colum [SF-100]-->
                                                     <div>
                                                         <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator') && approvalSet.workItemId != null}">
                                                             <span class="approval-set--aprove-button">
@@ -460,9 +462,16 @@
                                                         </apex:outputPanel>
                                                     </div>
                                                     <div>
-                                                        <span class="approval-set--aprove-button">
-                                                            <a href="{!'/'+ approvalSet.workItemId + '/e?et=REASSIGN&retURL=%2F' + recordId}" target="_blank" >Reassign</a>
-                                                        </span>
+                                                        <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator') && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a href="{!'/'+ approvalSet.workItemId + '/e?et=REASSIGN&retURL=%2F' + recordId}" target="_blank" >Reassign</a>
+                                                            </span>
+                                                        </apex:outputPanel>
+                                                        <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator') && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a disabled="true" class="diabled-anchor">Reassign</a>
+                                                            </span>
+                                                        </apex:outputPanel>
                                                     </div>                                                  
                                                 </td>
                                                 <td >
@@ -478,12 +487,16 @@
                                                     <a href="{! '/' + approvalSet.approval.asignedTo}" target="_blank" >{!approvalSet.approval.asignedToName}</a>
                                                 </td>
                                                 <td>{!approvalSet.approval.submitStatus}</td>
-                                                <td>{!approvalSet.approval.rejectedBy}</td>
+                                                <!-- Added Rejectedby column in Approvals Table[SF-62]-->
+                                                <td>
+                                                    <a href="{! '/' + approvalSet.approval.rejectedBy}" target="_blank" >{!approvalSet.approval.rejectedByName}</a>
+                                                </td>
                                                 <td>
                                                     <center>
                                                         {!IF(LEN(TEXT(approvalSet.approval.elapsedHours)) == 1, LPAD(TEXT(approvalSet.approval.elapsedHours), 2, '0'), approvalSet.approval.elapsedHours)}:{!IF(LEN(TEXT(approvalSet.approval.elapsedMins)) == 1, LPAD(TEXT(approvalSet.approval.elapsedMins), 2, '0'), approvalSet.approval.elapsedMins)}
                                                     </center>
                                                 </td>
+                                                <!-- Updated CompletedDate as createdDate column in Approvals Table[SF-62]-->
                                                 <td><center>{!approvalSet.approval.createdDate}</center></td>
                                                 <td>{!approvalSet.status}</td> 
                                             </tr>
@@ -500,11 +513,12 @@
             </div>
         </apex:outputPanel>
         <script>
-                                            
+                  
+            // Updated to slected filter name got from element[SF-62]
             function onFilterChange() {
                 showSpinner();
-                console.log('changed to ->',event.currentTarget.value);
-                let filter = event.currentTarget.value;
+                var filter = document.getElementById('filterSelect').value;
+                console.log('changed to ->',filter);
                 if (filter) {
                 
                     filterApprovals(filter);
