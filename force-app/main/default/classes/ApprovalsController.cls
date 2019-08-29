@@ -80,6 +80,11 @@ public with sharing class ApprovalsController {
         
         getAllApprovals();
     }
+    // Added method for refresh lead with recent changes.[SF-62]
+    public void refreshApprovals() {
+        
+        onFilterChange();
+    }
     
     public List<ApprovalSet> getAllApprovals() {
         
@@ -97,7 +102,7 @@ public with sharing class ApprovalsController {
         
         Map<String, ApprovalSet> processInstApprovalsMap = new Map<String, ApprovalSet>();
         Set<Id> targetObjectIdSet = new Set<Id>();
-        
+
         for(ProcessInstance procInstance : [SELECT Id,Status,LastActor.Name, CompletedDate, ElapsedTimeInDays, ElapsedTimeInHours, 
                                             ElapsedTimeInMinutes,LastActorId, ProcessDefinitionId,ProcessDefinition.Name, TargetObjectId, 
                                             TargetObject.Name,CreatedDate, SubmittedById, SubmittedBy.Name,
@@ -164,13 +169,13 @@ public with sharing class ApprovalsController {
         }
 
         if(targetObjectIdSet.isEmpty() == false) {
-           
-            for(ProcessInstance procInstance : [SELECT ProcessDefinitionId, TargetObjectId 
+            // Added LastActor.Name, LastActorId in query to show last rejected user name in approval[SF-62]. 
+            for(ProcessInstance procInstance : [SELECT ProcessDefinitionId, TargetObjectId, LastActor.Name, LastActorId
                                                 FROM ProcessInstance 
                                                 WHERE TargetObject.Type = :selectedValue
                                                 AND (Status = 'Rejected' OR Status = 'Removed')
                                                 AND TargetObjectId IN :targetObjectIdSet
-                                                ORDER By CreatedDate DESC]){
+                                                ORDER By CreatedDate ASC]){
 
                 String targetObjId_ProcDefId = '';
                 
@@ -180,7 +185,9 @@ public with sharing class ApprovalsController {
                     if (processInstApprovalsMap.containsKey(targetObjId_ProcDefId)) {
                         
                         processInstApprovalsMap.get(targetObjId_ProcDefId).approval.submitStatus = 'Resubmit';
-
+                        // Added rejectedBy, rejectedByName to show last rejected user name in approval[SF-62]. 
+                        processInstApprovalsMap.get(targetObjId_ProcDefId).approval.rejectedBy = procInstance.LastActorId;
+                        processInstApprovalsMap.get(targetObjId_ProcDefId).approval.rejectedByName = procInstance.LastActor.Name;
                     }
                 }
 
@@ -264,6 +271,9 @@ public with sharing class ApprovalsController {
         public String approvalType { get; set;}
         public String submitStatus { get; set;}
         public Boolean showActions {get; set;}
+        // Added two variables to show last rejected user name in approval[SF-62]. 
+        public String rejectedBy { get; set;}
+        public String rejectedByName { get; set;}
         
         public ApprovalRecord(ProcessInstance processInstance, Id userId) {
             this.approvalType = 'WORKITEM';
