@@ -14,9 +14,9 @@
 
 //define a limit for requests, Limit of 10 clients
 // consider for Phone SMS unsubscription
-public without sharing class EmailSubscriptionService {
+public without sharing class CommunicationSubscriptionService {
 
-    public static Integer API_StatusCode = 200;
+    public static Integer API_StatusCode = 200; // status code to be set to the API response
 
     // this method process the request from API and collectd ids/emails of client to unsubscribe them from emails
     public static List<UnsubscriptionResponse> unsubscribe(RestRequest apiRequest) {
@@ -26,41 +26,59 @@ public without sharing class EmailSubscriptionService {
         Set<String> clientEmails = new Set<String>(); // set of emails of client(both prospect & enrolled) who is to be unsubscribed from emails
         List<UnsubscriptionResponse> apiresponse = new List<UnsubscriptionResponse>();
         try{
-            List<EmailSubscriptionService.CommunicationNotificatioWrap> requestList = (List<EmailSubscriptionService.CommunicationNotificatioWrap>)JSON.deserialize(apiRequest.requestBody.toString(), List<EmailSubscriptionService.CommunicationNotificatioWrap>.class);
-            for(CommunicationNotificatioWrap reqWrap: requestList) { 
-                if(String.isNotBlank(reqWrap.clientId) == true) {
-                    if(getIdType(reqWrap.clientId) == 'nu_dse__Prospect__c') {
-                        clientProspectIds.add(reqWrap.clientId);
-                    } else if(getIdType(reqWrap.clientId) == 'Account') {
-                        clientAccountIds.add(reqWrap.clientId);
-                    } else if(getIdType(reqWrap.clientId) == 'nu_dse__Payment__c') {
-                        // unsubscribe logic
+            List<CommunicationSubscriptionService.CommunicationNotificatioWrap> requestList = (List<CommunicationSubscriptionService.CommunicationNotificatioWrap>)JSON.deserialize(apiRequest.requestBody.toString(), List<CommunicationSubscriptionService.CommunicationNotificatioWrap>.class);
+            if (requestList.size() <= 10) {
+
+                for(CommunicationNotificatioWrap reqWrap: requestList) { 
+                    if(String.isNotBlank(reqWrap.clientId) == true) {
+                        if(reqWrap.clientId.length() == 15 
+                            || reqWrap.clientId.length() == 18) {
+                        
+                            if(getIdType(Id.valueOf(reqWrap.clientId)) == 'nu_dse__Prospect__c') { // checking the type of record id sent
+                                clientProspectIds.add(Id.valueOf(reqWrap.clientId));
+                            } else if(getIdType(Id.valueOf(reqWrap.clientId)) == 'Account') {
+                                clientAccountIds.add(Id.valueOf(reqWrap.clientId));
+                            } else if(getIdType(Id.valueOf(reqWrap.clientId)) == 'nu_dse__Payment__c') {
+                                // unsubscribe logic
+                            } 
+                            
+                        } else {
+                            // if id is not of any specified type, we are throwing an exception as response 
+                            UnsubscriptionResponse response = new UnsubscriptionResponse();
+                            response.message = 'Invalid clientId';
+                            response.clientId = reqWrap.clientId;
+                            apiresponse.add(response);
+                        }
+                    } else if(String.isNotBlank(reqWrap.clientEmail) == true) { // if the json node contains email instead of id 
+                        if(isValidateEmail(reqWrap.clientEmail) == true) {
+                            clientEmails.add(reqWrap.clientEmail); // adding emails to set for processing
+                        } else {
+                            // if Email is not of any specified type, we are throwing an exception as response 
+                            UnsubscriptionResponse response = new UnsubscriptionResponse();
+                            response.message = 'Invalid clientEmail';
+                            response.clientEmail = reqWrap.clientEmail;
+                            apiresponse.add(response);
+                        }
                     } else {
-                        API_StatusCode = 500;
+                        //throw *customException*;
                         UnsubscriptionResponse response = new UnsubscriptionResponse();
-                        response.message = 'Invalid clientId';
-                        response.clientId = reqWrap.clientId;
+                        response.message = 'clientId or clientEmail required';
                         apiresponse.add(response);
                     }
-                } else if(String.isNotBlank(reqWrap.clientEmail) == true 
-                            && isValidateEmail(reqWrap.clientEmail) == true) {
-                        clientEmails.add(reqWrap.clientEmail);
-                } else {
-                    //throw *customException*;
-                    API_StatusCode = 500;
-                    UnsubscriptionResponse response = new UnsubscriptionResponse();
-                    response.message = 'clientId or clientEmail required';
-                    apiresponse.add(response);
                 }
+                if (clientProspectIds.isEmpty() == false
+                    || clientEmails.isEmpty() == false) {
+                    apiresponse.addAll(unsubscribeProspectsfromEmail(clientProspectIds, clientEmails));
+                }
+                if (clientAccountIds.isEmpty() == false
+                    || clientEmails.isEmpty() == false) {
+                    apiresponse.addAll(unsubscribePersonAccountfromEmail(clientAccountIds, clientEmails));
+                }    
+
+            } else {
+
+                throw new CustomException('Unable to process more than 10 records.');
             }
-            if (clientProspectIds.isEmpty() == false
-                || clientEmails.isEmpty() == false) {
-                apiresponse.addAll(unsubscribeProspectsfromEmail(clientProspectIds, clientEmails));
-            }
-            if (clientAccountIds.isEmpty() == false
-                || clientEmails.isEmpty() == false) {
-                apiresponse.addAll(unsubscribePersonAccountfromEmail(clientAccountIds, clientEmails));
-            }    
         } catch(Exception e) {
             //return e.getMessage();
             API_StatusCode = 500;
@@ -107,10 +125,9 @@ public without sharing class EmailSubscriptionService {
     public void unsubscribeEmailTasks(Set<Id> whatIds) {
 
         List<Task> emailCommTasks = [SELECT Id, Subject, WhatId, Status, nu_dse__Communication_Sent__c, nu_dse__Communication_Template__c
-                                     FROM Task 
-                                     WHERE WhatId IN :whatIds 
-                                        AND nu_dse__Communication_Template__c != null 
-                                        AND nu_dse__Communication_Template__r.nu_dse__Action_Type__c = 'Email Alert'];
+                                FROM Task WHERE WhatId IN :whatIds 
+                                AND nu_dse__Communication_Template__c != null 
+                                AND nu_dse__Communication_Template__r.nu_dse__Action_Type__c = 'Email Alert'];
         for(Task commTasks: emailCommTasks) {
             commTasks.Status = 'Completed';
         }

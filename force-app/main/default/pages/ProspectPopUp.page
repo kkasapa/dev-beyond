@@ -1,0 +1,7 @@
+<apex:page standardController="nu_dse__Prospect__c">
+  <script>
+        if({!nu_dse__Prospect__c.Not_Interested__c})
+            alert('Display Alert!!');
+            setAlertVal();
+    </script>
+</apex:page>

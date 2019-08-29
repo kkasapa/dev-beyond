@@ -43,6 +43,7 @@ public class SavingsCalcService{
         String body;
         request.setEndpoint(endpoint);
         request.setMethod('POST');
+        request.setTimeout(2000);
         request.setHeader('Content-Type','application/vnd.api+json');
         body = '{"data":{"type":"savings","attributes":{"current_balance":'+ debt +',"minimum_payment":'+ payment +',"annual_interest_rate":"'+ rate +'"}}}';
         request.setBody(body);

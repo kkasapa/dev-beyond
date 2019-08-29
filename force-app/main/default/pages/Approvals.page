@@ -1,3 +1,15 @@
+<!--
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+* Visualforce Page for Approvals Tab. 
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+* @author         Ashwin Bretto   <abretto@selastech.com>
+* @modifiedBy     Vignesh   <vsadhasivam@selastech.com>
+* @maintainedBy   Ashwin Bretto   <abretto@selastech.com>
+* @version        1.0
+* @created        2019-01-09
+* @modified       2019-08-29
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+-->
 <apex:page controller="ApprovalsController" readOnly="true">
 
     <link rel="stylesheet" href="{!URLFOR($Resource.nu_dse__SLDS_221, '/assets/styles/salesforce-lightning-design-system.min.css')}" />
@@ -401,10 +413,11 @@
                         
                         <div>
                             <br/>
-                            <apex:selectRadio value="{!selectedRadio}" styleClass="radio">
+                            <!-- Fixed Filter change apply for switch selectedRadio[SF-62]  --> 
+                            <apex:selectRadio value="{!selectedRadio}" styleClass="radio" onchange="onFilterChange()">
                                 <apex:selectOption itemLabel="Prospect" itemValue="nu_dse__Prospect__c"/>
                                 <apex:selectOption itemLabel="Offer" itemValue="nu_dse__Offer__c"/>
-                                <apex:actionSupport event="onchange" action="{!renderApprovals}" reRender="tableData" onsubmit="showSpinner();" oncomplete="applyJQueryTable(); hideSpinner();"/>
+                                <!-- <apex:actionSupport event="onchange" action="{!renderApprovals}" reRender="tableData" onsubmit="showSpinner();" oncomplete="applyJQueryTable(); hideSpinner();"/> -->
                             </apex:selectRadio>
                         </div>
                         <div class="slds-no-flex">            
@@ -462,9 +475,16 @@
                                                         </apex:outputPanel>
                                                     </div>
                                                     <div>
-                                                        <span class="approval-set--aprove-button">
-                                                            <a href="{!'/'+ approvalSet.workItemId + '/e?et=REASSIGN&retURL=%2F' + recordId}" target="_blank" >Reassign</a>
-                                                        </span>
+                                                        <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator') && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a href="{!'/'+ approvalSet.workItemId + '/e?et=REASSIGN&retURL=%2F' + recordId}" target="_blank" >Reassign</a>
+                                                            </span>
+                                                        </apex:outputPanel>
+                                                        <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator') && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a disabled="true" class="diabled-anchor">Reassign</a>
+                                                            </span>
+                                                        </apex:outputPanel>
                                                     </div>                                                  
                                                 </td>
                                                 <td >

@@ -1,3 +1,15 @@
+/*
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+* Controller class for Approvals Page. 
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+* @author         Ashwin Bretto   <abretto@selastech.com>
+* @modifiedBy     Vignesh   <vsadhasivam@selastech.com>
+* @maintainedBy   Ashwin Bretto   <abretto@selastech.com>
+* @version        1.0
+* @created        2019-01-09
+* @modified       2019-08-29
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+*/
 public with sharing class ApprovalsController {
     
     public Id userId {get; set;}
@@ -79,11 +91,6 @@ public with sharing class ApprovalsController {
     public void renderApprovals() {
         
         getAllApprovals();
-    }
-    // Added method for refresh lead with recent changes.[SF-62]
-    public void refreshApprovals() {
-        
-        onFilterChange();
     }
     
     public List<ApprovalSet> getAllApprovals() {
@@ -192,6 +199,19 @@ public with sharing class ApprovalsController {
                 }
 
             }
+            // Added query to get target object records created date[SF-62]
+            String queryStr = 'SELECT Id, CreatedDate FROM '+ selectedValue + ' WHERE Id IN :targetObjectIdSet';
+            Map<Id, SObject> selectedObjectMap = new Map<Id, SObject>(Database.query(queryStr));
+            // Assign page showing approval record target object createdDate[SF-62]
+            for(String approvalId : processInstApprovalsMap.keySet()) {
+
+                if(processInstApprovalsMap.get(approvalId).approval.targetId != null
+                    && selectedObjectMap.containsKey(processInstApprovalsMap.get(approvalId).approval.targetId) == true) {
+                    
+                    DateTime createdDate  = DateTime.valueOf((selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('CreatedDate')));
+                    processInstApprovalsMap.get(approvalId).approval.CreatedDate = createdDate.format('MM-dd-YYYY');
+                }
+            }
         }
         return processInstApprovalsMap.values();
     }
@@ -265,7 +285,8 @@ public with sharing class ApprovalsController {
         public Id approvalId {get; set;}
         public String approvalName { get; set;}
         public String targetObjectName {get; set;}
-        public DateTime createdDate {get; set;}
+        // Changed CompletedDate variable as TargetObject createdDate[SF-62]
+        public String createdDate {get; set;}
         public Id workItemId {get; set;}
         public Id instanceId {get; set;}
         public String approvalType { get; set;}
@@ -286,7 +307,7 @@ public with sharing class ApprovalsController {
                 this.objectName = processInstance.TargetObject.Name;
                 this.completedDate = ApprovalsController.toDateString(processInstance.CompletedDate);
                 this.targetId = processInstance.TargetObjectId;
-                this.createdDate = processInstance.CreatedDate;
+                // Removed CompletedDate value assignments[SF-62]
                 this.approvalId = processInstance.ProcessDefinitionId;
                 this.approvalName = processInstance.ProcessDefinition.Name;
                 this.instanceId = processInstance.Id;
