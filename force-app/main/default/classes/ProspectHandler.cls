@@ -24,6 +24,7 @@ public class ProspectHandler extends TriggerHandler {
     Map<Id, String> disqualifiedProspectIdUuIdMap = new Map<Id, String>(); // Map of Prospect Id and UUId 
     List<nu_dse__Prospect__c> velocifyLeadList = new List<nu_dse__Prospect__c>(); //List of Prospect for velocify update
     Set<Id> velocifyProspectIds = new Set<Id>(); // Set of Prospect Ids for Velocify modify leads
+    Map<String,nu_dse__Prospect__c> prospectSSN_ProspectsMap = new Map<String,nu_dse__Prospect__c>(); //contains ssn of all prospects for duplicate validation
 
     public override void beforeInsert() {
         
@@ -38,11 +39,13 @@ public class ProspectHandler extends TriggerHandler {
             updateUuIdProspects(newProspect);
             // updates Owner from Five9 Owner field, if Has_Been_Assigned__c is set to TRUE
             updateProspectOwner(newProspect, null);
-        }   
+            // validation to check if any duplicate SSN in available for other records
+            //collectAllProspectSSN(newProspect, null);
+        }
+        //checkDuplicateAndTagAccount(); 
     }
     
     public override void beforeUpdate() {
-        
         
         for (nu_dse__Prospect__c newProspect : (List<nu_dse__Prospect__c>)Trigger.New) {  
             // Update Uuid in Prospect records 
@@ -51,7 +54,14 @@ public class ProspectHandler extends TriggerHandler {
             collectDisqualifiedProspects(newProspect);
             //Update Prospect Owner from Five9 Owner Id value if Has been assigned it set to true
             updateProspectOwner(newProspect, oldProspectMap.get(newProspect.Id));
+            // validation to check if any duplicate SSN in available for other records
+            //collectAllProspectSSN(newProspect,oldProspectMap.get(newProspect.Id));
         } 
+
+        //checkDuplicateAndTagAccount(); 
+        System.debug('Trigger.New--->'+Trigger.New);
+        System.debug('prospectSSN_ProspectsMap--->'+prospectSSN_ProspectsMap);
+
         if(disqualifiedProspectIdUuIdMap.isEmpty() == false) {
             updateDispositionEmailType();
         }
@@ -179,6 +189,31 @@ public class ProspectHandler extends TriggerHandler {
                || (oldProspect.Has_Been_Assigned__c == false 
                    ||newProspect.FIve9_Owner_ID__c != oldProspect.FIve9_Owner_ID__c))) {
             newProspect.OwnerId = Id.valueof(newProspect.FIve9_Owner_ID__c);
+        }
+    }
+    public void collectAllProspectSSN(nu_dse__Prospect__c newProspect, nu_dse__Prospect__c oldProspect) {
+        if ((Trigger.isInsert && String.isNotBlank(newProspect.nu_dse__SSN__c)) 
+                ||(oldProspect.nu_dse__SSN__c != newProspect.nu_dse__SSN__c)) {
+            prospectSSN_ProspectsMap.put(newProspect.nu_dse__SSN__c, newProspect); //collecting SSN of all prospect for duplicate validation
+        }
+    }
+
+    public void checkDuplicateAndTagAccount() {
+        Map<String, String> SSN_AccountDetailMap = new Map<String, String>();
+        for (nu_dse__Program__c program: [SELECT Id, Name, nu_dse__Account__r.FirstName, nu_dse__Account__r.LastName, 
+                                        nu_dse__Account__r.nu_dse__SSN__c 
+                                        FROM nu_dse__Program__c 
+                                        WHERE nu_dse__Account__r.nu_dse__SSN__c IN :prospectSSN_ProspectsMap.keySet()]) {
+            if (String.isNotBlank(program.nu_dse__Account__r.nu_dse__SSN__c) 
+                && prospectSSN_ProspectsMap.containsKey(program.nu_dse__Account__r.nu_dse__SSN__c)) {
+                SSN_AccountDetailMap.put(program.nu_dse__Account__r.nu_dse__SSN__c, program.Name+':'+program.nu_dse__Account__r.FirstName+'_'+program.nu_dse__Account__r.LastName);
+            }
+        }
+
+        for(String existingSSN: SSN_AccountDetailMap.keySet()) {
+            nu_dse__Prospect__c pros = prospectSSN_ProspectsMap.get(existingSSN);
+            pros.SSN_Duplicate_Reference__c = SSN_AccountDetailMap.get(existingSSN);
+            prospectSSN_ProspectsMap.put(existingSSN, pros);
         }
     }
 }

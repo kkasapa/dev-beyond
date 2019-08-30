@@ -11,7 +11,7 @@
 * @systemLayer    Trigger
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
-trigger offerTrigger on nu_dse__Offer__c (before Update, after Update, after Insert) {
+trigger offerTrigger on nu_dse__Offer__c (before Update, after Update, after Insert, before Insert) {
     if(!System.isFuture())
         new OfferHandler_TF().run();
 }
