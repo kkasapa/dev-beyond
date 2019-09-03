@@ -16,8 +16,7 @@
 // consider for Phone SMS unsubscription
 public without sharing class CommunicationSubscriptionService {
 
-    public static Integer API_StatusCode = 200; // status code to be set to the API response
-
+    public static Integer API_StatusCode = 200; // status code to be set to the API response  
     // this method process the request from API and collectd ids/emails of client to unsubscribe them from emails
     public static List<UnsubscriptionResponse> unsubscribe(RestRequest apiRequest) {
       
@@ -40,13 +39,19 @@ public without sharing class CommunicationSubscriptionService {
                                 clientAccountIds.add(Id.valueOf(reqWrap.clientId));
                             } else if(getIdType(Id.valueOf(reqWrap.clientId)) == 'nu_dse__Payment__c') {
                                 // unsubscribe logic
-                            } 
+                            } else {
+                                // if id is not of any specified type, we are throwing an exception as response 
+                                UnsubscriptionResponse response = new UnsubscriptionResponse();
+                                response.clientId = reqWrap.clientId;
+                                response.message = 'Invalid clientId';
+                                apiresponse.add(response);
+                            }
                             
                         } else {
-                            // if id is not of any specified type, we are throwing an exception as response 
+                            // if id is not correct format, we are throwing an exception as response 
                             UnsubscriptionResponse response = new UnsubscriptionResponse();
-                            response.message = 'Invalid clientId';
                             response.clientId = reqWrap.clientId;
+                            response.message = 'ClientId must be 15 or 18 digit';
                             apiresponse.add(response);
                         }
                     } else if(String.isNotBlank(reqWrap.clientEmail) == true) { // if the json node contains email instead of id 
@@ -55,8 +60,8 @@ public without sharing class CommunicationSubscriptionService {
                         } else {
                             // if Email is not of any specified type, we are throwing an exception as response 
                             UnsubscriptionResponse response = new UnsubscriptionResponse();
-                            response.message = 'Invalid clientEmail';
                             response.clientEmail = reqWrap.clientEmail;
+                            response.message = 'Invalid clientEmail';
                             apiresponse.add(response);
                         }
                     } else {
@@ -77,7 +82,7 @@ public without sharing class CommunicationSubscriptionService {
 
             } else {
 
-                throw new CustomException('Unable to process more than 10 records.');
+                throw new CustomException('Unable to process more than 10 records for Communication unsubscribtion');
             }
         } catch(Exception e) {
             //return e.getMessage();
@@ -91,24 +96,59 @@ public without sharing class CommunicationSubscriptionService {
     }
 
     public static List<UnsubscriptionResponse> unsubscribeProspectsfromEmail(Set<Id> prospectIds, Set<String> clientEmails) {
-        List<nu_dse__Prospect__c> prospectList = [SELECT Id, Name, Unsubscribed_from_Emails__c
-                                                  FROM nu_dse__Prospect__c 
-                                                  WHERE (Id IN :prospectIds OR nu_dse__Email_Address__c IN :clientEmails)
-                                                      AND Unsubscribed_from_Emails__c = false];
-        for (nu_dse__Prospect__c prospect: prospectList) { // updating the controlling field in Prospect
-            prospect.Unsubscribed_from_Emails__c = true;
+        List<nu_dse__Prospect__c> prospectList = new List<nu_dse__Prospect__c>();
+        List<UnsubscriptionResponse> saveResultResponseList = new List<UnsubscriptionResponse>(); //response to be sent 
+        for (nu_dse__Prospect__c prospect: [SELECT Id, Name, Unsubscribed_from_Emails__c, nu_dse__Email_Address__c
+                                            FROM nu_dse__Prospect__c 
+                                            WHERE (Id IN :prospectIds OR nu_dse__Email_Address__c IN :clientEmails)]) { // updating the controlling field in Prospect
+            
+            if(prospect.Unsubscribed_from_Emails__c == false) {
+                prospect.Unsubscribed_from_Emails__c = true;
+                prospectList.add(prospect);
+            } else if(prospectIds.contains(prospect.Id) == true){
+
+                UnsubscriptionResponse response = new UnsubscriptionResponse();
+                response.clientId = prospect.Id;
+                response.message = 'Client is already unsubscribed';
+                saveResultResponseList.add(response);
+            } else if(clientEmails.contains(prospect.nu_dse__Email_Address__c) == true){
+
+                UnsubscriptionResponse response = new UnsubscriptionResponse();
+                response.clientEmail = prospect.nu_dse__Email_Address__c;
+                response.message = 'Client is already unsubscribed';
+                saveResultResponseList.add(response);
+            }
         }
-        return generateResponseFromSaveResult(Database.update(prospectList, false));
+        saveResultResponseList.addAll(generateResponseFromSaveResult(Database.update(prospectList, false)));
+        return saveResultResponseList;
     }
 
     public static List<UnsubscriptionResponse> unsubscribePersonAccountfromEmail(Set<Id> personAccountIds, Set<String> clientEmails) {
-        List<Account> personAccountList = [SELECT Id, Unsubscribed_from_Emails__c FROM Account 
-                                           WHERE (Id IN :personAccountIds OR PersonEmail IN :clientEmails)
-                                               AND Unsubscribed_from_Emails__c = false];
-        for (Account personAccount: personAccountList) {
-            personAccount.Unsubscribed_from_Emails__c = true;
+        List<Account> personAccountList = new List<Account>();
+        List<UnsubscriptionResponse> saveResultResponseList = new List<UnsubscriptionResponse>(); //response to be sent
+
+        for (Account personAccount: [SELECT Id, Unsubscribed_from_Emails__c, PersonEmail FROM Account 
+                                     WHERE (Id IN :personAccountIds OR PersonEmail IN :clientEmails)]) {
+            
+            if(personAccount.Unsubscribed_from_Emails__c == false) {
+                personAccount.Unsubscribed_from_Emails__c = true;
+                personAccountList.add(personAccount);
+            } else if(personAccountIds.contains(personAccount.Id) == true) {
+                
+                UnsubscriptionResponse response = new UnsubscriptionResponse();
+                response.clientId = personAccount.Id;
+                response.message = 'Client is already unsubscribed';
+                saveResultResponseList.add(response);
+            } else if(clientEmails.contains(personAccount.PersonEmail) == true) {
+
+                UnsubscriptionResponse response = new UnsubscriptionResponse();
+                response.clientId = personAccount.PersonEmail;
+                response.message = 'Client is already unsubscribed';
+                saveResultResponseList.add(response);
+            }
         }
-        return generateResponseFromSaveResult(Database.update(personAccountList, false));
+        saveResultResponseList.addAll(generateResponseFromSaveResult(Database.update(personAccountList, false)));
+        return saveResultResponseList;
     }
 
     public static String getIdType(Id recId) {

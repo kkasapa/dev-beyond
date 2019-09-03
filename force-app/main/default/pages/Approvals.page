@@ -453,8 +453,7 @@
                                             <th>Time in Queue (HH:MM)</th>
                                             <!-- Changed Completed Date to created Date column in Table [SF-62]-->
                                             <th>Created Date</th>
-                                            <th>Status</th>
-                                            
+                                            <!-- Removed status column in Approvals Table[SF-62]-->
                                         </tr>
                                     </thead>
                                     <tbody class="approval-set--section">
@@ -511,7 +510,7 @@
                                                 </td>
                                                 <!-- Updated CompletedDate as createdDate column in Approvals Table[SF-62]-->
                                                 <td><center>{!approvalSet.approval.createdDate}</center></td>
-                                                <td>{!approvalSet.status}</td> 
+                                                <!-- Removed status column in Approvals Table[SF-62]-->
                                             </tr>
                                         </apex:repeat>
                                     </tbody>
