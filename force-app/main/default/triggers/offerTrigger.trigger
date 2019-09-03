@@ -1,6 +1,7 @@
 /**
 * ─────────────────────────────────────────────────────────────────────────────────────────────────┐
 * Trigger on Offer after update
+* Creating a new offerHandler Class 08/29/2019
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 * @author         Ashwin Bretto   <abretto@selastech.com>
 * @modifiedBy     Vlad Polotsev   <vpolovtsev@beyondfinance.com>
@@ -11,7 +12,7 @@
 * @systemLayer    Trigger
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
-trigger offerTrigger on nu_dse__Offer__c (before Update, after Update, after Insert, before Insert) {
+trigger offerTrigger on nu_dse__Offer__c (after Update, after Insert) {
     if(!System.isFuture())
-        new OfferHandler_TF().run();
+        new OfferHandler().run();
 }

@@ -63,7 +63,7 @@ public class SavingsCalcService{
             return resp;
         }
         HTTPResponse resp2 = new HTTPResponse();
-        resp2.setStatus('400');
+        resp2.setStatus('OK');
         resp2.setBody('{"data": {"id": "772285","type": "savings","links": {"self": "/api/v1/savings/772285"},"attributes": {"current-balance": 1000.0,"annual-interest-rate": "16.41","minimum-percentage-principle": "20.0","minimum-payment": 200.0,"total-savings": 271.0,"total-months": 18,"total-payments": 1071.0,"absolute-minimum-payment": 15.0}}}');
         return resp2;
     }
