@@ -3,11 +3,11 @@
 * Handler class for ProgramTrigger, extends the TriggerHandler. 
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 * @author         Vignesh   <vsadhasivam@selastech.com>
-* @modifiedBy     Vignesh   <vsadhasivam@selastech.com>
+* @modifiedBy     Ashwin Bretto   <abretto@selastech.com>
 * @maintainedBy   Vignesh   <vsadhasivam@selastech.com>
 * @version        1.0
 * @created        2019-05-16
-* @modified       2019-06-25
+* @modified       2019-08-17
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
 public class ProgramHandler extends TriggerHandler {

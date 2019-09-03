@@ -92,11 +92,6 @@ public with sharing class ApprovalsController {
         
         getAllApprovals();
     }
-    // Added method for refresh lead with recent changes.[SF-62]
-    public void refreshApprovals() {
-        
-        onFilterChange();
-    }
     
     public List<ApprovalSet> getAllApprovals() {
         
@@ -213,7 +208,8 @@ public with sharing class ApprovalsController {
                 if(processInstApprovalsMap.get(approvalId).approval.targetId != null
                     && selectedObjectMap.containsKey(processInstApprovalsMap.get(approvalId).approval.targetId) == true) {
                     
-                    processInstApprovalsMap.get(approvalId).approval.CreatedDate = String.valueOf(selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('CreatedDate'));
+                    DateTime createdDate  = DateTime.valueOf((selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('CreatedDate')));
+                    processInstApprovalsMap.get(approvalId).approval.CreatedDate = createdDate.format('MM-dd-YYYY');
                 }
             }
         }

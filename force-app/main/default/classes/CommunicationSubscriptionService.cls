@@ -16,11 +16,8 @@
 // consider for Phone SMS unsubscription
 public without sharing class CommunicationSubscriptionService {
 
-    public static Integer API_StatusCode; // status code to be set to the API response
+    public static Integer API_StatusCode = 200; // status code to be set to the API response
 
-    public CommunicationSubscriptionService() {
-        API_StatusCode = 200;
-    }
     // this method process the request from API and collectd ids/emails of client to unsubscribe them from emails
     public static List<UnsubscriptionResponse> unsubscribe(RestRequest apiRequest) {
       
@@ -30,41 +27,58 @@ public without sharing class CommunicationSubscriptionService {
         List<UnsubscriptionResponse> apiresponse = new List<UnsubscriptionResponse>();
         try{
             List<CommunicationSubscriptionService.CommunicationNotificatioWrap> requestList = (List<CommunicationSubscriptionService.CommunicationNotificatioWrap>)JSON.deserialize(apiRequest.requestBody.toString(), List<CommunicationSubscriptionService.CommunicationNotificatioWrap>.class);
-            if (requestList.size() > 10) {
-                
+            if (requestList.size() <= 10) {
+
+                for(CommunicationNotificatioWrap reqWrap: requestList) { 
+                    if(String.isNotBlank(reqWrap.clientId) == true) {
+                        if(reqWrap.clientId.length() == 15 
+                            || reqWrap.clientId.length() == 18) {
+                        
+                            if(getIdType(Id.valueOf(reqWrap.clientId)) == 'nu_dse__Prospect__c') { // checking the type of record id sent
+                                clientProspectIds.add(Id.valueOf(reqWrap.clientId));
+                            } else if(getIdType(Id.valueOf(reqWrap.clientId)) == 'Account') {
+                                clientAccountIds.add(Id.valueOf(reqWrap.clientId));
+                            } else if(getIdType(Id.valueOf(reqWrap.clientId)) == 'nu_dse__Payment__c') {
+                                // unsubscribe logic
+                            } 
+                            
+                        } else {
+                            // if id is not of any specified type, we are throwing an exception as response 
+                            UnsubscriptionResponse response = new UnsubscriptionResponse();
+                            response.message = 'Invalid clientId';
+                            response.clientId = reqWrap.clientId;
+                            apiresponse.add(response);
+                        }
+                    } else if(String.isNotBlank(reqWrap.clientEmail) == true) { // if the json node contains email instead of id 
+                        if(isValidateEmail(reqWrap.clientEmail) == true) {
+                            clientEmails.add(reqWrap.clientEmail); // adding emails to set for processing
+                        } else {
+                            // if Email is not of any specified type, we are throwing an exception as response 
+                            UnsubscriptionResponse response = new UnsubscriptionResponse();
+                            response.message = 'Invalid clientEmail';
+                            response.clientEmail = reqWrap.clientEmail;
+                            apiresponse.add(response);
+                        }
+                    } else {
+                        //throw *customException*;
+                        UnsubscriptionResponse response = new UnsubscriptionResponse();
+                        response.message = 'clientId or clientEmail required';
+                        apiresponse.add(response);
+                    }
+                }
+                if (clientProspectIds.isEmpty() == false
+                    || clientEmails.isEmpty() == false) {
+                    apiresponse.addAll(unsubscribeProspectsfromEmail(clientProspectIds, clientEmails));
+                }
+                if (clientAccountIds.isEmpty() == false
+                    || clientEmails.isEmpty() == false) {
+                    apiresponse.addAll(unsubscribePersonAccountfromEmail(clientAccountIds, clientEmails));
+                }    
+
             } else {
 
+                throw new CustomException('Unable to process more than 10 records.');
             }
-            for(CommunicationNotificatioWrap reqWrap: requestList) { 
-                if(String.isNotBlank(reqWrap.clientId) == true) {
-                    if(getIdType(reqWrap.clientId) == 'nu_dse__Prospect__c') { // checking the type of record id sent
-                        clientProspectIds.add(reqWrap.clientId);
-                    } else if(getIdType(reqWrap.clientId) == 'Account') {
-                        clientAccountIds.add(reqWrap.clientId);
-                    } else if(getIdType(reqWrap.clientId) == 'nu_dse__Payment__c') {
-                        // unsubscribe logic
-                    } else {
-                        API_StatusCode = 500; // if id is not of any specified type, we are throwing an exception as response 
-                        throw  new CustomException('Invalid clientId: '+reqWrap.clientId);
-                    }
-                } else if(String.isNotBlank(reqWrap.clientEmail) == true 
-                            && isValidateEmail(reqWrap.clientEmail) == true) { // if the json node contains email instead of id 
-                        clientEmails.add(reqWrap.clientEmail); // adding emails to set for processing
-                } else {
-                    //throw *customException*;
-                    API_StatusCode = 500; // throw exception if id, email is invalid
-                    throw  new CustomException('clientId or clientEmail required');
-                }
-            }
-            if (clientProspectIds != null && clientProspectIds.isEmpty() == false) {
-                apiresponse.addAll(unsubscribeProspectsfromEmail(clientProspectIds)); // based on the clientId, 
-            }
-            if (clientAccountIds != null && clientAccountIds.isEmpty() == false) {
-                apiresponse.addAll(unsubscribePersonAccountfromEmail(clientAccountIds));
-            }     
-            if (clientEmails != null && clientEmails.isEmpty() == false) {
-                apiresponse.addAll(unsubscribeProspectsfromEmail(clientEmails));
-            }   
         } catch(Exception e) {
             //return e.getMessage();
             API_StatusCode = 500;
@@ -76,36 +90,21 @@ public without sharing class CommunicationSubscriptionService {
         return apiresponse;
     }
 
-    public static List<UnsubscriptionResponse> unsubscribeProspectsfromEmail(Set<Id> prospectIds) {
+    public static List<UnsubscriptionResponse> unsubscribeProspectsfromEmail(Set<Id> prospectIds, Set<String> clientEmails) {
         List<nu_dse__Prospect__c> prospectList = [SELECT Id, Name, Unsubscribed_from_Emails__c
-                                                    FROM nu_dse__Prospect__c WHERE Id IN :prospectIds];
+                                                  FROM nu_dse__Prospect__c 
+                                                  WHERE (Id IN :prospectIds OR nu_dse__Email_Address__c IN :clientEmails)
+                                                      AND Unsubscribed_from_Emails__c = false];
         for (nu_dse__Prospect__c prospect: prospectList) { // updating the controlling field in Prospect
             prospect.Unsubscribed_from_Emails__c = true;
         }
         return generateResponseFromSaveResult(Database.update(prospectList, false));
     }
 
-    public static List<UnsubscriptionResponse> unsubscribeProspectsfromEmail(Set<String> clientEmails) {
-        List<nu_dse__Prospect__c> prospectList = [SELECT Id, Name, Unsubscribed_from_Emails__c
-                                                    FROM nu_dse__Prospect__c WHERE nu_dse__Email_Address__c IN :clientEmails];
-        for (nu_dse__Prospect__c prospect: prospectList) {
-            prospect.Unsubscribed_from_Emails__c = true;
-        }
-        return generateResponseFromSaveResult(Database.update(prospectList, false));
-    }
-
-    public static List<UnsubscriptionResponse> unsubscribePersonAccountfromEmail(Set<Id> personAccountIds) {
-        List<Account> personAccountList = [SELECT Id, Unsubscribed_from_Emails__c
-                                                    FROM Account WHERE Id IN :personAccountIds];
-        for (Account personAccount: personAccountList) {
-            personAccount.Unsubscribed_from_Emails__c = true;
-        }
-        return generateResponseFromSaveResult(Database.update(personAccountList, false));
-    }
-
-    public static List<UnsubscriptionResponse> unsubscribePersonAccountfromEmail(Set<String> clientEmails) {
-        List<Account> personAccountList = [SELECT Id, Unsubscribed_from_Emails__c
-                                                    FROM Account WHERE PersonEmail IN :clientEmails];
+    public static List<UnsubscriptionResponse> unsubscribePersonAccountfromEmail(Set<Id> personAccountIds, Set<String> clientEmails) {
+        List<Account> personAccountList = [SELECT Id, Unsubscribed_from_Emails__c FROM Account 
+                                           WHERE (Id IN :personAccountIds OR PersonEmail IN :clientEmails)
+                                               AND Unsubscribed_from_Emails__c = false];
         for (Account personAccount: personAccountList) {
             personAccount.Unsubscribed_from_Emails__c = true;
         }
@@ -154,12 +153,12 @@ public without sharing class CommunicationSubscriptionService {
     }
 
     public class CommunicationNotificatioWrap {
-        public Id clientId;
+        public String clientId;
         public String clientEmail;
     }
 
     public class UnsubscriptionResponse{
-        Id clientId;
+        String clientId;
         String clientEmail;
         String message;
     }

@@ -39,12 +39,13 @@ private class AWSSQS_Test {
             msgAttributeType='String';
             queueName='test Q';
             
-*/
 
             List<AWSSQS.CreateSQSMessgeRequest> smrlist= new List<AWSSQS.CreateSQSMessgeRequest>();                    
             smrlist.add(smr);
 
-            AWSSQS.sendMessageInvocable(smrlist);            
+            AWSSQS.sendMessageInvocable(smrlist);   
+            */
+         
         }catch(AWS.ServiceException Ex){}
 
     }

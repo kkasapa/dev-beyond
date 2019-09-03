@@ -79,20 +79,21 @@ public class AWSSQS {
         String msgAttributeName, String msgAttributeVal, String msgAttributeType, 
         String msgAttributeName_2, String msgAttributeVal_2, String msgAttributeType_2 ) {
         SendMessageRequest req = new SendMessageRequest();
+        
         req.executeAttrib(msgBody, msgAttributeName, msgAttributeVal, msgAttributeType, msgAttributeName_2, msgAttributeVal_2, msgAttributeType_2);
     }
 
-   @InvocableMethod(label='Send Message to SQS Queue' description='Send Message to SQS Queue.')
+    //this method is not required and deprecated as the process logic was converted to trigger.
+   /*@InvocableMethod(label='Send Message to SQS Queue' description='Send Message to SQS Queue.')
     //method to send message with 1 attribute, Invocable from process/flow
     public static void sendMessageInvocable(List<CreateSQSMessgeRequest> requestList) {
         for(CreateSQSMessgeRequest request : requestList){
-            System.debug('Request parameters'+request);
             sendMessageAttrib(request.msgBody, 
                 request.msgAttributeName, request.msgAttributeVal, request.msgAttributeType, 
                 request.msgAttributeName_2, request.msgAttributeVal_2, request.msgAttributeType_2);
-
         }
     }
+    */
 
     public class CreateSQSMessgeRequest {
         
