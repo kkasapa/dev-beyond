@@ -162,7 +162,7 @@ public without sharing class CommunicationSubscriptionService {
         return emailStringMatcher.matches(); //return true if valid email
     }
 
-    public void unsubscribeEmailTasks(Set<Id> whatIds) {
+    /* public void unsubscribeEmailTasks(Set<Id> whatIds) {
 
         List<Task> emailCommTasks = [SELECT Id, Subject, WhatId, Status, nu_dse__Communication_Sent__c, nu_dse__Communication_Template__c
                                 FROM Task WHERE WhatId IN :whatIds 
@@ -172,7 +172,7 @@ public without sharing class CommunicationSubscriptionService {
             commTasks.Status = 'Completed';
         }
         update emailCommTasks;
-    }
+    }*/
 
     public static List<UnsubscriptionResponse> generateResponseFromSaveResult(Database.SaveResult[] saveResults){
         
