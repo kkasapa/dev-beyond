@@ -27,7 +27,7 @@ public class ProspectHandler extends TriggerHandler {
     Map<String,nu_dse__Prospect__c> prospectSSN_ProspectsMap = new Map<String,nu_dse__Prospect__c>(); //contains ssn of all prospects for duplicate validation
 
     public override void beforeInsert() {
-        
+       
         List<BusinessHours> bussinessHourList = [SELECT Id FROM BusinessHours WHERE IsDefault = true LIMIT 1];
         
         for (nu_dse__Prospect__c newProspect : (List<nu_dse__Prospect__c>)Trigger.New) {  
@@ -40,9 +40,10 @@ public class ProspectHandler extends TriggerHandler {
             // updates Owner from Five9 Owner field, if Has_Been_Assigned__c is set to TRUE
             updateProspectOwner(newProspect, null);
             // validation to check if any duplicate SSN in available for other records
-            collectAllProspectSSN(newProspect, null);
+            //collectAllProspectSSN(newProspect, null);
         }
-        checkDuplicateAndTagAccount(); 
+        //checkDuplicateAndTagAccount(); 
+	
     }
     
     public override void beforeUpdate() {
@@ -196,7 +197,7 @@ public class ProspectHandler extends TriggerHandler {
                 ||(oldProspect.nu_dse__SSN__c != newProspect.nu_dse__SSN__c)) {
             if (prospectSSN_ProspectsMap.containsKey(newProspect.nu_dse__SSN__c) == true) {
                 nu_dse__Prospect__c prosDupSSN = prospectSSN_ProspectsMap.get(newProspect.nu_dse__SSN__c);
-                newProspect.SSN_Duplicate_Reference__c = newProspect.SSN_Duplicate_Reference__c != null ? newProspect.SSN_Duplicate_Reference__c : '' + '::'+ prosDupSSN.Name+': '+prosDupSSN.nu_dse__First_Name__c+prosDupSSN.nu_dse__Last_Name__c;
+                newProspect.SSN_Duplicate_Reference__c = newProspect.SSN_Duplicate_Reference__c != null ? newProspect.SSN_Duplicate_Reference__c + '::' : '' +  prosDupSSN.Name+': '+prosDupSSN.nu_dse__First_Name__c + ' ' +prosDupSSN.nu_dse__Last_Name__c;
             } else {
                prospectSSN_ProspectsMap.put(newProspect.nu_dse__SSN__c, newProspect); //collecting SSN of all prospect for duplicate validation
             }
@@ -204,24 +205,17 @@ public class ProspectHandler extends TriggerHandler {
     }
 
     public void checkDuplicateAndTagAccount() {
-        Map<String, String> SSN_AccountDetailMap = new Map<String, String>();
         for (nu_dse__Program__c program: [SELECT Id, Name, nu_dse__Account__r.FirstName, nu_dse__Account__r.LastName, 
                                         nu_dse__Account__r.nu_dse__SSN__c 
                                         FROM nu_dse__Program__c 
                                         WHERE nu_dse__Account__r.nu_dse__SSN__c IN :prospectSSN_ProspectsMap.keySet()]) {
             if (String.isNotBlank(program.nu_dse__Account__r.nu_dse__SSN__c) 
                 && prospectSSN_ProspectsMap.containsKey(program.nu_dse__Account__r.nu_dse__SSN__c)) {
+                
                 nu_dse__Prospect__c pros = prospectSSN_ProspectsMap.get(program.nu_dse__Account__r.nu_dse__SSN__c);
                 pros.SSN_Duplicate_Reference__c = program.Name+':'+program.nu_dse__Account__r.FirstName+'_'+program.nu_dse__Account__r.LastName;
                 prospectSSN_ProspectsMap.put(program.nu_dse__Account__r.nu_dse__SSN__c, pros);
-                //SSN_AccountDetailMap.put(program.nu_dse__Account__r.nu_dse__SSN__c, program.Name+':'+program.nu_dse__Account__r.FirstName+'_'+program.nu_dse__Account__r.LastName);
             }
         }
-
-        /*for(String existingSSN: SSN_AccountDetailMap.keySet()) {
-            nu_dse__Prospect__c pros = prospectSSN_ProspectsMap.get(existingSSN);
-            pros.SSN_Duplicate_Reference__c = SSN_AccountDetailMap.get(existingSSN);
-            prospectSSN_ProspectsMap.put(existingSSN, pros);
-        }*/
     }
 }
