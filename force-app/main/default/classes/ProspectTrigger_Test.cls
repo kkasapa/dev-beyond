@@ -32,12 +32,21 @@ public class ProspectTrigger_Test implements HttpCalloutMock {
         nu_dse__Prospect__c prospectInstance2 = TestRecordCreator.createProspect();
         prospectInstance2.nu_dse__First_Name__c = 'Duplicate_SSN';
         prospectInstance2.nu_dse__SSN__c = '111-11-1111';
+        prospectInstance2.nu_dse__Co_SSN__c = '222-22-2222';
         prospectList.add(prospectInstance2);
 
         nu_dse__Prospect__c prospectInstance3 = TestRecordCreator.createProspect();
         prospectInstance3.nu_dse__First_Name__c = 'Duplicate_SSN';
         prospectInstance3.nu_dse__SSN__c = '111-11-1111';
+        prospectInstance3.nu_dse__Co_SSN__c = '222-22-2222';
         prospectList.add(prospectInstance3);
+
+        nu_dse__Prospect__c prospectInstance4 = TestRecordCreator.createProspect();
+        prospectInstance4.nu_dse__First_Name__c = 'Duplicate_SSN';
+        prospectInstance4.nu_dse__SSN__c = '111-11-1111';
+        prospectInstance4.nu_dse__Co_SSN__c = '222-22-2222';
+        prospectList.add(prospectInstance4);
+
 
         insert prospectList;
 
@@ -48,13 +57,22 @@ public class ProspectTrigger_Test implements HttpCalloutMock {
 
         Account acc = TestRecordCreator.createAccount('Account1', accRecTypeList[0].Id);
         acc.nu_dse__SSN__c = '111-11-1111';
+        acc.nu_dse__Co_SSN__c = '222-22-2222';
         insert acc; 
+        Account acc1 = TestRecordCreator.createAccount('Account1', accRecTypeList[0].Id);
+        acc1.nu_dse__SSN__c = '111-11-1111';
+        acc1.nu_dse__Co_SSN__c = '222-22-2222';
+        insert acc1; 
         nu_dse__Processor__c processor = TestRecordCreator.createProcessor('GCS');
         insert processor;
 
         nu_dse__Program__c program = TestRecordCreator.createProgram(acc.Id, processor.Id);
         program.nu_dse__Program_Status__c = 'Active Client';
         insert program;
+        nu_dse__Program__c program1 = TestRecordCreator.createProgram(acc1.Id, processor.Id);
+        program1.nu_dse__Program_Status__c = 'Active Client';
+        insert program1;
+
 
     }
     static testMethod void validateProspectHandler()
@@ -260,29 +278,28 @@ public class ProspectTrigger_Test implements HttpCalloutMock {
         List<nu_dse__Prospect__c> prospectList = [SELECT Id, Name, nu_dse__First_Name__c, nu_dse__SSN__c 
                                                     FROM nu_dse__Prospect__c WHERE nu_dse__First_Name__c = 'Duplicate_SSN'];
 
-        for(nu_dse__Prospect__c prospect: prospectList) {
-            prospect.nu_dse__SSN__c = '';
-        }
-        update prospectList;
+        prospectList[0].nu_dse__SSN__c = '';
+        prospectList[0].nu_dse__Co_SSN__c = '';
+        update prospectList[0];
 
         Test.startTest();
-        for(nu_dse__Prospect__c prospect: prospectList) {
-            prospect.nu_dse__SSN__c = '111-11-1111';
-        }
-        update prospectList;
+        prospectList[0].nu_dse__SSN__c = '111-11-1111';
+        prospectList[0].nu_dse__Co_SSN__c = '222-22-2222';
+        update prospectList[0];
         Test.stopTest();
 
         /*List<nu_dse__Program__c> newprogList = [SELECT Id, Name, nu_dse__Account__r.FirstName, nu_dse__Account__r.nu_dse__SSN__c 
                                               FROM nu_dse__Program__c LIMIT 10];
 
         */
-        List<nu_dse__Prospect__c> updatedProspectList = [SELECT Id, Name, nu_dse__First_Name__c, nu_dse__SSN__c, SSN_Duplicate_Reference__c
-                                                    FROM nu_dse__Prospect__c WHERE nu_dse__First_Name__c = 'Duplicate_SSN'];
+        List<nu_dse__Prospect__c> updatedProspectList = [SELECT Id, Name, nu_dse__First_Name__c, nu_dse__SSN__c, Client_SSN_Duplicate_Reference__c, 
+                                                            Co_Client_Duplicate_By_SSN__c, Client_Duplicate_By_SSN__c
+                                                            FROM nu_dse__Prospect__c WHERE nu_dse__First_Name__c = 'Duplicate_SSN'];
        
 
-        System.assert(String.isNotBlank(updatedProspectList[0].SSN_Duplicate_Reference__c));
-
-        //System.assert(prospectList[0].SSN_Duplicate_Reference__c.contains(progList[0].Name));
+        System.assert(String.isNotBlank(updatedProspectList[0].Client_SSN_Duplicate_Reference__c));
+        System.assert(updatedProspectList[0].Co_Client_Duplicate_By_SSN__c);
+        System.assert(updatedProspectList[0].Client_Duplicate_By_SSN__c);
 
 
     }

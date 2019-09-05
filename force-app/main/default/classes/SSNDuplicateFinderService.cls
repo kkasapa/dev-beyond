@@ -1,12 +1,14 @@
 public with sharing class SSNDuplicateFinderService {
 
-    public static Map<String, List<nu_dse__Prospect__c>> checkAndTagDuplicate(Set<String> SSN_nos) {
+    public static Map<String, List<SObject>> checkAndTagDuplicate(Set<String> SSN_nos) {
         
         Map<String, List<SObject>> SSNDublicateRecMap = new Map<String, List<SObject>>();
         if(SSN_nos != null 
             && SSN_nos.isEmpty() == false) {
 
-            for(nu_dse__Prospect__c prospect : [SELECT Id, Name, nu_dse__First_Name__c, nu_dse__Last_Name__c, nu_dse__SSN__c FROM nu_dse__Prospect__c
+            for(nu_dse__Prospect__c prospect : [SELECT Id, Name, nu_dse__First_Name__c, nu_dse__Last_Name__c, nu_dse__SSN__c,
+                                                    nu_dse__Prospect_Status__c, nu_dse__DOB__c 
+                                                FROM nu_dse__Prospect__c
                                                 WHERE nu_dse__SSN__c IN :SSN_nos]){
                 
                 if(SSNDublicateRecMap.containskey(prospect.nu_dse__SSN__c) == false) {
@@ -17,7 +19,7 @@ public with sharing class SSNDuplicateFinderService {
             }
 
             for(nu_dse__Program__c program : [SELECT Id, Name, nu_dse__Account__r.FirstName, nu_dse__Account__r.LastName, 
-                                        nu_dse__Account__r.nu_dse__SSN__c 
+                                        nu_dse__Account__r.nu_dse__SSN__c, nu_dse__Account__r.PersonBirthdate, nu_dse__Program_Status__c 
                                         FROM nu_dse__Program__c 
                                         WHERE nu_dse__Account__r.nu_dse__SSN__c IN :SSN_nos]) {
             
@@ -31,42 +33,47 @@ public with sharing class SSNDuplicateFinderService {
         }
         return SSNDublicateRecMap; 
     }
-    /*
-    public static Map<String, String> checkAndTagDuplicate_Clone(Set<String> SSN_nos, Set<Id> ssnProspectIds) {
-        
-        Map<String, String> SSNDuplicateRefNameMap = new Map<String, String>();
 
+    public static Map<String, List<SObject>> coClientcheckAndTagDuplicate(Set<String> SSN_nos) {
+        
+        Map<String, List<SObject>> SSNDublicateRecMap = new Map<String, List<SObject>>();
         if(SSN_nos != null 
             && SSN_nos.isEmpty() == false) {
-
-            for(nu_dse__Prospect__c prospect : [SELECT Id, Name, nu_dse__First_Name__c, nu_dse__Last_Name__c, nu_dse__SSN__c FROM nu_dse__Prospect__c
-                                                WHERE nu_dse__SSN__c IN :SSN_nos AND Id NOT IN :ssnProspectIds]){
+            for(nu_dse__Prospect__c prospect : [SELECT Id, Name, nu_dse__Co_Full_Name__c, nu_dse__Co_SSN__c,
+                                                    nu_dse__Prospect_Status__c, nu_dse__CO_DOB__c 
+                                                FROM nu_dse__Prospect__c
+                                                WHERE nu_dse__Co_SSN__c IN :SSN_nos]){
                 
-                if(SSNDuplicateRefNameMap.containskey(prospect.nu_dse__SSN__c) == false) {
-                    SSNDuplicateRefNameMap.put(prospect.nu_dse__SSN__c, prospect.Name+': '+ 
-                        prospect.nu_dse__First_Name__c + ' ' +prospect.nu_dse__Last_Name__c);
+                if(SSNDublicateRecMap.containskey(prospect.nu_dse__Co_SSN__c) == false) {
+                    SSNDublicateRecMap.put(prospect.nu_dse__Co_SSN__c, new List<SObject>{prospect});
                 } else {
-                    SSNDuplicateRefNameMap.put(prospect.nu_dse__SSN__c, SSNDuplicateRefNameMap.get(prospect.nu_dse__SSN__c) + 
-                        ', ' + prospect.Name +': '+ prospect.nu_dse__First_Name__c + ' ' + 
-                        prospect.nu_dse__Last_Name__c);
+                    SSNDublicateRecMap.get(prospect.nu_dse__Co_SSN__c).add(prospect);
                 }
             }
 
-            for(nu_dse__Program__c program: [SELECT Id, Name, nu_dse__Account__r.FirstName, nu_dse__Account__r.LastName, 
-                                        nu_dse__Account__r.nu_dse__SSN__c 
+            for(nu_dse__Program__c program : [SELECT Id, Name, nu_dse__Account__r.nu_dse__Co_First_Name__c, nu_dse__Account__r.nu_dse__Co_Last_Name__c, 
+                                        nu_dse__Account__r.nu_dse__Co_SSN__c, nu_dse__Account__r.nu_dse__Co_Date_of_Birth__c, nu_dse__Program_Status__c 
                                         FROM nu_dse__Program__c 
-                                        WHERE nu_dse__Account__r.nu_dse__SSN__c IN :SSN_nos]) {
-
-                if(SSNDuplicateRefNameMap.containskey(program.nu_dse__Account__r.nu_dse__SSN__c) == false) {
-                    SSNDuplicateRefNameMap.put(program.nu_dse__Account__r.nu_dse__SSN__c, program.Name+': '+ 
-                        program.nu_dse__Account__r.FirstName + ' ' +program.nu_dse__Account__r.LastName);
+                                        WHERE nu_dse__Account__r.nu_dse__Co_SSN__c IN :SSN_nos]) {
+            
+                if(SSNDublicateRecMap.containskey(program.nu_dse__Account__r.nu_dse__Co_SSN__c) == false) {
+                    SSNDublicateRecMap.put(program.nu_dse__Account__r.nu_dse__Co_SSN__c, new List<SObject>{program});
                 } else {
-                    SSNDuplicateRefNameMap.put(program.nu_dse__Account__r.nu_dse__SSN__c, SSNDuplicateRefNameMap.get(program.nu_dse__Account__r.nu_dse__SSN__c) + 
-                        ', ' + program.Name +': '+ program.nu_dse__Account__r.FirstName + ' ' + 
-                        program.nu_dse__Account__r.LastName);
-                }                               
+                    SSNDublicateRecMap.get(program.nu_dse__Account__r.nu_dse__Co_SSN__c).add(program);
+                }
             }
         }
-        return SSNDuplicateRefNameMap; 
-    } */
+        return SSNDublicateRecMap;
+    }
+   
+    public class SSNDuplicateManagmentRequest{    
+        public ClientType clientType;
+        public Set<String> socialSecutityNumbers;
+    }
+    public Enum ClientType {CLIENT, CO_CLIENT}
+    
+    public class SSNDuplicateManagementResponse{
+        public String errorCode;
+        public String message;
+    }
 }
