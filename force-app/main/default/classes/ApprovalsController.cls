@@ -248,7 +248,7 @@ public with sharing class ApprovalsController {
         public String tradelineid {get; set;}
         public String recordName {get; set;}
         public String recordId {get; set;}
-        public String status { get; set;}
+        // Removed status column in Approvals table [SF-62]
         public Id workItemId {get; set;}
         public ApprovalRecord approval {get; set;}
         
@@ -258,7 +258,6 @@ public with sharing class ApprovalsController {
             this.objectTypeName = ApprovalsController.getObjectLabel(approval.targetId);
             this.recordName = approval.targetObjectName;
             this.recordId = approval.targetId;
-            this.status = approval.processStatus;
             
             if(approval.approvalType == 'WORKITEM') {
                 

@@ -24,10 +24,13 @@ public class ProspectHandler extends TriggerHandler {
     Map<Id, String> disqualifiedProspectIdUuIdMap = new Map<Id, String>(); // Map of Prospect Id and UUId 
     List<nu_dse__Prospect__c> velocifyLeadList = new List<nu_dse__Prospect__c>(); //List of Prospect for velocify update
     Set<Id> velocifyProspectIds = new Set<Id>(); // Set of Prospect Ids for Velocify modify leads
-    Map<String,nu_dse__Prospect__c> prospectSSN_ProspectsMap = new Map<String,nu_dse__Prospect__c>(); //contains ssn of all prospects for duplicate validation
+    Map<String, List<nu_dse__Prospect__c>> prospectSSN_ProspectsMap = new Map<String, List<nu_dse__Prospect__c>>(); //contains ssn of all prospects for duplicate validation
+    Map<Id, nu_dse__Prospect__c> updateProspectMap = new Map<Id, nu_dse__Prospect__c>();
+    List<Enrolled_Agreement_Details__c> insertEA = new List<Enrolled_Agreement_Details__c>();
+    Set<Id> ssnProspectIds = new Set<Id>();
 
     public override void beforeInsert() {
-        
+       
         List<BusinessHours> bussinessHourList = [SELECT Id FROM BusinessHours WHERE IsDefault = true LIMIT 1];
         
         for (nu_dse__Prospect__c newProspect : (List<nu_dse__Prospect__c>)Trigger.New) {  
@@ -40,9 +43,29 @@ public class ProspectHandler extends TriggerHandler {
             // updates Owner from Five9 Owner field, if Has_Been_Assigned__c is set to TRUE
             updateProspectOwner(newProspect, null);
             // validation to check if any duplicate SSN in available for other records
-            collectAllProspectSSN(newProspect, null);
+            //collectAllProspectSSN(newProspect, null);
         }
-        checkDuplicateAndTagAccount(); 
+        //checkDuplicateAndTagAccount(); 
+	
+    }
+    
+    public override void afterInsert() {
+
+        for (nu_dse__Prospect__c newProspect : (List<nu_dse__Prospect__c>)Trigger.New) { 
+
+            // validation to check if any duplicate SSN in available for other records
+            collectAllProspectSSN(newProspect, null);
+        } 
+
+        if(prospectSSN_ProspectsMap.isEmpty() == false
+            || updateProspectMap.isEmpty() == false) {
+            
+            prospectHandler.SSNDuplicateReferWrap reqWrap = new prospectHandler.SSNDuplicateReferWrap();
+            reqWrap.prospectIds = ssnProspectIds;
+            reqWrap.ssnProspectMap = prospectSSN_ProspectsMap;
+            reqWrap.updateProspectMap = updateProspectMap;
+            prospectHandler.updateSSNDuplicateReference(JSON.serialize(reqWrap));
+        }
     }
     
     public override void beforeUpdate() {
@@ -55,17 +78,27 @@ public class ProspectHandler extends TriggerHandler {
             //Update Prospect Owner from Five9 Owner Id value if Has been assigned it set to true
             updateProspectOwner(newProspect, oldProspectMap.get(newProspect.Id));
             // validation to check if any duplicate SSN in available for other records
-            collectAllProspectSSN(newProspect,oldProspectMap.get(newProspect.Id));
+            // collectAllProspectSSN(newProspect,oldProspectMap.get(newProspect.Id));
         } 
 
-        checkDuplicateAndTagAccount(); 
-        System.debug('Trigger.New--->'+Trigger.New);
-        System.debug('prospectSSN_ProspectsMap--->'+prospectSSN_ProspectsMap);
+        // checkDuplicateAndTagAccount(); 
 
         if(disqualifiedProspectIdUuIdMap.isEmpty() == false) {
             updateDispositionEmailType();
         }
     }
+    
+    public void createSnapshot(nu_dse__Prospect__c snapProspect)
+    {
+        if(snapProspect.Create_Snapshot__c)
+        {	
+            snapProspect.Create_Snapshot__c = false;
+            Enrolled_Agreement_Details__c snapObj = new Enrolled_Agreement_Details__c();
+            snapObj.Prospect_Id__c = snapProspect.Id;
+            insertEA.add(snapObj);
+            updateProspectMap.put(snapProspect.ID,snapProspect);
+        }
+	}
 
     public override void afterUpdate() {
         
@@ -99,6 +132,21 @@ public class ProspectHandler extends TriggerHandler {
         for(nu_dse__Prospect__c newProspect : (List<nu_dse__Prospect__c>)Trigger.New) {
             //collect prospect Ids of all prospects when prospect status is changed
             collectVelocifyLeadIds(newProspect, oldProspectMap.get(newProspect.Id));
+            // validation to check if any duplicate SSN in available for other records
+            collectAllProspectSSN(newProspect,oldProspectMap.get(newProspect.Id));
+            //generate snapshot if flag is set
+            createSnapshot(newProspect);
+        }
+        insert insertEA;
+
+        if(prospectSSN_ProspectsMap.isEmpty() == false
+            || updateProspectMap.isEmpty() == false) {
+            
+            prospectHandler.SSNDuplicateReferWrap reqWrap = new prospectHandler.SSNDuplicateReferWrap();
+            reqWrap.prospectIds = ssnProspectIds;
+            reqWrap.ssnProspectMap = prospectSSN_ProspectsMap;
+            reqWrap.updateProspectMap = updateProspectMap;
+            prospectHandler.updateSSNDuplicateReference(JSON.serialize(reqWrap));
         }
 
         if(velocifyLeadList.isEmpty() == false) {
@@ -192,36 +240,120 @@ public class ProspectHandler extends TriggerHandler {
         }
     }
     public void collectAllProspectSSN(nu_dse__Prospect__c newProspect, nu_dse__Prospect__c oldProspect) {
-        if ((Trigger.isInsert && String.isNotBlank(newProspect.nu_dse__SSN__c)) 
-                ||(oldProspect.nu_dse__SSN__c != newProspect.nu_dse__SSN__c)) {
-            if (prospectSSN_ProspectsMap.containsKey(newProspect.nu_dse__SSN__c) == true) {
-                nu_dse__Prospect__c prosDupSSN = prospectSSN_ProspectsMap.get(newProspect.nu_dse__SSN__c);
-                newProspect.SSN_Duplicate_Reference__c = newProspect.SSN_Duplicate_Reference__c != null ? newProspect.SSN_Duplicate_Reference__c : '' + '::'+ prosDupSSN.Name+': '+prosDupSSN.nu_dse__First_Name__c+prosDupSSN.nu_dse__Last_Name__c;
+        if (Trigger.isInsert
+            ||(oldProspect.nu_dse__SSN__c != newProspect.nu_dse__SSN__c)) {
+            
+            nu_dse__Prospect__c updatepros = new nu_dse__Prospect__c(Id=newProspect.Id);
+
+            if(String.isBlank(newProspect.nu_dse__SSN__c) == true) {
+                
+                updatepros.SSN_Duplicate_Reference__c = 'No duplicate found';
+                updatepros.Duplicate_By_SSN__c = false;
+
+            } else if (prospectSSN_ProspectsMap.containsKey(newProspect.nu_dse__SSN__c) == false) {
+                prospectSSN_ProspectsMap.put(newProspect.nu_dse__SSN__c, new List<nu_dse__Prospect__c>{newProspect}); //collecting SSN of all prospect for duplicate validation
+                updatepros.SSN_Duplicate_Reference__c = 'No duplicate found';
+                updatepros.Duplicate_By_SSN__c = false;
+                /* nu_dse__Prospect__c prosDupSSN = prospectSSN_ProspectsMap.get(newProspect.nu_dse__SSN__c);
+                newProspect.SSN_Duplicate_Reference__c = newProspect.SSN_Duplicate_Reference__c != null ? 
+                    newProspect.SSN_Duplicate_Reference__c + '::' : '' +  prosDupSSN.Name+': '+
+                    prosDupSSN.nu_dse__First_Name__c + ' ' +prosDupSSN.nu_dse__Last_Name__c; */
             } else {
-               prospectSSN_ProspectsMap.put(newProspect.nu_dse__SSN__c, newProspect); //collecting SSN of all prospect for duplicate validation
+                
+                nu_dse__Prospect__c prosDupSSN = prospectSSN_ProspectsMap.get(newProspect.nu_dse__SSN__c)[prospectSSN_ProspectsMap.get(newProspect.nu_dse__SSN__c).size() - 1];
+                String duplicatRefName = '';
+
+                if(String.isNotBlank(prosDupSSN.SSN_Duplicate_Reference__c)) {
+
+                    duplicatRefName = prosDupSSN.SSN_Duplicate_Reference__c;
+                }
+
+                duplicatRefName = prosDupSSN.Name+': '+
+                    prosDupSSN.nu_dse__First_Name__c + ' ' +prosDupSSN.nu_dse__Last_Name__c;
+                updatepros.SSN_Duplicate_Reference__c = duplicatRefName;
+                updatepros.Duplicate_By_SSN__c = true;
+                updateProspectMap.put(updatepros.Id, updatepros);
+                prospectSSN_ProspectsMap.get(newProspect.nu_dse__SSN__c).add(newProspect);
             }
+            updateProspectMap.put(updatepros.Id, updatepros);
+            ssnProspectIds.add(newProspect.Id);
         }
     }
 
-    public void checkDuplicateAndTagAccount() {
-        Map<String, String> SSN_AccountDetailMap = new Map<String, String>();
-        for (nu_dse__Program__c program: [SELECT Id, Name, nu_dse__Account__r.FirstName, nu_dse__Account__r.LastName, 
-                                        nu_dse__Account__r.nu_dse__SSN__c 
-                                        FROM nu_dse__Program__c 
-                                        WHERE nu_dse__Account__r.nu_dse__SSN__c IN :prospectSSN_ProspectsMap.keySet()]) {
-            if (String.isNotBlank(program.nu_dse__Account__r.nu_dse__SSN__c) 
-                && prospectSSN_ProspectsMap.containsKey(program.nu_dse__Account__r.nu_dse__SSN__c)) {
-                nu_dse__Prospect__c pros = prospectSSN_ProspectsMap.get(program.nu_dse__Account__r.nu_dse__SSN__c);
-                pros.SSN_Duplicate_Reference__c = program.Name+':'+program.nu_dse__Account__r.FirstName+'_'+program.nu_dse__Account__r.LastName;
-                prospectSSN_ProspectsMap.put(program.nu_dse__Account__r.nu_dse__SSN__c, pros);
-                //SSN_AccountDetailMap.put(program.nu_dse__Account__r.nu_dse__SSN__c, program.Name+':'+program.nu_dse__Account__r.FirstName+'_'+program.nu_dse__Account__r.LastName);
-            }
-        }
+    @future
+    public static void updateSSNDuplicateReference(String reqWrapJSON) {
 
-        /*for(String existingSSN: SSN_AccountDetailMap.keySet()) {
-            nu_dse__Prospect__c pros = prospectSSN_ProspectsMap.get(existingSSN);
-            pros.SSN_Duplicate_Reference__c = SSN_AccountDetailMap.get(existingSSN);
-            prospectSSN_ProspectsMap.put(existingSSN, pros);
-        }*/
+        if(String.isNotBlank(reqWrapJSON)) {
+
+            Set<Id> ssnProspectIds = new Set<Id>();
+            Map<String, List<nu_dse__Prospect__c>> prospectSSN_ProspectsMap = new Map<String, List<nu_dse__Prospect__c>>(); 
+            Map<Id, nu_dse__Prospect__c> updateProspectMap = new Map<Id, nu_dse__Prospect__c>();
+
+            SSNDuplicateReferWrap reqWrap = (SSNDuplicateReferWrap) JSON.deserialize(reqWrapJSON, SSNDuplicateReferWrap.class);
+
+            ssnProspectIds = reqWrap.prospectIds;
+            prospectSSN_ProspectsMap = reqWrap.ssnProspectMap;
+            updateProspectMap = reqWrap.updateProspectMap;
+
+            Map<String, List<SObject>> SSNDublicateRecMap = SSNDuplicateFinderService.checkAndTagDuplicate(prospectSSN_ProspectsMap.keyset());
+            Map<String, String> SSNDuplicateRefNameMap = new Map<String, String>();
+            
+            for(String SSNno : SSNDublicateRecMap.keySet()) {
+                
+                for(SObject duplicateRec : SSNDublicateRecMap.get(SSNno)) {
+                    
+                    if(duplicateRec.Id.getSobjectType().getDescribe().getName() == 'nu_dse__Prospect__c') {
+                        
+                        nu_dse__Prospect__c prospect = (nu_dse__Prospect__c)duplicateRec;
+                    
+                        if(ssnProspectIds.contains(prospect.Id) == false) {
+                            
+                            if(SSNDuplicateRefNameMap.containskey(prospect.nu_dse__SSN__c) == false) {
+                                SSNDuplicateRefNameMap.put(prospect.nu_dse__SSN__c, prospect.Name+': '+ 
+                                    prospect.nu_dse__First_Name__c + ' ' +prospect.nu_dse__Last_Name__c);
+                            } else {
+                                SSNDuplicateRefNameMap.put(prospect.nu_dse__SSN__c, SSNDuplicateRefNameMap.get(prospect.nu_dse__SSN__c) + 
+                                    ', ' + prospect.Name +': '+ prospect.nu_dse__First_Name__c + ' ' + 
+                                    prospect.nu_dse__Last_Name__c);
+                            }
+                        }
+                    } else {
+                        
+                        nu_dse__Program__c program = (nu_dse__Program__c)duplicateRec;
+
+                        if(SSNDuplicateRefNameMap.containskey(program.nu_dse__Account__r.nu_dse__SSN__c) == false) {
+                            SSNDuplicateRefNameMap.put(program.nu_dse__Account__r.nu_dse__SSN__c, program.Name+': '+ 
+                                program.nu_dse__Account__r.FirstName + ' ' +program.nu_dse__Account__r.LastName);
+                        } else {
+                            SSNDuplicateRefNameMap.put(program.nu_dse__Account__r.nu_dse__SSN__c, SSNDuplicateRefNameMap.get(program.nu_dse__Account__r.nu_dse__SSN__c) + 
+                                ', ' + program.Name +': '+ program.nu_dse__Account__r.FirstName + ' ' + 
+                                program.nu_dse__Account__r.LastName + ' ' + program.nu_dse__Account__r.PersonBirthdate + ' ' +program.nu_dse__Program_Status__c);
+                        }   
+                    }
+                    
+                }
+            }
+            for(String SSN_no : SSNDuplicateRefNameMap.keySet()) {
+                
+                String duplicateRef = SSNDuplicateRefNameMap.get(SSN_no);
+                for(nu_dse__Prospect__c prospect : prospectSSN_ProspectsMap.get(SSN_no)) {
+
+                    nu_dse__Prospect__c newProspect = new nu_dse__Prospect__c(Id=prospect.Id); 
+                    newProspect.SSN_Duplicate_Reference__c = duplicateRef;
+                    newProspect.Duplicate_By_SSN__c = true;
+                    duplicateRef += ', ' + prospect.Name +': '+ prospect.nu_dse__First_Name__c + ' ' + prospect.nu_dse__Last_Name__c;
+                    updateProspectMap.put(newProspect.Id, newProspect);
+                }
+            }
+
+            update updateProspectMap.values();
+        }
+    }
+
+    public class SSNDuplicateReferWrap{
+
+        public Set<Id> prospectIds;
+        public Map<String, List<nu_dse__Prospect__c>> ssnProspectMap;
+        public Map<Id, nu_dse__Prospect__c> updateProspectMap;
     }
 }
