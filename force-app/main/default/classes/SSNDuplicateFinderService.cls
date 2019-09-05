@@ -1,7 +1,4 @@
 public with sharing class SSNDuplicateFinderService {
-    public SSNDuplicateFinderService() {
-
-    }
 
     public static Map<String, List<nu_dse__Prospect__c>> checkAndTagDuplicate(Set<String> SSN_nos) {
         

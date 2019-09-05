@@ -26,6 +26,36 @@ public class ProspectTrigger_Test implements HttpCalloutMock {
         prospectInstance1.nu_dse__Last_Disposition__c = 'Disqualified';
         prospectInstance1.uuid__c = '187.55';
         insert prospectInstance1;
+
+        List<nu_dse__Prospect__c> prospectList = new List<nu_dse__Prospect__c>();
+
+        nu_dse__Prospect__c prospectInstance2 = TestRecordCreator.createProspect();
+        prospectInstance2.nu_dse__First_Name__c = 'Duplicate_SSN';
+        prospectInstance2.nu_dse__SSN__c = '111-11-1111';
+        prospectList.add(prospectInstance2);
+
+        nu_dse__Prospect__c prospectInstance3 = TestRecordCreator.createProspect();
+        prospectInstance3.nu_dse__First_Name__c = 'Duplicate_SSN';
+        prospectInstance3.nu_dse__SSN__c = '111-11-1111';
+        prospectList.add(prospectInstance3);
+
+        insert prospectList;
+
+        List<RecordType> accRecTypeList = [SELECT Id FROM RecordType 
+                                    WHERE sObjectType = 'Account' AND isPersonType = true 
+                                        AND DeveloperName = 'Client' LIMIT 1];
+
+
+        Account acc = TestRecordCreator.createAccount('Account1', accRecTypeList[0].Id);
+        acc.nu_dse__SSN__c = '111-11-1111';
+        insert acc; 
+        nu_dse__Processor__c processor = TestRecordCreator.createProcessor('GCS');
+        insert processor;
+
+        nu_dse__Program__c program = TestRecordCreator.createProgram(acc.Id, processor.Id);
+        program.nu_dse__Program_Status__c = 'Active Client';
+        insert program;
+
     }
     static testMethod void validateProspectHandler()
     {
@@ -221,4 +251,40 @@ public class ProspectTrigger_Test implements HttpCalloutMock {
         res.setBody(doc.toXmlString());
         return res;
     }
+
+    @isTest
+    public static void prospectSSNDuplicationCheck() {
+
+        List<nu_dse__Program__c> progList = [SELECT Id, Name, nu_dse__Account__r.FirstName, nu_dse__Account__r.nu_dse__SSN__c 
+                                                    FROM nu_dse__Program__c WHERE nu_dse__Account__r.nu_dse__SSN__c = '111-11-1111'];
+        List<nu_dse__Prospect__c> prospectList = [SELECT Id, Name, nu_dse__First_Name__c, nu_dse__SSN__c 
+                                                    FROM nu_dse__Prospect__c WHERE nu_dse__First_Name__c = 'Duplicate_SSN'];
+
+        for(nu_dse__Prospect__c prospect: prospectList) {
+            prospect.nu_dse__SSN__c = '';
+        }
+        update prospectList;
+
+        Test.startTest();
+        for(nu_dse__Prospect__c prospect: prospectList) {
+            prospect.nu_dse__SSN__c = '111-11-1111';
+        }
+        update prospectList;
+        Test.stopTest();
+
+        /*List<nu_dse__Program__c> newprogList = [SELECT Id, Name, nu_dse__Account__r.FirstName, nu_dse__Account__r.nu_dse__SSN__c 
+                                              FROM nu_dse__Program__c LIMIT 10];
+
+        */
+        List<nu_dse__Prospect__c> updatedProspectList = [SELECT Id, Name, nu_dse__First_Name__c, nu_dse__SSN__c, SSN_Duplicate_Reference__c
+                                                    FROM nu_dse__Prospect__c WHERE nu_dse__First_Name__c = 'Duplicate_SSN'];
+       
+
+        System.assert(String.isNotBlank(updatedProspectList[0].SSN_Duplicate_Reference__c));
+
+        //System.assert(prospectList[0].SSN_Duplicate_Reference__c.contains(progList[0].Name));
+
+
+    }
+
 }

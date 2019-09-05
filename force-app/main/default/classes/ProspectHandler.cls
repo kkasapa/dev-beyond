@@ -26,6 +26,7 @@ public class ProspectHandler extends TriggerHandler {
     Set<Id> velocifyProspectIds = new Set<Id>(); // Set of Prospect Ids for Velocify modify leads
     Map<String, List<nu_dse__Prospect__c>> prospectSSN_ProspectsMap = new Map<String, List<nu_dse__Prospect__c>>(); //contains ssn of all prospects for duplicate validation
     Map<Id, nu_dse__Prospect__c> updateProspectMap = new Map<Id, nu_dse__Prospect__c>();
+    List<Enrolled_Agreement_Details__c> insertEA = new List<Enrolled_Agreement_Details__c>();
     Set<Id> ssnProspectIds = new Set<Id>();
 
     public override void beforeInsert() {
@@ -85,6 +86,18 @@ public class ProspectHandler extends TriggerHandler {
             updateDispositionEmailType();
         }
     }
+    
+    public void createSnapshot(nu_dse__Prospect__c snapProspect)
+    {
+        if(snapProspect.Create_Snapshot__c)
+        {	
+            snapProspect.Create_Snapshot__c = false;
+            Enrolled_Agreement_Details__c snapObj = new Enrolled_Agreement_Details__c();
+            snapObj.Prospect_Id__c = snapProspect.Id;
+            insertEA.add(snapObj);
+            updateProspectMap.put(snapProspect.ID,snapProspect);
+        }
+	}
 
     public override void afterUpdate() {
         
@@ -120,7 +133,10 @@ public class ProspectHandler extends TriggerHandler {
             collectVelocifyLeadIds(newProspect, oldProspectMap.get(newProspect.Id));
             // validation to check if any duplicate SSN in available for other records
             collectAllProspectSSN(newProspect,oldProspectMap.get(newProspect.Id));
+            //generate snapshot if flag is set
+            createSnapshot(newProspect);
         }
+        insert insertEA;
 
         if(prospectSSN_ProspectsMap.isEmpty() == false) {
             
@@ -303,7 +319,7 @@ public class ProspectHandler extends TriggerHandler {
                         } else {
                             SSNDuplicateRefNameMap.put(program.nu_dse__Account__r.nu_dse__SSN__c, SSNDuplicateRefNameMap.get(program.nu_dse__Account__r.nu_dse__SSN__c) + 
                                 ', ' + program.Name +': '+ program.nu_dse__Account__r.FirstName + ' ' + 
-                                program.nu_dse__Account__r.LastName);
+                                program.nu_dse__Account__r.LastName + ':' + program.nu_dse__Account__r.PersonBirthdate + ':' +program.nu_dse__Program_Status__c);
                         }   
                     }
                     

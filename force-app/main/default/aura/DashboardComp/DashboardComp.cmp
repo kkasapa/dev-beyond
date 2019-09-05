@@ -1,0 +1,37 @@
+<aura:component controller="DashboardController" access="GLOBAL">
+
+    <aura:attribute name="programId" type="Id"/>
+    <aura:attribute name="showSpinner" type="Boolean"/>
+    <aura:attribute name="data" type="List" access="GLOBAL" description="data to be listed in the table"/>
+    <aura:attribute name="columns" type="List" access="GLOBAL" description="Columns of the datatable"/>
+    <aura:attribute name="cardActions" type="Aura.Component[]" access="GLOBAL" description="Header level actions to be passed to the card"/>
+    <aura:attribute name="cardFooter" type="Aura.Component[]" access="GLOBAL" description="Footer actions to be passed to the Card"/>
+
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+
+    <c:ApexActionService aura:id="apexService"/><!-- This is a service component that communicates with Apex -->
+    <c:CustomToast aura:id="toast"/><!-- This is a service component that displays toast message-->
+    <aura:if isTrue="{!v.showSpinner}">
+        <div >
+            <lightning:spinner alternativeText="Loading" variant="brand" size="medium" />
+        </div>
+    </aura:if>
+
+    <!--This is a Re-useable componenet that can be used for displaying Datatable within a Card-->
+        <c:RelatedListTableComp 
+            columns="{!v.columns}" 
+            data="{!v.data}" 
+            iconName="standard:individual" 
+            cardTitle="Settlements Out for Authorization">
+            <aura:set attribute="cardActions">
+                <lightning:buttonGroup>
+                        <lightning:button label="Action 1" />
+                        <lightning:button label="Action 2" />
+                        <lightning:button label="Action 3" />
+                    </lightning:buttonGroup>
+                </aura:set>    
+            <aura:set attribute="cardFooter">
+                <p class="slds-align_absolute-center">Pagination can be included</p>
+            </aura:set>
+        </c:RelatedListTableComp>
+</aura:component>

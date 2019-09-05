@@ -1,0 +1,19 @@
+<apex:page standardController="nu_dse__Program__c">
+  <apex:slds />
+    <apex:includeLightning />
+
+    <div id="lightning" />
+
+    <script>
+        $Lightning.use("c:PreviewApp", function() {
+          $Lightning.createComponent("c:DashboardComp",
+              {"programId" : '{!$CurrentPage.parameters.Id}'},
+              "lightning",
+              function(cmp) {
+                console.log("Comp was created",'{!$CurrentPage.parameters.Id}');
+                // do some stuff
+              }
+          );
+        });
+    </script>
+</apex:page>

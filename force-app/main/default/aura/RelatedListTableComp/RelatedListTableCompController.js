@@ -1,16 +1,12 @@
 ({
-    doInit : function(component, event, helper) {
-        
-        const apexService = component.find("apexService");
-		apexService.callServer(
-            component.get("c.getPageData"), // Action
-            {"offerId": component.get('v.currentOfferId')}, // Action parameters
-			$A.getCallback(function(response) { // Success callback
-                //component.set('v.memPreference', response);
-            }),
-            $A.getCallback(function(response) { // Error callback
-
-            })
-        );
+    // Client-side controller called by the onsort event handler
+    updateColumnSorting: function (cmp, event, helper) {
+        var fieldName = event.getParam('fieldName');
+        var sortDirection = event.getParam('sortDirection');
+        // assign the latest attribute with the sorted column fieldName and sorted direction
+        cmp.set("v.sortedBy", fieldName);
+        console.log('sortDirection',sortDirection);
+        cmp.set("v.sortedDirection", sortDirection);
+        helper.sortData(cmp, fieldName, sortDirection);
     }
 })
