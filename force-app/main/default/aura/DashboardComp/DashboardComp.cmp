@@ -22,7 +22,7 @@
             columns="{!v.columns}" 
             data="{!v.data}" 
             iconName="standard:individual" 
-            cardTitle="Settlements Out for Authorization">
+            cardTitle="Tradelines/Creditors">
             <aura:set attribute="cardActions">
                 <lightning:buttonGroup>
                         <lightning:button label="Action 1" />

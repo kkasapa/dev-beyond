@@ -298,13 +298,13 @@ public class ProspectHandler extends TriggerHandler {
                 updatepros = updateProspectMap.get(newProspect.Id);
             }
 
-            if(String.isBlank(newProspect.nu_dse__Co_SSN__c) == true) {
+            if(String.isBlank(newProspect.nu_dse__Co_SSN__c) == true) { // if SSN is cleared we mark that as no duplicate found
                 
                 updatepros.Co_Client_SSN_Duplicate_Reference__c = 'Co-Client SSN Duplicate Check ran on ['+ System.now()+']::::No duplicate found';
                 updatepros.Co_Client_Duplicate_By_SSN__c = false;
 
-            } else if (coClientSSNProspectsMap.containsKey(newProspect.nu_dse__Co_SSN__c) == false) {
-                coClientSSNProspectsMap.put(newProspect.nu_dse__Co_SSN__c, new List<nu_dse__Prospect__c>{newProspect}); //collecting SSN of all prospect for duplicate validation
+            } else if (coClientSSNProspectsMap.containsKey(newProspect.nu_dse__Co_SSN__c) == false) { //collecting SSN of all prospect for duplicate validation
+                coClientSSNProspectsMap.put(newProspect.nu_dse__Co_SSN__c, new List<nu_dse__Prospect__c>{newProspect}); 
                 updatepros.Co_Client_SSN_Duplicate_Reference__c = 'Co-Client SSN Duplicate Check ran on ['+ System.now()+']::::No duplicate found';
                 updatepros.Co_Client_Duplicate_By_SSN__c = false;
             } else {
@@ -329,8 +329,9 @@ public class ProspectHandler extends TriggerHandler {
         }
     }
 
+    //future method to query all Account and prospect and tag to Prospect
     @future
-    public static void updateSSNDuplicateReference(String reqWrapJSON) {
+    public static void updateSSNDuplicateReference(String reqWrapJSON) { 
 
         if(String.isNotBlank(reqWrapJSON)) {
 
@@ -359,7 +360,7 @@ public class ProspectHandler extends TriggerHandler {
                             
                             duplicatRefName = '[' + prospect.Name+': '+ prospect.nu_dse__First_Name__c + ' ' +prospect.nu_dse__Last_Name__c + ', ' +
                                                (prospect.nu_dse__DOB__c != null ? prospect.nu_dse__DOB__c + ', ':'') + 
-                                               prospect.nu_dse__Prospect_Status__c + ']';
+                                               prospect.nu_dse__Prospect_Status__c + ']'; // formulating the reference of duplicate in apattern easy to parse
 
                             if(SSNDuplicateRefNameMap.containskey(prospect.nu_dse__SSN__c) == false) {
                                 SSNDuplicateRefNameMap.put(prospect.nu_dse__SSN__c, duplicatRefName);
@@ -373,22 +374,22 @@ public class ProspectHandler extends TriggerHandler {
                         nu_dse__Program__c program = (nu_dse__Program__c)duplicateRec;
                         duplicatRefName = '[' + program.Name +': '+ program.nu_dse__Account__r.FirstName + ' ' + 
                                 program.nu_dse__Account__r.LastName + ', '+ program.nu_dse__Account__r.PersonBirthdate + ', ' + 
-                                program.nu_dse__Program_Status__c + ']';
+                                program.nu_dse__Program_Status__c + ']'; // formulating the reference of duplicate in apattern easy to parse
 
                         if(SSNDuplicateRefNameMap.containskey(program.nu_dse__Account__r.nu_dse__SSN__c) == false) {
-                            SSNDuplicateRefNameMap.put(program.nu_dse__Account__r.nu_dse__SSN__c, duplicatRefName);
+                            SSNDuplicateRefNameMap.put(program.nu_dse__Account__r.nu_dse__SSN__c, duplicatRefName); //setting reference in Prospect
                         } else {
                             SSNDuplicateRefNameMap.put(program.nu_dse__Account__r.nu_dse__SSN__c, 
-                                SSNDuplicateRefNameMap.get(program.nu_dse__Account__r.nu_dse__SSN__c) + ', ' + duplicatRefName);
+                                SSNDuplicateRefNameMap.get(program.nu_dse__Account__r.nu_dse__SSN__c) + ', ' + duplicatRefName);  //apending reference in Prospect
                         }   
                     }
                     
                 }
             }
-            for(String SSN_no : SSNDuplicateRefNameMap.keySet()) {
+            for(String SSN_no : SSNDuplicateRefNameMap.keySet()) { // iterating all ssn and getting it ready for dml
                 
                 String duplicateRef = 'SSN Duplicate Check ran on ['+ System.now()+']::::'+ SSNDuplicateRefNameMap.get(SSN_no);
-                for(nu_dse__Prospect__c prospect : prospectSSN_ProspectsMap.get(SSN_no)) {
+                for(nu_dse__Prospect__c prospect : prospectSSN_ProspectsMap.get(SSN_no)) { // if one ssn has multiple duplicate records, we handle as list of duplicate for one SSN
 
                     nu_dse__Prospect__c newProspect = new nu_dse__Prospect__c(Id=prospect.Id); 
                     if(updateProspectMap.containskey(prospect.Id)) {
@@ -397,7 +398,7 @@ public class ProspectHandler extends TriggerHandler {
                     }
                     newProspect.Client_SSN_Duplicate_Reference__c = duplicateRef;
                     newProspect.Client_Duplicate_By_SSN__c = true;
-                    duplicateRef += ', [' + prospect.Name +': '+ prospect.nu_dse__First_Name__c + ' ' + prospect.nu_dse__Last_Name__c + ']';
+                    duplicateRef += ', [' + prospect.Name +': '+ prospect.nu_dse__First_Name__c + ' ' + prospect.nu_dse__Last_Name__c + ']'; // appending to existing reference for new duplicate
                     updateProspectMap.put(newProspect.Id, newProspect);
                 }
             }
@@ -405,6 +406,7 @@ public class ProspectHandler extends TriggerHandler {
             Map<String, List<SObject>> coClientSSNDublicateRecMap = SSNDuplicateFinderService.coClientcheckAndTagDuplicate(coClientSSNProspectsMap.keyset());
             Map<String, String> coClientSSNDuplicateRefNameMap = new Map<String, String>();
 
+            //similar logic as we did for Client SSN
             for(String SSNno : coClientSSNDublicateRecMap.keySet()) {
                 
                 for(SObject duplicateRec : coClientSSNDublicateRecMap.get(SSNno)) {
