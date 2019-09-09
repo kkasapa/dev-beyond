@@ -93,17 +93,6 @@ public class ProspectHandler extends TriggerHandler {
         }
     }
     
-    public void createSnapshot(nu_dse__Prospect__c snapProspect)
-    {
-        if(snapProspect.Create_Snapshot__c)
-        {	
-            snapProspect.Create_Snapshot__c = false;
-            Enrolled_Agreement_Details__c snapObj = new Enrolled_Agreement_Details__c();
-            snapObj.Prospect_Id__c = snapProspect.Id;
-            insertEA.add(snapObj);
-            updateProspectMap.put(snapProspect.ID,snapProspect);
-        }
-	}
 
     public override void afterUpdate() {
         
@@ -139,8 +128,6 @@ public class ProspectHandler extends TriggerHandler {
             collectVelocifyLeadIds(newProspect, oldProspectMap.get(newProspect.Id));
             // validation to check if any duplicate SSN in available for other records
             collectAllProspectSSN(newProspect,oldProspectMap.get(newProspect.Id));
-            //generate snapshot if flag is set
-            createSnapshot(newProspect);
         }
         insert insertEA;
 

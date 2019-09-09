@@ -8,8 +8,12 @@
                 <apex:column headerValue="New Creditor" value="{!n.nu_dse__New_Creditor__r.Name}" />
                 <apex:column headerValue="Original Balance" value="{!n.nu_dse__Original_Debt__c}" />
                 <apex:column headerValue="Verified Balance" value="{!n.nu_dse__Verified_Balance__c}" />
-                <apex:column headerValue="Current Balance" value="{!n.VerifiedBalance__c}" />
-                <apex:column headerValue="Offer Name" value="{!n.name}" />
+                <apex:column headerValue="Current Balance" value="{!n.Verified_Balance2__c}" />
+                <apex:repeat value="{!n.nu_dse__Offers__r}" var="offer">
+                    <apex:column headerValue="Offer Name" value="{!offer.name}" rendered="{!n.nu_dse__Offers__r.size != 0}"/>
+                    <apex:column headerValue="Offer Amount" value="{!offer.nu_dse__Offer_Amount__c}" />
+                </apex:repeat>
+                <!--<apex:column headerValue="Offer Name" value="{!n.name}" />-->
             </apex:pageBlockTable>
         
         
