@@ -116,12 +116,12 @@ public class TaskHandler extends TriggerHandler{
 
         if(Test.isRunningTest() == true) {
             return new List<Sales_Disposition_for_Prospect_Owner_Upd__mdt>{
-                            new Sales_Disposition_for_Prospect_Owner_Upd__mdt(MasterLabel = 'No Answer', QualifiedApiName = 'No_Answer'),
-                            new Sales_Disposition_for_Prospect_Owner_Upd__mdt(MasterLabel = 'Disqualified', QualifiedApiName = 'Disqualified'),
+                            new Sales_Disposition_for_Prospect_Owner_Upd__mdt(MasterLabel = 'No Answer', QualifiedApiName = 'No_Answer', Active__c = true),
+                            new Sales_Disposition_for_Prospect_Owner_Upd__mdt(MasterLabel = 'Disqualified', QualifiedApiName = 'Disqualified', Active__c = true),
                             new Sales_Disposition_for_Prospect_Owner_Upd__mdt(MasterLabel = '08 Not Interested', QualifiedApiName = 'X08_Not_Interested')
                         };
         } else {
-            return [SELECT MasterLabel, QualifiedApiName FROM Sales_Disposition_for_Prospect_Owner_Upd__mdt];
+            return [SELECT MasterLabel, QualifiedApiName FROM Sales_Disposition_for_Prospect_Owner_Upd__mdt WHERE Active__c = true];
             
         }
     }

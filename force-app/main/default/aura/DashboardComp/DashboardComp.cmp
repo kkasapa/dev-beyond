@@ -17,12 +17,13 @@
         </div>
     </aura:if>
 
-    <!--This is a Re-useable componenet that can be used for displaying Datatable within a Card-->
-        <c:RelatedListTableComp 
+    <lightning:tabset>
+        <lightning:tab label="Tradelines With Settlements" onactive="{!c.doInit}">
+            <c:RelatedListTableComp 
             columns="{!v.columns}" 
             data="{!v.data}" 
             iconName="standard:individual" 
-            cardTitle="Settlements Out for Authorization">
+            cardTitle="Tradelines and Settlements">
             <aura:set attribute="cardActions">
                 <lightning:buttonGroup>
                         <lightning:button label="Action 1" />
@@ -34,4 +35,69 @@
                 <p class="slds-align_absolute-center">Pagination can be included</p>
             </aura:set>
         </c:RelatedListTableComp>
+        </lightning:tab>
+        <lightning:tab label="Tradelines With Pending Settlements" onactive="{!c.getNewSettlements}" title="Tradelines With Pending Settlements">
+        <aura:if isTrue="{!not(empty(v.data))}">
+            <c:RelatedListTableComp 
+                columns="{!v.columns}" 
+                data="{!v.data}" 
+                iconName="standard:individual" 
+                cardTitle="Tradelines With Pending Settlements">
+                <aura:set attribute="cardActions">
+                    <lightning:buttonGroup>
+                            <lightning:button label="Action 1" />
+                            <lightning:button label="Action 2" />
+                            <lightning:button label="Action 3" />
+                        </lightning:buttonGroup>
+                    </aura:set>    
+                <aura:set attribute="cardFooter">
+                    <p class="slds-align_absolute-center">Pagination can be included</p>
+                </aura:set>
+            </c:RelatedListTableComp>
+        </aura:if>
+        
+        </lightning:tab>
+        <lightning:tab label="Other Tradelines" onactive="{!c.doInit}">
+            <c:RelatedListTableComp 
+            columns="{!v.columns}" 
+            data="{!v.data}" 
+            iconName="standard:individual" 
+            cardTitle="Other Tradelines">
+            <aura:set attribute="cardActions">
+                <lightning:buttonGroup>
+                        <lightning:button label="Action 1" />
+                        <lightning:button label="Action 2" />
+                        <lightning:button label="Action 3" />
+                    </lightning:buttonGroup>
+                </aura:set>    
+            <aura:set attribute="cardFooter">
+                <p class="slds-align_absolute-center">Pagination can be included</p>
+            </aura:set>
+        </c:RelatedListTableComp>
+        </lightning:tab>
+    </lightning:tabset>
+
+    <!--<lightning:tabset variant="default">
+        <lightning:tab onactive="{!c.handleActive}" label="Tradelines With Settlements" id="tradelineSettlement" />
+        <lightning:tab onactive="{!c.handleActive}" label="Tradelines With Pending Settlements" id="tradelineSettlementsPending" />
+        <lightning:tab onactive="{!c.handleActive}" label="Other Tradelines" id="otherTradelines" />
+        <lightning:tab onactive="{!c.handleActive}" label="Tradelines Settlement Payments" id="tradelineSettlementPayments" />
+    </lightning:tabset>
+    This is a Re-useable componenet that can be used for displaying Datatable within a Card
+        <c:RelatedListTableComp 
+            columns="{!v.columns}" 
+            data="{!v.data}" 
+            iconName="standard:individual" 
+            cardTitle="Tradelines/Creditors">
+            <aura:set attribute="cardActions">
+                <lightning:buttonGroup>
+                        <lightning:button label="Action 1" />
+                        <lightning:button label="Action 2" />
+                        <lightning:button label="Action 3" />
+                    </lightning:buttonGroup>
+                </aura:set>    
+            <aura:set attribute="cardFooter">
+                <p class="slds-align_absolute-center">Pagination can be included</p>
+            </aura:set>
+        </c:RelatedListTableComp>-->
 </aura:component>

@@ -20,6 +20,8 @@
             sortedBy="{!v.sortedBy}"
             defaultSortDirection="asc"
             sortedDirection="{!v.sortedDirection}"
+			minColumnWidth="150"
+            maxColumnWidth="200"                     
             onsort="{!c.updateColumnSorting}"
             columns="{!v.columns}"
             hideCheckboxColumn="true"/>
