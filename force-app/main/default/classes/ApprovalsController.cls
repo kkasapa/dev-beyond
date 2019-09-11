@@ -16,8 +16,7 @@ public with sharing class ApprovalsController {
     public Id recordId {get; set;}
     public String namespace;
     public List<ApprovalSet> approvalSets {get; set;}
-    public Set<Id> offerQueueIdSet = new Set<Id>();
-    public Set<Id> prospectQueueIdSet = new Set<Id>();
+    public Set<Id> queueIdSet = new Set<Id>();
     public static Set<Id> subordinatesOfCurrentUser;
     public String selectedRadio{get;set;}
     
@@ -38,16 +37,11 @@ public with sharing class ApprovalsController {
     }
     
     public void getUserMemberGroup() {
-        
-        Set<String> prospectQueueNames = new Set<String>{'ADR', 'ADR_ClearOne', 'Beyond', 'Beyond_ClearOne'};
-        for(GroupMember grpMember : [SELECT GroupId, Group.Name FROM GroupMember 
-                                     WHERE UserOrGroupId = :this.userId AND Group.Type = 'Queue']){
+    
+        for(GroupMember grpMember : [SELECT GroupId, Group.Name FROM GroupMember WHERE UserOrGroupId = :this.userId AND Group.Type = 'Queue']){
         
             if (String.isNotBlank(grpMember.GroupId)) {            
-                offerQueueIdSet.add(grpMember.GroupId);
-                if(prospectQueueNames.contains(grpMember.Group.Name)) {
-                    prospectQueueIdSet.add(grpMember.GroupId);
-                }
+                queueIdSet.add(grpMember.GroupId);
             }
         }
     }
@@ -84,11 +78,8 @@ public with sharing class ApprovalsController {
             
             for (ApprovalSet appSet : assignedToQueue) {
         
-                if (String.isNotBlank(appSet.approval.asignedTo) 
-                    && ((selectedRadio == 'nu_dse__Prospect__c' && prospectQueueIdSet.isEmpty() == FALSE 
-                            && prospectQueueIdSet.contains(appSet.approval.asignedTo))
-                        || (selectedRadio != 'nu_dse__Prospect__c' && offerQueueIdSet.isEmpty() == FALSE 
-                            && offerQueueIdSet.contains(appSet.approval.asignedTo)))) {
+                if (String.isNotBlank(appSet.approval.asignedTo) && queueIdSet.isEmpty() == FALSE &&  
+                    queueIdSet.contains(appSet.approval.asignedTo)) {
                         
                     filteredApprovals.add(appSet);
                 }
@@ -106,11 +97,7 @@ public with sharing class ApprovalsController {
         
         try {
             System.debug('selectedRadio :::: ' + selectedRadio);
-            if(this.selectedRadio == 'nu_dse__Prospect__c') {
-                this.approvalSets = getApprovals(selectedRadio, this.userId, this.prospectQueueIdSet);
-            } else {
-                this.approvalSets = getApprovals(selectedRadio, this.userId, this.offerQueueIdSet);
-            }
+            this.approvalSets = getApprovals(selectedRadio, this.userId, this.queueIdSet);
             
         } catch(Exception e) {
             

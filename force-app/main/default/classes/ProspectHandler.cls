@@ -27,7 +27,6 @@ public class ProspectHandler extends TriggerHandler {
     Map<String, List<nu_dse__Prospect__c>> prospectSSN_ProspectsMap = new Map<String, List<nu_dse__Prospect__c>>(); //contains ssn of all prospects for duplicate validation
     Map<String, List<nu_dse__Prospect__c>> coClientSSNProspectsMap = new Map<String, List<nu_dse__Prospect__c>>();
     Map<Id, nu_dse__Prospect__c> updateProspectMap = new Map<Id, nu_dse__Prospect__c>();
-    List<Enrolled_Agreement_Details__c> insertEA = new List<Enrolled_Agreement_Details__c>();
     Set<Id> ssnProspectIds = new Set<Id>();
     Set<Id> coClientSSNProspectIds = new Set<Id>();
 
@@ -129,7 +128,6 @@ public class ProspectHandler extends TriggerHandler {
             // validation to check if any duplicate SSN in available for other records
             collectAllProspectSSN(newProspect,oldProspectMap.get(newProspect.Id));
         }
-        insert insertEA;
 
         if(prospectSSN_ProspectsMap.isEmpty() == false
             || updateProspectMap.isEmpty() == false
