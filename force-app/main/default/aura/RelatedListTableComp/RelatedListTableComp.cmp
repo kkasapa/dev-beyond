@@ -20,7 +20,7 @@
             sortedBy="{!v.sortedBy}"
             defaultSortDirection="asc"
             sortedDirection="{!v.sortedDirection}"
-			minColumnWidth="150"
+			minColumnWidth="100"
             maxColumnWidth="200"                     
             onsort="{!c.updateColumnSorting}"
             columns="{!v.columns}"
