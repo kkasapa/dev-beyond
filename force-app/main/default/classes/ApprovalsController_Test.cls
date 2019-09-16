@@ -67,6 +67,7 @@ public class ApprovalsController_Test {
         nu_dse__Prospect__c prospectInstance = new nu_dse__Prospect__c();
         prospectInstance.nu_dse__First_Name__c = 'Test Prospect';
         prospectInstance.nu_dse__Last_Name__c = 'Test Approval';
+        prospectInstance.nu_dse__State__c = 'AL';
         insert prospectInstance;
         
         Approval.ProcessSubmitRequest requestForSubmit = new Approval.ProcessSubmitRequest();
@@ -88,7 +89,7 @@ public class ApprovalsController_Test {
 
         Approval.ProcessSubmitRequest resubmitRequest = new Approval.ProcessSubmitRequest();
         resubmitRequest.setComments('Resubmit for Approve.');
-        resubmitRequest.setNextApproverIds(new Id[] {userQueryInstance.Id});
+        resubmitRequest.setNextApproverIds(new Id[] {UserInfo.getUserId()});
         resubmitRequest.setObjectId(prospectInstance.Id);
         resubmitRequest.setSkipEntryCriteria(true);
         Approval.ProcessResult resubmitResult = Approval.process(resubmitRequest);
