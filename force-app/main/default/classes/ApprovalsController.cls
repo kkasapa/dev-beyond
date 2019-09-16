@@ -37,8 +37,40 @@ public with sharing class ApprovalsController {
     }
     
     public void getUserMemberGroup() {
-    
-        for(GroupMember grpMember : [SELECT GroupId, Group.Name FROM GroupMember WHERE UserOrGroupId = :this.userId AND Group.Type = 'Queue']){
+        // Collect the groupIds which the current user added as member[SF-337]. 
+        Set<Id> currentUserGroupIds = new Set<Id>();
+        Set<Id> groupIds = new Set<Id>();
+
+        for(GroupMember grpMember : [SELECT GroupId, Group.Name FROM GroupMember 
+                                        WHERE UserOrGroupId = :this.userId]){
+            
+            if (String.isNotBlank(grpMember.GroupId)) {            
+                currentUserGroupIds.add(grpMember.GroupId);
+                groupIds.add(grpMember.GroupId);
+            }
+        }
+
+        for(Integer i=0; i < 5 ; i++) {
+            
+            List<GroupMember> groupMemberList = [SELECT GroupId, Group.Name FROM GroupMember 
+                                                 WHERE UserOrGroupId IN :groupIds];
+            groupIds = new Set<Id>();
+
+            for(GroupMember grpMember : groupMemberList){
+            
+                if (String.isNotBlank(grpMember.GroupId)) {            
+                    currentUserGroupIds.add(grpMember.GroupId);
+                    groupIds.add(grpMember.GroupId);
+                }
+            }
+            if(groupIds.isEmpty() == true) {
+                break;
+            }
+        }
+
+        for(GroupMember grpMember : [SELECT GroupId, Group.Name FROM GroupMember 
+                                     WHERE (UserOrGroupId = :this.userId OR UserOrGroupId IN :currentUserGroupIds)
+                                        AND Group.Type = 'Queue']){
         
             if (String.isNotBlank(grpMember.GroupId)) {            
                 queueIdSet.add(grpMember.GroupId);
