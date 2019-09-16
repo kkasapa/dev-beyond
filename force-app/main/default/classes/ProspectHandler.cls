@@ -242,7 +242,7 @@ public class ProspectHandler extends TriggerHandler {
 
             if(String.isBlank(newProspect.nu_dse__SSN__c) == true) {
                 
-                updatepros.Client_SSN_Duplicate_Reference__c = 'SSN Duplicate Check ran on ['+ System.now()+']::::No duplicate found';
+                updatepros.Client_SSN_Duplicate_Reference__c = '';
                 updatepros.Client_Duplicate_By_SSN__c = false;
 
             } else if (prospectSSN_ProspectsMap.containsKey(newProspect.nu_dse__SSN__c) == false) {
