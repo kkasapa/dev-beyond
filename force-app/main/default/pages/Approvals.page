@@ -451,6 +451,8 @@
                                             <!-- Added new RejectedBy column in Table [SF-62]-->
                                             <th>Rejected By</th>
                                             <th>Time in Queue (HH:MM)</th>
+                                            <!-- Added hidden Total mins in Queue column in Approvals Table for sorting[SF-339]-->
+                                            <th>Total mins in Queue (hidden)</th>
                                             <!-- Changed Completed Date to created Date column in Table [SF-62]-->
                                             <th>Created Date</th>
                                             <!-- Removed status column in Approvals Table[SF-62]-->
@@ -508,9 +510,10 @@
                                                         {!IF(LEN(TEXT(approvalSet.approval.elapsedHours)) == 1, LPAD(TEXT(approvalSet.approval.elapsedHours), 2, '0'), approvalSet.approval.elapsedHours)}:{!IF(LEN(TEXT(approvalSet.approval.elapsedMins)) == 1, LPAD(TEXT(approvalSet.approval.elapsedMins), 2, '0'), approvalSet.approval.elapsedMins)}
                                                     </center>
                                                 </td>
+                                                <!-- Added hidden total min column in Approvals Table for sorting[SF-339]-->
+                                                <td><center>{!approvalSet.approval.elapsedTotalMins}</center></td>
                                                 <!-- Updated CompletedDate as createdDate column in Approvals Table[SF-62]-->
                                                 <td><center>{!approvalSet.approval.createdDate}</center></td>
-                                                <!-- Removed status column in Approvals Table[SF-62]-->
                                             </tr>
                                         </apex:repeat>
                                     </tbody>
@@ -589,10 +592,24 @@
             function applyJQueryTable() {
             
                 $(document).ready( function () {
-                    $('#approvalsTable').DataTable();
+                    var table = $('#approvalsTable').DataTable({
+                        // Added default setting as default record count 25 & sort desc based on Time in Queue column[SF-339]
+                        "iDisplayLength": 25,
+                        "columnDefs":[
+                            {"visible": false, "targets":7},
+                            { "orderData": [7], "targets": 6}
+                        ]
+                    });
+                    // Used hidden column for sorting[SF-339]
+                    table
+                        .order( [ 7, 'desc' ] )
+                        .draw();
                 } );
             }
             
+            function getRank(name) {
+                return 
+            }
             
         </script>
     </apex:form>  
