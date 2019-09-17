@@ -37,8 +37,20 @@ public with sharing class ApprovalsController {
     }
     
     public void getUserMemberGroup() {
-    
-        for(GroupMember grpMember : [SELECT GroupId, Group.Name FROM GroupMember WHERE UserOrGroupId = :this.userId AND Group.Type = 'Queue']){
+        // Collect the groupIds which the current user added as member[SF-337]. 
+        Set<Id> currentUserGroupIds = new Set<Id>();
+
+        for(GroupMember grpMember : [SELECT GroupId, Group.Name FROM GroupMember 
+                                        WHERE UserOrGroupId = :this.userId]){
+            
+            if (String.isNotBlank(grpMember.GroupId)) {            
+                currentUserGroupIds.add(grpMember.GroupId);
+            }
+        }
+
+        for(GroupMember grpMember : [SELECT GroupId, Group.Name FROM GroupMember 
+                                     WHERE (UserOrGroupId = :this.userId OR UserOrGroupId IN :currentUserGroupIds)
+                                        AND Group.Type = 'Queue']){
         
             if (String.isNotBlank(grpMember.GroupId)) {            
                 queueIdSet.add(grpMember.GroupId);
@@ -129,13 +141,14 @@ public with sharing class ApprovalsController {
                 
                 if (procInstance.Workitems[0].ElapsedTimeInMinutes != null && appRec.elapsedHours != null) {
                     appRec.elapsedMins = getMinutes(procInstance.Workitems[0].ElapsedTimeInMinutes , appRec.elapsedHours);
+                    appRec.elapsedTotalMins = Integer.valueOf(procInstance.Workitems[0].ElapsedTimeInMinutes);
                 }
                 
             } else {
                 
                 appRec.elapsedHours = 0;
                 appRec.elapsedMins = 0;
-            
+                appRec.elapsedTotalMins = 0;
             }
             
             String targetObjId_ProcDefId = '';
@@ -275,6 +288,7 @@ public with sharing class ApprovalsController {
         public String submittedByName {get; set;}
         public Integer elapsedHours {get; set;}
         public Integer elapsedMins {get; set;}
+        public Integer elapsedTotalMins {get; set;}
         public String processStatus {get; set;}
         public String stepStatus {get; set;}
         public Id workId {get; set;}
