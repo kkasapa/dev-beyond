@@ -141,6 +141,7 @@ public with sharing class ApprovalsController {
                 
                 if (procInstance.Workitems[0].ElapsedTimeInMinutes != null && appRec.elapsedHours != null) {
                     appRec.elapsedMins = getMinutes(procInstance.Workitems[0].ElapsedTimeInMinutes , appRec.elapsedHours);
+                    // Updated elapsedTotalMins for sorting Time in Queue[SF-339]
                     appRec.elapsedTotalMins = Integer.valueOf(procInstance.Workitems[0].ElapsedTimeInMinutes);
                 }
                 
@@ -288,6 +289,7 @@ public with sharing class ApprovalsController {
         public String submittedByName {get; set;}
         public Integer elapsedHours {get; set;}
         public Integer elapsedMins {get; set;}
+        // Added elapsedTotalMins for sorting Time in Queue[SF-339]
         public Integer elapsedTotalMins {get; set;}
         public String processStatus {get; set;}
         public String stepStatus {get; set;}

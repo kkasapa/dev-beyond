@@ -466,7 +466,7 @@
                                                     <div>
                                                         <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator') && approvalSet.workItemId != null}">
                                                             <span class="approval-set--aprove-button">
-                                                                <a href="{!'/p/process/ProcessInstanceWorkitemWizardStageManager?id=' + approvalSet.workItemId + '&retURL=%2F' + recordId}" target="_blank" >Approve/Reject</a>
+                                                                <a href="{!'/p/process/ProcessInstanceWorkitemWizardStageManager?id=' + approvalSet.workItemId + '&retURL=%2F' + approvalSet.recordId}" target="_blank" >Approve/Reject</a>
                                                             </span>
                                                         </apex:outputPanel>
                                                         <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator') && approvalSet.workItemId != null}">
@@ -478,7 +478,7 @@
                                                     <div>
                                                         <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator') && approvalSet.workItemId != null}">
                                                             <span class="approval-set--aprove-button">
-                                                                <a href="{!'/'+ approvalSet.workItemId + '/e?et=REASSIGN&retURL=%2F' + recordId}" target="_blank" >Reassign</a>
+                                                                <a href="{!'/'+ approvalSet.workItemId + '/e?et=REASSIGN&retURL=%2F' + approvalSet.recordId}" target="_blank" >Reassign</a>
                                                             </span>
                                                         </apex:outputPanel>
                                                         <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator') && approvalSet.workItemId != null}">
@@ -574,8 +574,6 @@
                     dBody.style.overflow = 'auto';
                 }
             }
-
-        
             showSpinner();
             function approval_getApprovals() {
                 console.log('calling approval_refreshApprovals function.');
