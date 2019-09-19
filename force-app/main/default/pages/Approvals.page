@@ -10,7 +10,7 @@
 * @modified       2019-08-29
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 -->
-<apex:page controller="ApprovalsController" readOnly="true">
+<apex:page controller="ApprovalsController">
 
     <link rel="stylesheet" href="{!URLFOR($Resource.nu_dse__SLDS_221, '/assets/styles/salesforce-lightning-design-system.min.css')}" />
     <head>
@@ -376,10 +376,15 @@
             position:fixed;
         }
         
-        input {
-        
-            
-        }         
+        .nudebt-modal_header_primary {
+            background-color: rgb(34,54,117);
+            color: rgb(255,255,255);
+        }       
+        .nudebt-button, .nudebt-button:hover, .nudebt-button:active, .nudebt-button:focus {
+            background-color: rgb(122,180,59);
+            color: rgb(255,255,255);
+            border: none;
+        }
     </style>
    
     <div>
@@ -398,6 +403,11 @@
         <apex:actionFunction name="filterApprovals" action="{!onFilterChange}" rerender="tableData" oncomplete="applyJQueryTable();  hideSpinner();">
             <apex:param name="filterBy" value="" />
         </apex:actionFunction>
+        <apex:actionFunction name="setCurrentApproval" action="{!setCurrentApproval}" rerender="reAssignModal" oncomplete="hideSpinner();">
+            <apex:param name="currentApprovalIndex" assignTo="{!currentApprovalIndex}" value="" /> 
+        </apex:actionFunction>
+        <apex:actionFunction name="reAssignApproval" action="{!reAssignApproval}" rerender="reAssignModal" oncomplete="redirectPage(event.target.id);hideSpinner();" />
+        <apex:actionFunction name="cancelReAssignApproval" action="{!cancelReAssignApproval}" rerender="reAssignModal,tableData" oncomplete="hideSpinner();" />
         <apex:actionFunction name="approval_refreshApprovals" action="{!renderApprovals}" rerender="tableData" oncomplete="applyJQueryTable(); hideSpinner();"/>
         <apex:outputPanel id="page">
             <div class="slds">
@@ -459,6 +469,7 @@
                                         </tr>
                                     </thead>
                                     <tbody class="approval-set--section">
+                                        <apex:variable var="count" value="{!0}"></apex:variable>
                                         <apex:repeat value="{!approvalSets}" var="approvalSet">
                                             <tr class="approval-set--approval-steps">
                                                 <td>
@@ -486,6 +497,18 @@
                                                                 <a disabled="true" class="diabled-anchor">Reassign</a>
                                                             </span>
                                                         </apex:outputPanel>
+                                                    </div>        
+                                                    <div>
+                                                        <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator') && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a id="{!count}" onclick="showSpinner(); setCurrentApproval(event.target.id);">Reassign to me</a>
+                                                            </span>
+                                                        </apex:outputPanel>
+                                                        <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator') && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a disabled="true" class="diabled-anchor">Reassign to me</a>
+                                                            </span>
+                                                        </apex:outputPanel>
                                                     </div>                                                  
                                                 </td>
                                                 <td >
@@ -498,7 +521,12 @@
                                                     <a href="{! '/' + approvalSet.approval.submittedBy}" target="_blank" >{!approvalSet.approval.submittedByName}</a>
                                                 </td>
                                                 <td>
-                                                    <a href="{! '/' + approvalSet.approval.asignedTo}" target="_blank" >{!approvalSet.approval.asignedToName}</a>
+                                                    <apex:outputPanel rendered="{!BEGINS(approvalSet.approval.asignedTo, '005')}">
+                                                        <a href="{! '/' + approvalSet.approval.asignedTo}" target="_blank" >{!approvalSet.approval.asignedToName}</a> 
+                                                    </apex:outputPanel>
+                                                    <apex:outputPanel rendered="{!BEGINS(approvalSet.approval.asignedTo, '00G')}">
+                                                        <a href="{! '/p/own/Queue/d?id=' + approvalSet.approval.asignedTo}" target="_blank" >{!approvalSet.approval.asignedToName}</a>
+                                                    </apex:outputPanel>
                                                 </td>
                                                 <td>{!approvalSet.approval.submitStatus}</td>
                                                 <!-- Added Rejectedby column in Approvals Table[SF-62]-->
@@ -515,6 +543,7 @@
                                                 <!-- Updated CompletedDate as createdDate column in Approvals Table[SF-62]-->
                                                 <td><center>{!approvalSet.approval.createdDate}</center></td>
                                             </tr>
+                                            <apex:variable var="count" value="{!count + 1}"/>
                                         </apex:repeat>
                                     </tbody>
                                 </table>
@@ -522,10 +551,57 @@
                         </apex:outputPanel>
                     </div>
                     <div class="slds-card__footer">
-                        
                     </div>
                 </div>
             </div>
+        </apex:outputPanel>
+        <apex:outputPanel id="reAssignModal">
+            <apex:outputPanel rendered="{!reAssign}">
+                <div role="dialog" tabindex="-1" aria-labelledby="reAssignModal" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container" >
+                        <div class="slds-modal__header nudebt-modal_header_primary">
+                            <h2 class="slds-text-heading--medium">Reassign Approval Request</h2>
+                        </div>
+                        <div class="slds-modal__content slds-p-around--medium" >
+                            <div class="slds-grid slds-wrap">
+                                <div class="slds-col">
+                                    <span class="slds-form-element__label">Related To</span>
+                                    <div class="slds-form-element__control">
+                                        <span class="slds-form-element__static">
+                                            <a href="{!'/' + currentApproval.recordId}" target="_blank">{!currentApproval.recordName}</a>
+                                        </span>
+                                    </div>
+                                    <span class="slds-form-element__label">Approver</span>
+                                    <div class="slds-form-element__control">
+                                        <span class="slds-form-element__static">
+                                            <a href="{! '/' + $User.Id}" target="_blank" >{!$User.FirstName} {!$User.LastName}</a>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="slds-col">
+                                    <span class="slds-form-element__label">Submitted By</span>
+                                    <div class="slds-form-element__control">
+                                        <span class="slds-form-element__static">
+                                            <a href="{! '/' + currentApproval.approval.submittedBy}" target="_blank" >{!currentApproval.approval.submittedByName}</a>
+                                        </span>
+                                    </div>
+                                    <span class="slds-form-element__label">Assigned Approver</span>
+                                    <div class="slds-form-element__control">
+                                        <span class="slds-form-element__static">
+                                            <a href="{! '/' + currentApproval.approval.asignedTo}" target="_blank" >{!currentApproval.approval.asignedToName}</a>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-modal__footer nudebt-modal_header_primary">
+                            <button class="slds-button slds-button--brand nudebt-button" id="{!currentApproval.recordId}" type="button" onclick="showSpinner();reAssignApproval();">Reassign Approval Request</button>
+                            <button class="slds-button slds-button--neutral nudebt-button" type="button" onclick="showSpinner();cancelReAssignApproval();">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-backdrop slds-backdrop--open"></div>
+            </apex:outputPanel>
         </apex:outputPanel>
         <script>
                   
@@ -539,10 +615,14 @@
                     filterApprovals(filter);
                 }
             }
+            
+            function redirectPage(recordId) {
+                var redirectRef = window.open("/"+recordId, '_blank');
+            }
         </script>
         
         <script>
-        
+
             function showSpinner() {
         
                 var spinner = document.getElementById('Spinner');
@@ -603,10 +683,6 @@
                         .order( [ 7, 'desc' ] )
                         .draw();
                 } );
-            }
-            
-            function getRank(name) {
-                return 
             }
             
         </script>

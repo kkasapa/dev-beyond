@@ -97,6 +97,10 @@ public class ApprovalsController_Test {
         Test.startTest();
             ApprovalsController approvalsCont = new ApprovalsController();
             approvalsCont.renderApprovals();
+            approvalsCont.currentApprovalIndex = 0;
+            approvalsCont.setCurrentApproval();
+            approvalsCont.reAssignApproval();
+            approvalsCont.cancelReAssignApproval();
             ApexPages.currentPage().getParameters().put('filterBy', 'me');
             approvalsCont.onFilterChange();
             ApexPages.currentPage().getParameters().put('filterBy', 'all');
