@@ -152,11 +152,11 @@ public with sharing class ApprovalsController {
                                             ElapsedTimeInMinutes,LastActorId, ProcessDefinitionId,ProcessDefinition.Name, TargetObjectId, 
                                             TargetObject.Name,CreatedDate, SubmittedById, SubmittedBy.Name,
                                             (SELECT Id, ActorId, ProcessInstanceId, OriginalActorId, OriginalActor.Name, Actor.Name,
-                                             ElapsedTimeInDays, ElapsedTimeInHours, ElapsedTimeInMinutes FROM Workitems ORDER By CreatedDate DESC)
+                                             ElapsedTimeInDays, ElapsedTimeInHours, ElapsedTimeInMinutes FROM Workitems ORDER By ElapsedTimeInMinutes DESC)
                                             FROM ProcessInstance 
                                             WHERE TargetObject.Type = :selectedValue
                                             AND Status = 'Pending'
-                                            ORDER By CreatedDate DESC LIMIT 1000]) {
+                                            ORDER By CreatedDate ASC LIMIT 1000]) {
             
             ApprovalRecord appRec = new ApprovalRecord(procInstance, userId);
             if(procInstance.Workitems != null && procInstance.Workitems.isEmpty() == FALSE) {
