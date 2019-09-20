@@ -19,6 +19,9 @@ public with sharing class ApprovalsController {
     public Set<Id> queueIdSet = new Set<Id>();
     public static Set<Id> subordinatesOfCurrentUser;
     public String selectedRadio{get;set;}
+    public ApprovalSet currentApproval {get; set;}
+    public Integer currentApprovalIndex {get;set;}
+    public Boolean reAssign {get; set;}
     
     public ApprovalsController() {
     
@@ -27,6 +30,8 @@ public with sharing class ApprovalsController {
         getsubordinatesOfCurrentUser();
         getUserMemberGroup();
         selectedRadio = 'nu_dse__Prospect__c';
+        reAssign = false;
+        this.currentApproval = new ApprovalSet();
     }
     
     public void getsubordinatesOfCurrentUser() {
@@ -100,6 +105,27 @@ public with sharing class ApprovalsController {
         }
     }
     
+    public void setCurrentApproval() {
+
+        this.currentApproval = this.approvalSets[this.currentApprovalIndex];
+        this.reAssign = true;
+    }
+
+    public void reAssignApproval() {
+
+        ProcessInstanceWorkItem pi = new ProcessInstanceWorkItem();
+        pi.Id = this.currentApproval.workItemId;
+        pi.ActorId = UserInfo.getUserId();
+        update pi;
+        this.reAssign = false;
+    }
+
+    public void cancelReAssignApproval() {
+
+        this.reAssign = false;
+        this.currentApproval = new ApprovalSet();
+    }
+
     public void renderApprovals() {
         
         getAllApprovals();
@@ -141,6 +167,7 @@ public with sharing class ApprovalsController {
                 
                 if (procInstance.Workitems[0].ElapsedTimeInMinutes != null && appRec.elapsedHours != null) {
                     appRec.elapsedMins = getMinutes(procInstance.Workitems[0].ElapsedTimeInMinutes , appRec.elapsedHours);
+                    // Updated elapsedTotalMins for sorting Time in Queue[SF-339]
                     appRec.elapsedTotalMins = Integer.valueOf(procInstance.Workitems[0].ElapsedTimeInMinutes);
                 }
                 
@@ -264,6 +291,8 @@ public with sharing class ApprovalsController {
         // Removed status column in Approvals table [SF-62]
         public Id workItemId {get; set;}
         public ApprovalRecord approval {get; set;}
+
+        public ApprovalSet(){}
         
         public ApprovalSet(ApprovalRecord approval) {
             
@@ -288,6 +317,7 @@ public with sharing class ApprovalsController {
         public String submittedByName {get; set;}
         public Integer elapsedHours {get; set;}
         public Integer elapsedMins {get; set;}
+        // Added elapsedTotalMins for sorting Time in Queue[SF-339]
         public Integer elapsedTotalMins {get; set;}
         public String processStatus {get; set;}
         public String stepStatus {get; set;}
@@ -308,6 +338,7 @@ public with sharing class ApprovalsController {
         // Added two variables to show last rejected user name in approval[SF-62]. 
         public String rejectedBy { get; set;}
         public String rejectedByName { get; set;}
+        public String comments {get;set;}
         
         public ApprovalRecord(ProcessInstance processInstance, Id userId) {
             this.approvalType = 'WORKITEM';
