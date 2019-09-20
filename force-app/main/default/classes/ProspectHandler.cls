@@ -91,42 +91,16 @@ public class ProspectHandler extends TriggerHandler {
             updateDispositionEmailType();
         }
     }
-    
 
     public override void afterUpdate() {
-        
-        this.prospectIds = trigger.newMap.keySet();
-        List<nu_dse__Prospect__c> prospects = [SELECT ID,Recalled_Approval__c FROM nu_dse__Prospect__c WHERE Id IN :prospectIds];
-        Boolean RecalledApproval;
-        for (nu_dse__Prospect__c newProspect: prospects)
-        {
-            RecalledApproval = newProspect.Recalled_Approval__c;
-            newProspect.Recalled_Approval__c = false;
-            if(RecalledApproval)
-            {
-                List<ProcessInstance> instances = [SELECT Id FROM ProcessInstance WHERE TargetObjectId=:newProspect.Id AND Status='Pending' LIMIT 1];
-                if (!instances.isEmpty())
-                {
-                    ProcessInstance instance = instances[0];
-                    List<ProcessInstanceWorkitem> workItems = [SELECT Id FROM ProcessInstanceWorkitem WHERE ProcessInstanceId=:instance.Id LIMIT 1];
-                    if (!workItems.isEmpty())
-                    {
-                        ProcessInstanceWorkItem workItem = workItems[0];
-                        Approval.ProcessWorkItemRequest req = new Approval.ProcessWorkItemRequest();
-                        req.setWorkItemId(workItem.Id);
-                        req.setAction('Removed');
-                        req.setComments('Recalled Approval from ACE');
-                        Approval.ProcessResult result = Approval.process(req);
-                    }
-                }
-            }
-        }
         
         for(nu_dse__Prospect__c newProspect : (List<nu_dse__Prospect__c>)Trigger.New) {
             //collect prospect Ids of all prospects when prospect status is changed
             collectVelocifyLeadIds(newProspect, oldProspectMap.get(newProspect.Id));
             // validation to check if any duplicate SSN in available for other records
             collectAllProspectSSN(newProspect,oldProspectMap.get(newProspect.Id));
+            //Check if this is a approvall recall trigger
+            recallApproval(newProspect);
         }
 
         if(prospectSSN_ProspectsMap.isEmpty() == false
@@ -451,6 +425,31 @@ public class ProspectHandler extends TriggerHandler {
                 }
             }
             update updateProspectMap.values();
+        }
+    }
+    
+    public void recallApproval(nu_dse__Prospect__c newProspect)
+    {
+        Boolean RecalledApproval; 
+        RecalledApproval = newProspect.Recalled_Approval__c;
+        newProspect.Recalled_Approval__c = false;
+        if(RecalledApproval)
+        {
+        	List<ProcessInstance> instances = [SELECT Id FROM ProcessInstance WHERE TargetObjectId=:newProspect.Id AND Status='Pending' LIMIT 1];
+            if (!instances.isEmpty())
+            {
+            	ProcessInstance instance = instances[0];
+                List<ProcessInstanceWorkitem> workItems = [SELECT Id FROM ProcessInstanceWorkitem WHERE ProcessInstanceId=:instance.Id LIMIT 1];
+                if (!workItems.isEmpty())
+                {
+                	ProcessInstanceWorkItem workItem = workItems[0];
+                    Approval.ProcessWorkItemRequest req = new Approval.ProcessWorkItemRequest();
+                    req.setWorkItemId(workItem.Id);
+                    req.setAction('Removed');
+                    req.setComments('Recalled Approval from ACE');
+                    Approval.ProcessResult result = Approval.process(req);
+                }
+            }
         }
     }
 
