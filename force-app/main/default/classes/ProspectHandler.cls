@@ -428,13 +428,14 @@ public class ProspectHandler extends TriggerHandler {
         }
     }
     
-    public void recallApproval(nu_dse__Prospect__c newProspect)
-    {
+    //updated by Ashwin to prevent record read-only error while creation as newProspect instance can't be assigned with any values from afterUpdate context.
+    public void recallApproval(nu_dse__Prospect__c newProspect){
         Boolean RecalledApproval; 
         RecalledApproval = newProspect.Recalled_Approval__c;
-        newProspect.Recalled_Approval__c = false;
-        if(RecalledApproval)
-        {
+        //newProspect.Recalled_Approval__c = false; moved this update within the if condition
+        if(RecalledApproval) {
+
+            newProspect.Recalled_Approval__c = false;
         	List<ProcessInstance> instances = [SELECT Id FROM ProcessInstance WHERE TargetObjectId=:newProspect.Id AND Status='Pending' LIMIT 1];
             if (!instances.isEmpty())
             {
