@@ -400,14 +400,14 @@
    
     <apex:form >
         
-        <apex:actionFunction name="filterApprovals" action="{!onFilterChange}" rerender="tableData" oncomplete="applyJQueryTable();  hideSpinner();">
+        <apex:actionFunction name="filterApprovals" action="{!onFilterChange}" rerender="tableData,reAssignModal" oncomplete="applyJQueryTable();  hideSpinner();">
             <apex:param name="filterBy" value="" />
         </apex:actionFunction>
         <apex:actionFunction name="setCurrentApproval" action="{!setCurrentApproval}" rerender="reAssignModal" oncomplete="hideSpinner();">
             <apex:param name="currentApprovalIndex" assignTo="{!currentApprovalIndex}" value="" /> 
         </apex:actionFunction>
         <apex:actionFunction name="reAssignApproval" action="{!reAssignApproval}" rerender="reAssignModal" oncomplete="redirectPage(event.target.id);hideSpinner();" />
-        <apex:actionFunction name="cancelReAssignApproval" action="{!cancelReAssignApproval}" rerender="reAssignModal,tableData" oncomplete="hideSpinner();" />
+        <apex:actionFunction name="cancelReAssignApproval" action="{!cancelReAssignApproval}" rerender="reAssignModal" oncomplete="hideSpinner();" />
         <apex:actionFunction name="approval_refreshApprovals" action="{!renderApprovals}" rerender="tableData" oncomplete="applyJQueryTable(); hideSpinner();"/>
         <apex:outputPanel id="page">
             <div class="slds">
@@ -551,6 +551,10 @@
                         </apex:outputPanel>
                     </div>
                     <div class="slds-card__footer">
+                        <label class="font-color-white" for="refresh-time-element">Approvals data auto refresh for every</label>
+                        <input type="number" id="refreshTime" class="slds-input" style="width:4%; padding: 0 0.50rem 0 .50rem;" value="" onchange="autoRefresh();"/>
+                        <label class="font-color-white" for="refresh-time-element">seconds</label>
+                        <div class="slds-form-element__help" id="refreshTimeError" style="color: Red;display:none;">Refresh time shold be minimum 25 seconds</div>
                     </div>
                 </div>
             </div>
@@ -604,7 +608,7 @@
             </apex:outputPanel>
         </apex:outputPanel>
         <script>
-                  
+            var refreshSetInterval;
             // Updated to slected filter name got from element[SF-62]
             function onFilterChange() {
                 showSpinner();
@@ -618,6 +622,26 @@
             
             function redirectPage(recordId) {
                 var redirectRef = window.open("/"+recordId, '_blank');
+            }
+
+            function autoRefresh() {
+                var timeValue = document.getElementById("refreshTime").value;
+                document.getElementById('refreshTimeError').style.display = "none";
+                console.log('value', timeValue);
+                if(refreshSetInterval) {
+                    clearTimeout(refreshSetInterval);
+                }
+                if(timeValue != ''
+                    && timeValue > 24) {
+                    timeValue = timeValue * 1000;
+                    console.log('value 2:', timeValue);
+                    
+                    refreshSetInterval = setInterval(function(){ showSpinner();onFilterChange(); }, timeValue);
+                } else if(timeValue != ''
+                          && timeValue <= 24) {
+                    console.log('error');
+                    document.getElementById('refreshTimeError').style.display = "block";
+                }
             }
         </script>
         
@@ -653,6 +677,7 @@
                 } else {
                     dBody.style.overflow = 'auto';
                 }
+                console.log('hide');
             }
             showSpinner();
             function approval_getApprovals() {
