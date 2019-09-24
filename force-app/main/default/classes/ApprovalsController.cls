@@ -66,7 +66,8 @@ public with sharing class ApprovalsController {
     public void onFilterChange() {
     
         String filterBy = ApexPages.currentPage().getParameters().get('filterBy');
-        
+        this.reAssign = false;
+
         if (filterBy == 'me') {
         
             List<ApprovalSet> assignedToMe = new List<ApprovalSet>();
@@ -113,11 +114,12 @@ public with sharing class ApprovalsController {
 
     public void reAssignApproval() {
 
-        ProcessInstanceWorkItem pi = new ProcessInstanceWorkItem();
-        pi.Id = this.currentApproval.workItemId;
-        pi.ActorId = UserInfo.getUserId();
-        update pi;
+        ProcessInstanceWorkItem updateWorkItem = new ProcessInstanceWorkItem();
+        updateWorkItem.Id = this.currentApproval.workItemId;
+        updateWorkItem.ActorId = UserInfo.getUserId();
+        update updateWorkItem;
         this.reAssign = false;
+        this.currentApproval = new ApprovalSet();
     }
 
     public void cancelReAssignApproval() {
