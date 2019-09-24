@@ -400,7 +400,7 @@
    
     <apex:form >
         
-        <apex:actionFunction name="filterApprovals" action="{!onFilterChange}" rerender="tableData,reAssignModal" oncomplete="applyJQueryTable();  hideSpinner();">
+        <apex:actionFunction name="filterApprovals" action="{!onFilterChange}" rerender="tableData,reAssignModal" oncomplete="applyJQueryTable(); hideSpinner();">
             <apex:param name="filterBy" value="" />
         </apex:actionFunction>
         <apex:actionFunction name="setCurrentApproval" action="{!setCurrentApproval}" rerender="reAssignModal" oncomplete="hideSpinner();">
@@ -444,7 +444,7 @@
                                 </div>
                               </div>
                             </div>
-                            <button class="nudebt-button slds-button slds-button--neutral slds-m-left--xx-large" onclick="onFilterChange();" type="button">Refresh</button>
+                            <button class="nudebt-button slds-button slds-button--neutral slds-m-left--xx-large" onclick="refreshPage();" type="button">Refresh</button>
                         </div>
                     </div>
                     <div class="slds-card__body slds-panel">
@@ -553,8 +553,8 @@
                     <div class="slds-card__footer">
                         <label class="font-color-white" for="refresh-time-element">Approvals data auto refresh for every</label>
                         <input type="number" id="refreshTime" class="slds-input" style="width:4%; padding: 0 0.50rem 0 .50rem;" value="" onchange="autoRefresh();"/>
-                        <label class="font-color-white" for="refresh-time-element">seconds</label>
-                        <div class="slds-form-element__help" id="refreshTimeError" style="color: Red;display:none;">Refresh time shold be minimum 25 seconds</div>
+                        <label class="font-color-white" for="refresh-time-element">minutes</label>
+                        <div class="slds-form-element__help" id="refreshTimeError" style="color: Red;display:none;">Refresh time shold be minimum 3 minutes</div>
                     </div>
                 </div>
             </div>
@@ -609,6 +609,16 @@
         </apex:outputPanel>
         <script>
             var refreshSetInterval;
+            var currentPage = 0;
+
+            function refreshPage() {
+
+                var table =  $('#approvalsTable').DataTable();
+                currentPage = table.page.info().page;
+                console.log('currentPage -->',table.page.info().page);
+                onFilterChange();
+            }
+            
             // Updated to slected filter name got from element[SF-62]
             function onFilterChange() {
                 showSpinner();
@@ -632,13 +642,13 @@
                     clearTimeout(refreshSetInterval);
                 }
                 if(timeValue != ''
-                    && timeValue > 24) {
-                    timeValue = timeValue * 1000;
+                    && timeValue > 2) {
+                    timeValue = timeValue * 60 * 1000;
                     console.log('value 2:', timeValue);
                     
                     refreshSetInterval = setInterval(function(){ showSpinner();onFilterChange(); }, timeValue);
                 } else if(timeValue != ''
-                          && timeValue <= 24) {
+                          && timeValue <= 2) {
                     console.log('error');
                     document.getElementById('refreshTimeError').style.display = "block";
                 }
@@ -677,7 +687,6 @@
                 } else {
                     dBody.style.overflow = 'auto';
                 }
-                console.log('hide');
             }
             showSpinner();
             function approval_getApprovals() {
@@ -693,7 +702,7 @@
             })();
 
             function applyJQueryTable() {
-            
+                
                 $(document).ready( function () {
                     var table = $('#approvalsTable').DataTable({
                         // Added default setting as default record count 25 & sort desc based on Time in Queue column[SF-339]
@@ -707,7 +716,8 @@
                     table
                         .order( [ 7, 'desc' ] )
                         .draw();
-                } );
+                    currentPage = 0;
+                });
             }
             
         </script>
