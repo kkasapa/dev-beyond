@@ -52,6 +52,7 @@ public class SavingsCalcService{
         request.setHeader('Content-Type','application/vnd.api+json');
         body = '{"data":{"type":"savings","attributes":{"current_balance":'+ debt +',"minimum_payment":'+ payment +',"annual_interest_rate":"'+ rate +'"}}}';
         request.setBody(body);
+        system.debug('query built');
         return request;
     }
     public HttpResponse sendRequest(HttpRequest req)
@@ -60,6 +61,7 @@ public class SavingsCalcService{
         {
             HTTP http = new http();
             HTTPResponse resp = http.send(req);
+            system.debug('request sent');
             return resp;
         }
         HTTPResponse resp2 = new HTTPResponse();

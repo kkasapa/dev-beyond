@@ -624,6 +624,7 @@
                 showSpinner();
                 var filter = document.getElementById('filterSelect').value;
                 console.log('changed to ->',filter);
+
                 if (filter) {
                 
                     filterApprovals(filter);

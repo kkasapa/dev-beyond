@@ -21,18 +21,16 @@ public class OfferHandler extends TriggerHandler {
     public OfferHandler() {
         this.newOfferMap = (Map<Id, nu_dse__Offer__c>) Trigger.newMap;
         this.oldOfferMap = (Map<Id, nu_dse__Offer__c>) Trigger.oldMap;
+        this.offerIds = trigger.newMap.keySet();
     }
 
     public override void afterInsert()
     {
         //Run the savings calculator after offer create
-        this.offerIds = trigger.newMap.keySet();
         savingsCalc(offerIds);
     }
         
     public override void afterUpdate() {
-    
-        this.offerIds = trigger.newMap.keySet();
         Set<ID> OfferstoUpdate = new Set<ID>();
         /*run savings calculator ONLY if enrolled balance is changed.
         for( Id offerId : offerIds)
@@ -55,15 +53,19 @@ public class OfferHandler extends TriggerHandler {
         savingsCalc(OfferstoUpdate);
     }
     
-    @future(callout=true)
+ 	@future(callout=true)
     public static void savingsCalc(Set<ID> recordIds)
     {   
+        //Set up required variables, list of offers to be updated, list of offers to be modified 
         List<nu_dse__Offer__c> offers = [SELECT Name,Enrolled_Balance__c FROM nu_dse__Offer__c WHERE Id IN :recordIds];
+        List<nu_dse__Offer__c> offersToUpdate = new List<nu_dse__Offer__c>();
         Double debt;
         Double payment;
         Double rate;
         SavingsCalcService api = new SavingsCalcService();
         HttpRequest send = new HttpRequest();
+        System.debug('savings calc');
+        
         //extract relevant info, run savings calc, and store value for each offer that triggered.
         for (nu_dse__Offer__c newOffer: offers)
         {
@@ -75,36 +77,44 @@ public class OfferHandler extends TriggerHandler {
                 response = api.sendRequest(send);
                 String resp = response.getStatus();
                 String body = response.getBody();
-                System.debug(resp);
-                Double saved; 
+                Double saved;
+                Integer months;
+                Double totalPayment;
                 
                 if (resp != 'OK')
                 {
                     newOffer.Savings_Calculation__c = 0;
                     newOffer.Update_Savings_Calc__c = false;
-                    update newOffer;
-                    //try{
-                    //} catch (DmlException e){
-                    //process exception
-                    //}
+                    offersToUpdate.add(newOffer);
                 }
-                else
+                else if(resp == 'OK')
                 {
                     JSONParser parser = JSON.createParser(body);
                     while (parser.nextToken() != null)
                     {
+                        if(parser.getText() == 'total-months')
+                        {
+                            parser.nextToken();
+                            months = parser.getIntegerValue();
+                            newOffer.Months_to_Payoff__c = months;
+                            system.debug(months);
+                        }
+                        if(parser.getText() == 'total-payments')
+                        {
+                        	parser.nextToken();
+                        	totalPayment = parser.getDoubleValue();
+                            newOffer.Payoff_Amount__c = totalPayment;
+                        	system.debug(totalPayment); 
+                        }
                         if(parser.getText() == 'total-savings')
                         {
                                 parser.nextToken();
                                 saved = parser.getDoubleValue();
                                 newOffer.Savings_Calculation__c = saved;
-                                //try{
                                 newOffer.Update_Savings_Calc__c = false;
                             	newOffer.Savings_Calc_Error__c = '';
-                                    update newOffer;
-                                //} catch (DmlException e){
-                                    //process exception
-                                //}
+                            	System.debug(newOffer);
+                                offersToUpdate.add(newOffer);
                         }
                     }
                 }
@@ -112,16 +122,11 @@ public class OfferHandler extends TriggerHandler {
                 system.debug('whoops');
                 newOffer.Savings_Calculation__c = 0;
                 newOffer.Update_Savings_Calc__c = false;
-                String CalcError = e.getTypeName()+ ' ' +e.getMessage();
-                if(CalcError.length() > 255 ){
-                	newOffer.Savings_Calc_Error__c = CalcError.substring(0,254);
-                }
-                else{
-                	newOffer.Savings_Calc_Error__c = CalcError;
-                }
-                update newOffer;
+                newOffer.Savings_Calc_Error__c = e.getTypeName()+ ' ' +e.getMessage();
+                offersToUpdate.add(newOffer);
             }
             
-        } 
+        }
+        update offersToUpdate;
     }
 }

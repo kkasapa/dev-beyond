@@ -341,6 +341,7 @@ public class OfferHandler_TF extends TriggerHandler {
         Double rate;
         SavingsCalcService api = new SavingsCalcService();
         HttpRequest send = new HttpRequest();
+        System.debug('savings calc');
         
         //extract relevant info, run savings calc, and store value for each offer that triggered.
         for (nu_dse__Offer__c newOffer: offers)
@@ -353,7 +354,9 @@ public class OfferHandler_TF extends TriggerHandler {
                 response = api.sendRequest(send);
                 String resp = response.getStatus();
                 String body = response.getBody();
-                Double saved; 
+                Double saved;
+                Integer months;
+                Double totalPayment;
                 
                 if (resp != 'OK')
                 {
@@ -366,11 +369,25 @@ public class OfferHandler_TF extends TriggerHandler {
                     JSONParser parser = JSON.createParser(body);
                     while (parser.nextToken() != null)
                     {
+                        if(parser.getText() == 'total-months')
+                        {
+                            parser.nextToken();
+                            months = parser.getIntegerValue();
+                            system.debug(months);
+                        }
+                        if(parser.getText() == 'total-payments')
+                        {
+                        	parser.nextToken();
+                        	totalPayment = parser.getDoubleValue();
+                        	system.debug(totalPayment); 
+                        }
                         if(parser.getText() == 'total-savings')
                         {
                                 parser.nextToken();
                                 saved = parser.getDoubleValue();
                                 newOffer.Savings_Calculation__c = saved;
+                            	newOffer.Months_to_Payoff__c = months;
+                            	newOffer.Payoff_Amount__c = totalPayment;
                                 newOffer.Update_Savings_Calc__c = false;
                             	newOffer.Savings_Calc_Error__c = '';
                                 offersToUpdate.add(newOffer);
