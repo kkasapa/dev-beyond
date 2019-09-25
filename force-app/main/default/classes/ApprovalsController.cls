@@ -174,8 +174,7 @@ public with sharing class ApprovalsController {
                     appRec.elapsedTotalMins = Integer.valueOf(procInstance.Workitems[0].ElapsedTimeInMinutes);
                 }
 
-                if(procInstance.StepsAndWorkitems != null 
-                    && procInstance.StepsAndWorkitems.isEmpty() == FALSE) {
+                if(procInstance.StepsAndWorkitems != null && procInstance.StepsAndWorkitems.isEmpty() == FALSE) {
                 
                     if(procInstance.Workitems[0].ElapsedTimeInHours != null
                         && procInstance.StepsAndWorkitems[0].ElapsedTimeInHours != null) {
@@ -252,8 +251,8 @@ public with sharing class ApprovalsController {
             for(ProcessInstance procInstance : [SELECT ProcessDefinitionId, TargetObjectId, LastActor.Name, LastActorId, Status
                                                 FROM ProcessInstance 
                                                 WHERE TargetObject.Type = :selectedValue
-                                                AND (Status = 'Rejected' OR Status = 'Approved')
-                                                AND TargetObjectId IN :targetObjectIdSet
+                                                    AND TargetObjectId IN :targetObjectIdSet
+                                                    AND (Status = 'Rejected' OR Status = 'Approved')
                                                 ORDER By CreatedDate DESC]){
 
                 String targetObjId_ProcDefId = '';
