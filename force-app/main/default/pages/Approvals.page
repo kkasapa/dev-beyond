@@ -444,12 +444,12 @@
                                 </div>
                               </div>
                             </div>
-                            <button class="nudebt-button slds-button slds-button--neutral slds-m-left--xx-large" onclick="onFilterChange();" type="button">Refresh</button>
+                            <button class="nudebt-button slds-button slds-button--neutral slds-m-left--xx-large" onclick="refreshPage();" type="button">Refresh</button>
                         </div>
                     </div>
                     <div class="slds-card__body slds-panel">
                         <apex:outputPanel id="tableData">
-                            <div>
+                            <div id="dataTableDiv">
                                 <table class="slds-table slds-table--bordered" id="approvalsTable">
                                     <thead>
                                         <tr>
@@ -617,7 +617,7 @@
             </apex:outputPanel>
         </apex:outputPanel>
         <script>
-                  
+            var currentPage = 0;      
             // Updated to slected filter name got from element[SF-62]
             function onFilterChange() {
                 showSpinner();
@@ -632,9 +632,29 @@
             function redirectPage(recordId) {
                 var redirectRef = window.open("/"+recordId, '_blank');
             }
+
+            function refreshPage() {
+
+                var table =  $('#approvalsTable').DataTable();
+                currentPage = table.page.info().page * 25;
+                console.log('currentPage -->',currentPage);
+                onFilterChange();
+            }
         </script>
         
         <script>
+            
+            window.onresize = onResize;
+
+            function onResize() {
+
+                if (window.innerWidth) {
+
+                    var windowWidth = window.innerWidth * (83 / 100);
+                    console.log('width--->',windowWidth);
+                    $("#dataTableDiv").css("max-width", windowWidth);
+                }
+            }
 
             function showSpinner() {
         
@@ -686,6 +706,7 @@
                     var table = $('#approvalsTable').DataTable({
                         // Added default setting as default record count 25 & sort desc based on Time in Queue column[SF-339]
                         "iDisplayLength": 25,
+                        "displayStart": currentPage,
                         "scrollX": true, 
                         "columnDefs":[
                             {"visible": false, "targets":8},
@@ -696,7 +717,9 @@
                     table
                         .order( [ 8, 'desc' ] )
                         .draw();
+                    currentPage = 0;
                 } );
+                onResize();
             }
             
         </script>

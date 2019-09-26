@@ -199,13 +199,6 @@ public with sharing class ApprovalsController {
                 appRec.reAssignedElapsedMins = 0;
             }
 
-            if(procInstance.Workitems != null && procInstance.Workitems.isEmpty() == FALSE) {
-
-            }
-
-            system.debug('Workitem::'+procInstance.Workitems);
-            system.debug('StepsAndWorkitems::'+procInstance.StepsAndWorkitems);
-
             String targetObjId_ProcDefId = '';
             
             if (String.isNotBlank(procInstance.TargetObjectId) && String.isNotBlank(procInstance.ProcessDefinitionId)) {
@@ -301,7 +294,7 @@ public with sharing class ApprovalsController {
         return processInstApprovalsMap.values();
     }
     
-    public static String toDateString(DateTime activityDate) {
+    /* public static String toDateString(DateTime activityDate) {
         String dateFormat = 'MM/dd/yyyy';
         
         if(activityDate != null) {
@@ -309,7 +302,7 @@ public with sharing class ApprovalsController {
             return activityDate.format(dateFormat);
         }
         return '';
-    }
+    } */
     
     public static Integer getMinutes(Decimal totalElapsedMinutes, Integer elapsedHours) {
     
@@ -384,7 +377,6 @@ public with sharing class ApprovalsController {
         public String lastApprovedByName { get; set;}
         public Integer reAssignedElapsedHours {get; set;}
         public Integer reAssignedElapsedMins {get; set;}
-        public Integer reAssignedElapsedTotalMins {get; set;}
 
         public ApprovalRecord(ProcessInstance processInstance, Id userId) {
             this.approvalType = 'WORKITEM';
