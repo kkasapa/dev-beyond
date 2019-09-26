@@ -278,13 +278,13 @@ public class ProspectTrigger_Test implements HttpCalloutMock {
         List<nu_dse__Prospect__c> prospectList = [SELECT Id, Name, nu_dse__First_Name__c, nu_dse__SSN__c 
                                                     FROM nu_dse__Prospect__c WHERE nu_dse__First_Name__c = 'Duplicate_SSN'];
 
-        prospectList[0].nu_dse__SSN__c = '';
-        prospectList[0].nu_dse__Co_SSN__c = '';
+        prospectList[0].nu_dse__SSN_ENC__c = '';
+        prospectList[0].nu_dse__CO_SSN_ENC__c = '';
         update prospectList[0];
 
         Test.startTest();
-        prospectList[0].nu_dse__SSN__c = '111-11-1111';
-        prospectList[0].nu_dse__Co_SSN__c = '222-22-2222';
+        prospectList[0].nu_dse__SSN_ENC__c = '111-11-1111';
+        prospectList[0].nu_dse__CO_SSN_ENC__c = '222-22-2222';
         update prospectList[0];
         Test.stopTest();
 
