@@ -43,8 +43,8 @@ public class ProspectHandler extends TriggerHandler {
             updateUuIdProspects(newProspect);
             // updates Owner from Five9 Owner field, if Has_Been_Assigned__c is set to TRUE
             updateProspectOwner(newProspect, null);
-            // validation to check if any duplicate SSN in available for other records
-            //collectAllProspectSSN(newProspect, null);
+            //Copy prospect client and co-client Encrypted SSN to non Encrypted SSN
+            updateProspectNonEncryptSSN(newProspect, null);
         }
         //checkDuplicateAndTagAccount(); 
 	
@@ -81,8 +81,8 @@ public class ProspectHandler extends TriggerHandler {
             collectDisqualifiedProspects(newProspect);
             //Update Prospect Owner from Five9 Owner Id value if Has been assigned it set to true
             updateProspectOwner(newProspect, oldProspectMap.get(newProspect.Id));
-            // validation to check if any duplicate SSN in available for other records
-            // collectAllProspectSSN(newProspect,oldProspectMap.get(newProspect.Id));
+            //Copy prospect client and co-client Encrypted SSN to non Encrypted SSN
+            updateProspectNonEncryptSSN(newProspect, oldProspectMap.get(newProspect.Id));
         } 
 
         // checkDuplicateAndTagAccount(); 
@@ -207,29 +207,42 @@ public class ProspectHandler extends TriggerHandler {
             newProspect.OwnerId = Id.valueof(newProspect.FIve9_Owner_ID__c);
         }
     }
+
+    //Copy prospect client and co-client Encrypted SSN to non Encrypted SSN
+    public void updateProspectNonEncryptSSN(nu_dse__Prospect__c newProspect, nu_dse__Prospect__c oldProspect) {
+        
+        if((Trigger.isInsert && newProspect.nu_dse__SSN_ENC__c != null)
+            || (Trigger.isUpdate &&  newProspect.nu_dse__SSN_ENC__c != oldProspect.nu_dse__SSN_ENC__c)) {
+            
+            newProspect.nu_dse__SSN__c = newProspect.nu_dse__SSN_ENC__c;
+        }
+        if((Trigger.isInsert && newProspect.nu_dse__CO_SSN_ENC__c != null)
+            || (Trigger.isUpdate &&  newProspect.nu_dse__CO_SSN_ENC__c != oldProspect.nu_dse__CO_SSN_ENC__c)) {
+            
+            newProspect.nu_dse__Co_SSN__c = newProspect.nu_dse__CO_SSN_ENC__c;
+        }
+    }
+    
     public void collectAllProspectSSN(nu_dse__Prospect__c newProspect, nu_dse__Prospect__c oldProspect) {
         
         if (Trigger.isInsert
-            ||(oldProspect.nu_dse__SSN__c != newProspect.nu_dse__SSN__c)) {
+            ||(oldProspect.nu_dse__SSN_ENC__c != newProspect.nu_dse__SSN_ENC__c)) {
             
             nu_dse__Prospect__c updatepros = new nu_dse__Prospect__c(Id=newProspect.Id);
 
-            if(String.isBlank(newProspect.nu_dse__SSN__c) == true) {
+            if(String.isBlank(newProspect.nu_dse__SSN_ENC__c) == true) {
                 
                 updatepros.Client_SSN_Duplicate_Reference__c = '';
                 updatepros.Client_Duplicate_By_SSN__c = false;
 
-            } else if (prospectSSN_ProspectsMap.containsKey(newProspect.nu_dse__SSN__c) == false) {
-                prospectSSN_ProspectsMap.put(newProspect.nu_dse__SSN__c, new List<nu_dse__Prospect__c>{newProspect}); //collecting SSN of all prospect for duplicate validation
+            } else if (prospectSSN_ProspectsMap.containsKey(newProspect.nu_dse__SSN_ENC__c) == false) {
+                prospectSSN_ProspectsMap.put(newProspect.nu_dse__SSN_ENC__c, new List<nu_dse__Prospect__c>{newProspect}); //collecting SSN of all prospect for duplicate validation
                 updatepros.Client_SSN_Duplicate_Reference__c = 'SSN Duplicate Check ran on ['+ System.now()+']::::No duplicate found';
                 updatepros.Client_Duplicate_By_SSN__c = false;
-                /* nu_dse__Prospect__c prosDupSSN = prospectSSN_ProspectsMap.get(newProspect.nu_dse__SSN__c);
-                newProspect.Client_SSN_Duplicate_Reference__c = newProspect.Client_SSN_Duplicate_Reference__c != null ? 
-                    newProspect.Client_SSN_Duplicate_Reference__c + '::' : '' +  prosDupSSN.Name+': '+
-                    prosDupSSN.nu_dse__First_Name__c + ' ' +prosDupSSN.nu_dse__Last_Name__c; */
+
             } else {
                 
-                nu_dse__Prospect__c prosDupSSN = prospectSSN_ProspectsMap.get(newProspect.nu_dse__SSN__c)[prospectSSN_ProspectsMap.get(newProspect.nu_dse__SSN__c).size() - 1];
+                nu_dse__Prospect__c prosDupSSN = prospectSSN_ProspectsMap.get(newProspect.nu_dse__SSN_ENC__c)[prospectSSN_ProspectsMap.get(newProspect.nu_dse__SSN_ENC__c).size() - 1];
                 String duplicatRefName = '';
 
                 if(String.isNotBlank(prosDupSSN.Client_SSN_Duplicate_Reference__c)
@@ -242,14 +255,14 @@ public class ProspectHandler extends TriggerHandler {
                                   (prosDupSSN.nu_dse__DOB__c != null ? prosDupSSN.nu_dse__DOB__c + ', ':'') + prosDupSSN.nu_dse__Prospect_Status__c + ']';
                 updatepros.Client_SSN_Duplicate_Reference__c = 'SSN Duplicate Check ran on ['+ System.now()+']::::'+duplicatRefName;
                 updatepros.Client_Duplicate_By_SSN__c = true;
-                prospectSSN_ProspectsMap.get(newProspect.nu_dse__SSN__c).add(newProspect);
+                prospectSSN_ProspectsMap.get(newProspect.nu_dse__SSN_ENC__c).add(newProspect);
             }
             updateProspectMap.put(updatepros.Id, updatepros);
             ssnProspectIds.add(newProspect.Id);
         }
 
         if (Trigger.isInsert
-            ||(oldProspect.nu_dse__Co_SSN__c != newProspect.nu_dse__Co_SSN__c)) {
+            ||(oldProspect.nu_dse__CO_SSN_ENC__c != newProspect.nu_dse__CO_SSN_ENC__c)) {
             
             nu_dse__Prospect__c updatepros = new nu_dse__Prospect__c(Id=newProspect.Id);
 
@@ -257,18 +270,18 @@ public class ProspectHandler extends TriggerHandler {
                 updatepros = updateProspectMap.get(newProspect.Id);
             }
 
-            if(String.isBlank(newProspect.nu_dse__Co_SSN__c) == true) { // if SSN is cleared we mark that as no duplicate found
+            if(String.isBlank(newProspect.nu_dse__CO_SSN_ENC__c) == true) { // if SSN is cleared we mark that as no duplicate found
                 
-                updatepros.Co_Client_SSN_Duplicate_Reference__c = 'Co-Client SSN Duplicate Check ran on ['+ System.now()+']::::No duplicate found';
+                updatepros.Co_Client_SSN_Duplicate_Reference__c = '';
                 updatepros.Co_Client_Duplicate_By_SSN__c = false;
 
-            } else if (coClientSSNProspectsMap.containsKey(newProspect.nu_dse__Co_SSN__c) == false) { //collecting SSN of all prospect for duplicate validation
-                coClientSSNProspectsMap.put(newProspect.nu_dse__Co_SSN__c, new List<nu_dse__Prospect__c>{newProspect}); 
+            } else if (coClientSSNProspectsMap.containsKey(newProspect.nu_dse__CO_SSN_ENC__c) == false) { //collecting SSN of all prospect for duplicate validation
+                coClientSSNProspectsMap.put(newProspect.nu_dse__CO_SSN_ENC__c, new List<nu_dse__Prospect__c>{newProspect}); 
                 updatepros.Co_Client_SSN_Duplicate_Reference__c = 'Co-Client SSN Duplicate Check ran on ['+ System.now()+']::::No duplicate found';
                 updatepros.Co_Client_Duplicate_By_SSN__c = false;
             } else {
                 
-                nu_dse__Prospect__c prosDupSSN = coClientSSNProspectsMap.get(newProspect.nu_dse__Co_SSN__c)[coClientSSNProspectsMap.get(newProspect.nu_dse__Co_SSN__c).size() - 1];
+                nu_dse__Prospect__c prosDupSSN = coClientSSNProspectsMap.get(newProspect.nu_dse__CO_SSN_ENC__c)[coClientSSNProspectsMap.get(newProspect.nu_dse__CO_SSN_ENC__c).size() - 1];
                 String duplicatRefName = '';
 
                 if(String.isNotBlank(prosDupSSN.Co_Client_SSN_Duplicate_Reference__c)
@@ -281,7 +294,7 @@ public class ProspectHandler extends TriggerHandler {
                                   (prosDupSSN.nu_dse__CO_DOB__c != null ? prosDupSSN.nu_dse__CO_DOB__c + ', ':'') + prosDupSSN.nu_dse__Prospect_Status__c + ']';
                 updatepros.Co_Client_SSN_Duplicate_Reference__c = 'Co-Client SSN Duplicate Check ran on ['+ System.now()+']::::'+duplicatRefName;
                 updatepros.Co_Client_Duplicate_By_SSN__c = true;
-                coClientSSNProspectsMap.get(newProspect.nu_dse__Co_SSN__c).add(newProspect);
+                coClientSSNProspectsMap.get(newProspect.nu_dse__CO_SSN_ENC__c).add(newProspect);
             }
             updateProspectMap.put(updatepros.Id, updatepros);
             coClientSSNProspectIds.add(newProspect.Id);

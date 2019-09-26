@@ -26,7 +26,7 @@ public class ApprovalsController_Test {
         insert UserInstance;
         
         Group groupInstance = new Group();
-        groupInstance.Name = 'TestGroup'; 
+        groupInstance.Name = 'Beyond'; 
         groupInstance.Type = 'Queue';
         insert groupInstance;
         
@@ -63,6 +63,7 @@ public class ApprovalsController_Test {
     static testMethod void approvalProcess() {
     
         User userQueryInstance = [SELECT Id FROM User WHERE lastname='TTestUser' LIMIT 1];
+        Group queueInst = [SELECT Id FROM Group LIMIT 1];
         
         nu_dse__Prospect__c prospectInstance = new nu_dse__Prospect__c();
         prospectInstance.nu_dse__First_Name__c = 'Test Prospect';
@@ -93,6 +94,23 @@ public class ApprovalsController_Test {
         resubmitRequest.setObjectId(prospectInstance.Id);
         resubmitRequest.setSkipEntryCriteria(true);
         Approval.ProcessResult resubmitResult = Approval.process(resubmitRequest);
+
+        List<ProcessInstanceWorkitem> newWorkItemList = [SELECT Id,ProcessInstanceId 
+                                                      FROM ProcessInstanceWorkitem LIMIT 1];
+
+        Approval.ProcessWorkitemRequest approveRequest = new Approval.ProcessWorkitemRequest();
+        approveRequest.setComments('Approving request.');
+        approveRequest.setAction('Approve');
+        approveRequest.setNextApproverIds(new Id[] {UserInfo.getUserId()});
+        approveRequest.setWorkitemId(newWorkItemList[0].Id);
+        Approval.ProcessResult approveResult =  Approval.process(approveRequest);
+
+        Approval.ProcessSubmitRequest resubmitRequest2 = new Approval.ProcessSubmitRequest();
+        resubmitRequest2.setComments('Resubmit for Approve.');
+        resubmitRequest2.setNextApproverIds(new Id[] {queueInst.Id});
+        resubmitRequest2.setObjectId(prospectInstance.Id);
+        resubmitRequest2.setSkipEntryCriteria(true);
+        Approval.ProcessResult resubmitResult2 = Approval.process(resubmitRequest2);
 
         Test.startTest();
             ApprovalsController approvalsCont = new ApprovalsController();
