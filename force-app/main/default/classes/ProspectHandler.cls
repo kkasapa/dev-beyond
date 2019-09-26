@@ -26,9 +26,11 @@ public class ProspectHandler extends TriggerHandler {
     Set<Id> velocifyProspectIds = new Set<Id>(); // Set of Prospect Ids for Velocify modify leads
     Map<String, List<nu_dse__Prospect__c>> prospectSSN_ProspectsMap = new Map<String, List<nu_dse__Prospect__c>>(); //contains ssn of all prospects for duplicate validation
     Map<String, List<nu_dse__Prospect__c>> coClientSSNProspectsMap = new Map<String, List<nu_dse__Prospect__c>>();
-    Map<Id, nu_dse__Prospect__c> updateProspectMap = new Map<Id, nu_dse__Prospect__c>();
+    Map<Id, nu_dse__Prospect__c> updateProspectSSN_RefMap = new Map<Id, nu_dse__Prospect__c>(); //this map is only used for updating SSN Ref in prospect, DML done in future context
+    Map<Id, nu_dse__Prospect__c> updateProspectMap = new Map<Id, nu_dse__Prospect__c>(); // map for updating Prospects at end of the context
     Set<Id> ssnProspectIds = new Set<Id>();
     Set<Id> coClientSSNProspectIds = new Set<Id>();
+    Set<Id> approvalRecallProspectsIds = new Set<Id>();
 
     public override void beforeInsert() {
        
@@ -47,7 +49,6 @@ public class ProspectHandler extends TriggerHandler {
             updateProspectNonEncryptSSN(newProspect, null);
         }
         //checkDuplicateAndTagAccount(); 
-	
     }
     
     public override void afterInsert() {
@@ -59,7 +60,7 @@ public class ProspectHandler extends TriggerHandler {
         } 
 
         if(prospectSSN_ProspectsMap.isEmpty() == false
-            || updateProspectMap.isEmpty() == false
+            || updateProspectSSN_RefMap.isEmpty() == false
             || coClientSSNProspectsMap.isEmpty() == false) {
             
             prospectHandler.SSNDuplicateReferWrap reqWrap = new prospectHandler.SSNDuplicateReferWrap();
@@ -67,7 +68,7 @@ public class ProspectHandler extends TriggerHandler {
             reqWrap.ssnProspectMap = prospectSSN_ProspectsMap;
             reqWrap.coClientSSNProspectIds = coClientSSNProspectIds;
             reqWrap.coClientSSNProspectsMap = coClientSSNProspectsMap;
-            reqWrap.updateProspectMap = updateProspectMap;
+            reqWrap.updateProspectSSN_RefMap = updateProspectSSN_RefMap;
             prospectHandler.updateSSNDuplicateReference(JSON.serialize(reqWrap));
         }
     }
@@ -100,11 +101,16 @@ public class ProspectHandler extends TriggerHandler {
             // validation to check if any duplicate SSN in available for other records
             collectAllProspectSSN(newProspect,oldProspectMap.get(newProspect.Id));
             //Check if this is a approvall recall trigger
-            recallApproval(newProspect);
+            //collect Prospects for recalling the approval
+            collectProspectsforRecall(newProspect, oldProspectMap.get(newProspect.Id));
+        }
+
+        if (approvalRecallProspectsIds.isEmpty() == false) {
+            recallApproval();
         }
 
         if(prospectSSN_ProspectsMap.isEmpty() == false
-            || updateProspectMap.isEmpty() == false
+            || updateProspectSSN_RefMap.isEmpty() == false
             || coClientSSNProspectsMap.isEmpty() == false) {
             
             prospectHandler.SSNDuplicateReferWrap reqWrap = new prospectHandler.SSNDuplicateReferWrap();
@@ -112,7 +118,7 @@ public class ProspectHandler extends TriggerHandler {
             reqWrap.ssnProspectMap = prospectSSN_ProspectsMap;
             reqWrap.coClientSSNProspectIds = coClientSSNProspectIds;
             reqWrap.coClientSSNProspectsMap = coClientSSNProspectsMap;
-            reqWrap.updateProspectMap = updateProspectMap;
+            reqWrap.updateProspectSSN_RefMap = updateProspectSSN_RefMap;
 
             prospectHandler.updateSSNDuplicateReference(JSON.serialize(reqWrap));
         }
@@ -129,6 +135,11 @@ public class ProspectHandler extends TriggerHandler {
             //send JSON string of Leads and perform Action update on Velocify based on datamapping named VelocifyActionMap
             VelocifyLeadHandler.addLeadActions(leadListJson);
         }
+
+        if(updateProspectMap.isEmpty() == false) {
+            update updateProspectMap.values();
+        }
+
     }
     /*  * This method filters prospects that are need to be pushed to Velocify
         * Prospect must have velocify Id and change in Prospect Status.
@@ -229,6 +240,10 @@ public class ProspectHandler extends TriggerHandler {
             ||(oldProspect.nu_dse__SSN_ENC__c != newProspect.nu_dse__SSN_ENC__c)) {
             
             nu_dse__Prospect__c updatepros = new nu_dse__Prospect__c(Id=newProspect.Id);
+            
+            if (updateProspectSSN_RefMap.containskey(newProspect.Id) == true) {
+                updatepros = updateProspectSSN_RefMap.get(newProspect.Id);
+            } 
 
             if(String.isBlank(newProspect.nu_dse__SSN_ENC__c) == true) {
                 
@@ -257,7 +272,8 @@ public class ProspectHandler extends TriggerHandler {
                 updatepros.Client_Duplicate_By_SSN__c = true;
                 prospectSSN_ProspectsMap.get(newProspect.nu_dse__SSN_ENC__c).add(newProspect);
             }
-            updateProspectMap.put(updatepros.Id, updatepros);
+            
+            updateProspectSSN_RefMap.put(updatepros.Id, updatepros);
             ssnProspectIds.add(newProspect.Id);
         }
 
@@ -266,8 +282,8 @@ public class ProspectHandler extends TriggerHandler {
             
             nu_dse__Prospect__c updatepros = new nu_dse__Prospect__c(Id=newProspect.Id);
 
-            if(updateProspectMap.containskey(newProspect.Id)) {
-                updatepros = updateProspectMap.get(newProspect.Id);
+            if(updateProspectSSN_RefMap.containskey(newProspect.Id)) {
+                updatepros = updateProspectSSN_RefMap.get(newProspect.Id);
             }
 
             if(String.isBlank(newProspect.nu_dse__CO_SSN_ENC__c) == true) { // if SSN is cleared we mark that as no duplicate found
@@ -296,12 +312,12 @@ public class ProspectHandler extends TriggerHandler {
                 updatepros.Co_Client_Duplicate_By_SSN__c = true;
                 coClientSSNProspectsMap.get(newProspect.nu_dse__CO_SSN_ENC__c).add(newProspect);
             }
-            updateProspectMap.put(updatepros.Id, updatepros);
+            updateProspectSSN_RefMap.put(updatepros.Id, updatepros);
             coClientSSNProspectIds.add(newProspect.Id);
         }
     }
 
-    //future method to query all Account and prospect and tag to Prospect
+//future method to query all Account and prospect and tag to Prospect
     @future
     public static void updateSSNDuplicateReference(String reqWrapJSON) { 
 
@@ -311,7 +327,7 @@ public class ProspectHandler extends TriggerHandler {
 
             Set<Id> ssnProspectIds = reqWrap.ssnProspectIds;
             Map<String, List<nu_dse__Prospect__c>> prospectSSN_ProspectsMap = reqWrap.ssnProspectMap;
-            Map<Id, nu_dse__Prospect__c> updateProspectMap = reqWrap.updateProspectMap;
+            Map<Id, nu_dse__Prospect__c> updateProspectSSN_RefMap = reqWrap.updateProspectSSN_RefMap;
             Set<Id> coClientSSNProspectIds = reqWrap.coClientSSNProspectIds;
             Map<String, List<nu_dse__Prospect__c>> coClientSSNProspectsMap = reqWrap.coClientSSNProspectsMap;
 
@@ -364,14 +380,14 @@ public class ProspectHandler extends TriggerHandler {
                 for(nu_dse__Prospect__c prospect : prospectSSN_ProspectsMap.get(SSN_no)) { // if one ssn has multiple duplicate records, we handle as list of duplicate for one SSN
 
                     nu_dse__Prospect__c newProspect = new nu_dse__Prospect__c(Id=prospect.Id); 
-                    if(updateProspectMap.containskey(prospect.Id)) {
+                    if(updateProspectSSN_RefMap.containskey(prospect.Id)) {
 
-                        newProspect = updateProspectMap.get(prospect.Id);
+                        newProspect = updateProspectSSN_RefMap.get(prospect.Id);
                     }
                     newProspect.Client_SSN_Duplicate_Reference__c = duplicateRef;
                     newProspect.Client_Duplicate_By_SSN__c = true;
                     duplicateRef += ', [' + prospect.Name +': '+ prospect.nu_dse__First_Name__c + ' ' + prospect.nu_dse__Last_Name__c + ']'; // appending to existing reference for new duplicate
-                    updateProspectMap.put(newProspect.Id, newProspect);
+                    updateProspectSSN_RefMap.put(newProspect.Id, newProspect);
                 }
             }
 
@@ -427,51 +443,58 @@ public class ProspectHandler extends TriggerHandler {
                     
                     nu_dse__Prospect__c newProspect = new nu_dse__Prospect__c(Id=prospect.Id);
 
-                    if(updateProspectMap.containskey(prospect.Id)) {
+                    if(updateProspectSSN_RefMap.containskey(prospect.Id)) {
 
-                        newProspect = updateProspectMap.get(prospect.Id);
+                        newProspect = updateProspectSSN_RefMap.get(prospect.Id);
                     }
                     newProspect.Co_Client_SSN_Duplicate_Reference__c = duplicateRef;
                     newProspect.Co_Client_Duplicate_By_SSN__c = true;
                     duplicateRef += ', [' + prospect.Name +': '+ prospect.nu_dse__First_Name__c + ' ' + prospect.nu_dse__Last_Name__c + ']';
-                    updateProspectMap.put(newProspect.Id, newProspect);
+                    updateProspectSSN_RefMap.put(newProspect.Id, newProspect);
                 }
             }
-            update updateProspectMap.values();
+            update updateProspectSSN_RefMap.values();
         }
     }
     
-    //updated by Ashwin to prevent record read-only error while creation as newProspect instance can't be assigned with any values from afterUpdate context.
-    public void recallApproval(nu_dse__Prospect__c newProspect){
-        Boolean RecalledApproval; 
-        RecalledApproval = newProspect.Recalled_Approval__c;
-        //newProspect.Recalled_Approval__c = false; moved this update within the if condition
-        if(RecalledApproval) {
+    public void collectProspectsforRecall(nu_dse__Prospect__c newProspect, nu_dse__Prospect__c oldProspect) {
+        //collecting all prospect Ids for recalling approval
+        if(newProspect.Recalled_Approval__c == true 
+            && oldProspect.Recalled_Approval__c == false) {
 
-            newProspect.Recalled_Approval__c = false;
-        	List<ProcessInstance> instances = [SELECT Id FROM ProcessInstance WHERE TargetObjectId=:newProspect.Id AND Status='Pending' LIMIT 1];
-            if (!instances.isEmpty())
-            {
-            	ProcessInstance instance = instances[0];
-                List<ProcessInstanceWorkitem> workItems = [SELECT Id FROM ProcessInstanceWorkitem WHERE ProcessInstanceId=:instance.Id LIMIT 1];
-                if (!workItems.isEmpty())
-                {
-                	ProcessInstanceWorkItem workItem = workItems[0];
-                    Approval.ProcessWorkItemRequest req = new Approval.ProcessWorkItemRequest();
-                    req.setWorkItemId(workItem.Id);
-                    req.setAction('Removed');
-                    req.setComments('Recalled Approval from ACE');
-                    Approval.ProcessResult result = Approval.process(req);
-                }
+            approvalRecallProspectsIds.add(newProspect.Id);
+            nu_dse__Prospect__c recalledProspect;
+            if (updateProspectMap.containskey(newProspect.Id) == true) {
+                recalledProspect = updateProspectMap.get(newProspect.Id);
+                recalledProspect.Recalled_Approval__c = false;
+            } else {
+                recalledProspect = new nu_dse__Prospect__c(Id=newProspect.Id, Recalled_Approval__c = false);
             }
+            updateProspectMap.put(newProspect.Id,recalledProspect);
         }
+    }
+    //updated by Ashwin to prevent record read-only error while creation as newProspect instance can't be assigned with any values from afterUpdate context.
+    public void recallApproval(){
+
+        List<Approval.ProcessWorkItemRequest> recallRequest = new List<Approval.ProcessWorkItemRequest>();
+        for (ProcessInstance processInstnce: [SELECT Id, (SELECT Id FROM Workitems LIMIT 1)
+                                            FROM ProcessInstance 
+                                            WHERE TargetObjectId IN :approvalRecallProspectsIds
+                                            AND Status = 'Pending']) {
+            Approval.ProcessWorkItemRequest req = new Approval.ProcessWorkItemRequest();
+            req.setWorkItemId(processInstnce.Workitems[0].Id);
+            req.setAction('Removed');
+            req.setComments('Recalled Approval from ACE');
+            recallRequest.add(req);
+        }
+        List<Approval.ProcessResult> result = Approval.process(recallRequest);
     }
 
     public class SSNDuplicateReferWrap{
 
         Set<Id> ssnProspectIds;
         Map<String, List<nu_dse__Prospect__c>> ssnProspectMap;
-        Map<Id, nu_dse__Prospect__c> updateProspectMap;
+        Map<Id, nu_dse__Prospect__c> updateProspectSSN_RefMap;
         Set<Id> coClientSSNProspectIds;
         Map<String, List<nu_dse__Prospect__c>> coClientSSNProspectsMap;
     }

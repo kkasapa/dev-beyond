@@ -410,14 +410,12 @@
         <apex:actionFunction name="cancelReAssignApproval" action="{!cancelReAssignApproval}" rerender="reAssignModal" oncomplete="hideSpinner();" />
         <apex:actionFunction name="approval_refreshApprovals" action="{!renderApprovals}" rerender="tableData" oncomplete="applyJQueryTable(); hideSpinner();"/>
         <apex:outputPanel id="page">
-            <div class="slds">
+            <div class="slds" id="dataTableDiv">
                 <div class="slds-card nudebt-section-header-primary">
                     <div class="slds-card__header slds-grid">
                         <header class="slds-media slds-media--center slds-has-flexi-truncate">
                             <h2>
-                                <a href="javascript:void(0);" class="slds-card__header-link slds-truncate">
-                                    <span class="slds-text-heading--small font-color-white" >Approval Processes</span>
-                                </a>
+                                <span class="slds-text-heading--small font-color-white" >Approval Processes</span>
                             </h2>
                         </header>
                         
@@ -444,12 +442,12 @@
                                 </div>
                               </div>
                             </div>
-                            <button class="nudebt-button slds-button slds-button--neutral slds-m-left--xx-large" onclick="refreshPage();" type="button">Refresh</button>
+                            <button id="refreshButton" class="nudebt-button slds-button slds-button--neutral slds-m-left--xx-large" onclick="refreshPage();" type="button">Refresh</button>
                         </div>
                     </div>
                     <div class="slds-card__body slds-panel">
                         <apex:outputPanel id="tableData">
-                            <div id="dataTableDiv">
+                            <div>
                                 <table class="slds-table slds-table--bordered" id="approvalsTable">
                                     <thead>
                                         <tr>
@@ -458,16 +456,18 @@
                                             <th>Submitted By</th>
                                             <th>Assigned To</th>
                                             <th>Submit Status</th>
-                                            <!-- Added new Last RejectedBy column in Table [SF-62]-->
-                                            <th>Last Rejected By</th>
                                             <!-- Added new Last Approved column in Table [SF-333]-->
                                             <th>Last Approved By</th>
+                                            <!-- Added new Last RejectedBy column in Table [SF-62]-->
+                                            <th>Last Rejected By</th>
                                             <th>Time in Queue (HH:MM)</th>
                                             <!-- Added hidden Total mins in Queue column in Approvals Table for sorting[SF-339]-->
                                             <th>Total mins in Queue (hidden)</th>
                                             <!-- Changed Completed Date to created Date column in Table [SF-62]-->
                                             <!-- Added new Time Since Reassigned(HH:MM) column in Table [SF-333]-->
                                             <th>Time Since Reassigned (HH:MM)</th>
+                                            <!-- Added hidden Total mins Since Reassigned column in Table [SF-333]-->
+                                            <th>Total mins Since Reassigned (hidden)</th>
                                             <th>Created Date</th>
                                             <!-- Removed status column in Approvals Table[SF-62]-->
                                         </tr>
@@ -533,13 +533,13 @@
                                                     </apex:outputPanel>
                                                 </td>
                                                 <td>{!approvalSet.approval.submitStatus}</td>
-                                                <!-- Added last Rejectedby column in Approvals Table[SF-62]-->
-                                                <td>
-                                                    <a href="{! '/' + approvalSet.approval.lastRejectedBy}" target="_blank" >{!approvalSet.approval.lastRejectedByName}</a>
-                                                </td>
                                                 <!-- Added last ApprovedBy column in Approvals Table[SF-333]-->
                                                 <td>
                                                     <a href="{! '/' + approvalSet.approval.lastApprovedBy}" target="_blank" >{!approvalSet.approval.lastApprovedByName}</a>
+                                                </td>
+                                                <!-- Added last Rejectedby column in Approvals Table[SF-62]-->
+                                                <td>
+                                                    <a href="{! '/' + approvalSet.approval.lastRejectedBy}" target="_blank" >{!approvalSet.approval.lastRejectedByName}</a>
                                                 </td>
                                                 <td>
                                                     <center>
@@ -548,11 +548,14 @@
                                                 </td>
                                                 <!-- Added hidden total min column in Approvals Table for sorting[SF-339]-->
                                                 <td><center>{!approvalSet.approval.elapsedTotalMins}</center></td>
+                                                <!-- Added Total min since reAssigned column in Approvals Table[SF-333]-->
                                                 <td>
                                                     <center>
                                                         {!IF(LEN(TEXT(approvalSet.approval.reAssignedElapsedHours)) == 1, LPAD(TEXT(approvalSet.approval.reAssignedElapsedHours), 2, '0'), approvalSet.approval.reAssignedElapsedHours)}:{!IF(LEN(TEXT(approvalSet.approval.reAssignedElapsedMins)) == 1, LPAD(TEXT(approvalSet.approval.reAssignedElapsedMins), 2, '0'), approvalSet.approval.reAssignedElapsedMins)}
                                                     </center>
                                                 </td>
+                                                <!-- Added hidden total min since reAssigned column in Approvals Table for sorting[SF-333]-->
+                                                <td><center>{!approvalSet.approval.reAssignedElapsedTotalMins}</center></td>
                                                 <!-- Updated CompletedDate as createdDate column in Approvals Table[SF-62]-->
                                                 <td><center>{!approvalSet.approval.createdDate}</center></td>
                                             </tr>
@@ -617,12 +620,11 @@
             </apex:outputPanel>
         </apex:outputPanel>
         <script>
-            var currentPage = 0;      
+            var currentPage = {number:0, sortOrder:[8, "desc" ], length:25};      
             // Updated to slected filter name got from element[SF-62]
             function onFilterChange() {
                 showSpinner();
                 var filter = document.getElementById('filterSelect').value;
-                console.log('changed to ->',filter);
                 if (filter) {
                 
                     filterApprovals(filter);
@@ -636,8 +638,11 @@
             function refreshPage() {
 
                 var table =  $('#approvalsTable').DataTable();
-                currentPage = table.page.info().page * 25;
-                console.log('currentPage -->',currentPage);
+                currentPage.length = table.page.info().length;
+                currentPage.number = table.page.info().page * table.page.info().length;
+                if(table.context != null && table.context[0].aaSorting != null) {
+                    currentPage.sortOrder = table.context[0].aaSorting[0];
+                }
                 onFilterChange();
             }
         </script>
@@ -650,8 +655,7 @@
 
                 if (window.innerWidth) {
 
-                    var windowWidth = window.innerWidth * (83 / 100);
-                    console.log('width--->',windowWidth);
+                    var windowWidth = window.innerWidth * (81 / 100);
                     $("#dataTableDiv").css("max-width", windowWidth);
                 }
             }
@@ -701,25 +705,40 @@
             })();
 
             function applyJQueryTable() {
-            
+
+                if(event != null && event.target.Id == 'refreshButton') {
+                    reCreateJQueryTable();
+                }
                 $(document).ready( function () {
-                    var table = $('#approvalsTable').DataTable({
-                        // Added default setting as default record count 25 & sort desc based on Time in Queue column[SF-339]
-                        "iDisplayLength": 25,
-                        "displayStart": currentPage,
-                        "scrollX": true, 
-                        "columnDefs":[
-                            {"visible": false, "targets":8},
-                            { "orderData": [8], "targets": 7}
-                        ]
-                    });
-                    // Used hidden column for sorting[SF-339]
-                    table
-                        .order( [ 8, 'desc' ] )
-                        .draw();
-                    currentPage = 0;
-                } );
+                    createJQueryDataTable();
+                });
                 onResize();
+            }
+
+            function createJQueryDataTable() {
+                
+                var table = $('#approvalsTable').DataTable({
+                    // Added default setting as default record count 25 & sort desc based on Time in Queue column[SF-339]
+                    "iDisplayLength": currentPage.length,
+                    "displayStart": currentPage.number,
+                    "order": [currentPage.sortOrder],
+                    "scrollX": true, 
+                    "columnDefs":[
+                        {"visible": false, "targets":8},
+                        { "orderData": [8], "targets": 7},
+                        {"visible": false, "targets":10},
+                        { "orderData": [10], "targets": 9}
+                    ]
+                });
+            }
+
+            function reCreateJQueryTable() {
+
+                if (j$.fn.dataTable.isDataTable('#approvalsTable')) {
+                            
+                    j$('#approvalsTable').DataTable().clear().destroy();
+                }
+                createJQueryDataTable();
             }
             
         </script>

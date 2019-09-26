@@ -183,11 +183,13 @@ public with sharing class ApprovalsController {
                     if (procInstance.Workitems[0].ElapsedTimeInMinutes != null && appRec.elapsedHours != null
                         && procInstance.StepsAndWorkitems[0].ElapsedTimeInMinutes != null) {
                         appRec.reAssignedElapsedMins = getMinutes(procInstance.Workitems[0].ElapsedTimeInMinutes - procInstance.StepsAndWorkitems[0].ElapsedTimeInMinutes , appRec.reAssignedElapsedHours);
+                        appRec.reAssignedElapsedTotalMins = Integer.valueOf(procInstance.Workitems[0].ElapsedTimeInMinutes - procInstance.StepsAndWorkitems[0].ElapsedTimeInMinutes);
                     }
                 } else {
                    
                     appRec.reAssignedElapsedHours = 0;
                     appRec.reAssignedElapsedMins = 0;
+                    appRec.reAssignedElapsedTotalMins = 0;
                 }
                 
             } else {
@@ -197,6 +199,7 @@ public with sharing class ApprovalsController {
                 appRec.elapsedTotalMins = 0;
                 appRec.reAssignedElapsedHours = 0;
                 appRec.reAssignedElapsedMins = 0;
+                appRec.reAssignedElapsedTotalMins = 0;
             }
 
             String targetObjId_ProcDefId = '';
@@ -377,6 +380,7 @@ public with sharing class ApprovalsController {
         public String lastApprovedByName { get; set;}
         public Integer reAssignedElapsedHours {get; set;}
         public Integer reAssignedElapsedMins {get; set;}
+        public Integer reAssignedElapsedTotalMins {get; set;}
 
         public ApprovalRecord(ProcessInstance processInstance, Id userId) {
             this.approvalType = 'WORKITEM';
