@@ -31,20 +31,20 @@ public class ProspectTrigger_Test implements HttpCalloutMock {
 
         nu_dse__Prospect__c prospectInstance2 = TestRecordCreator.createProspect();
         prospectInstance2.nu_dse__First_Name__c = 'Duplicate_SSN';
-        prospectInstance2.nu_dse__SSN__c = '111-11-1111';
-        prospectInstance2.nu_dse__Co_SSN__c = '222-22-2222';
+        prospectInstance2.nu_dse__SSN_ENC__c = '111-11-1111';
+        prospectInstance2.nu_dse__Co_SSN_ENC__c = '222-22-2222';
         prospectList.add(prospectInstance2);
 
         nu_dse__Prospect__c prospectInstance3 = TestRecordCreator.createProspect();
         prospectInstance3.nu_dse__First_Name__c = 'Duplicate_SSN';
-        prospectInstance3.nu_dse__SSN__c = '111-11-1111';
-        prospectInstance3.nu_dse__Co_SSN__c = '222-22-2222';
+        prospectInstance3.nu_dse__SSN_ENC__c = '111-11-1111';
+        prospectInstance3.nu_dse__Co_SSN_ENC__c = '222-22-2222';
         prospectList.add(prospectInstance3);
 
         nu_dse__Prospect__c prospectInstance4 = TestRecordCreator.createProspect();
         prospectInstance4.nu_dse__First_Name__c = 'Duplicate_SSN';
-        prospectInstance4.nu_dse__SSN__c = '111-11-1111';
-        prospectInstance4.nu_dse__Co_SSN__c = '222-22-2222';
+        prospectInstance4.nu_dse__SSN_ENC__c = '111-11-1111';
+        prospectInstance4.nu_dse__Co_SSN_ENC__c = '222-22-2222';
         prospectList.add(prospectInstance4);
 
 

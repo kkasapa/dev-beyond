@@ -222,13 +222,15 @@ public class ProspectHandler extends TriggerHandler {
     //Copy prospect client and co-client Encrypted SSN to non Encrypted SSN
     public void updateProspectNonEncryptSSN(nu_dse__Prospect__c newProspect, nu_dse__Prospect__c oldProspect) {
         
-        if((Trigger.isInsert && newProspect.nu_dse__SSN_ENC__c != null)
-            || (Trigger.isUpdate &&  newProspect.nu_dse__SSN_ENC__c != oldProspect.nu_dse__SSN_ENC__c)) {
+        if(String.isNotBlank(newProspect.nu_dse__SSN_ENC__c) == true 
+            &&(Trigger.isInsert 
+               || (Trigger.isUpdate && newProspect.nu_dse__SSN_ENC__c != oldProspect.nu_dse__SSN_ENC__c))) {
             
             newProspect.nu_dse__SSN__c = newProspect.nu_dse__SSN_ENC__c;
         }
-        if((Trigger.isInsert && newProspect.nu_dse__CO_SSN_ENC__c != null)
-            || (Trigger.isUpdate &&  newProspect.nu_dse__CO_SSN_ENC__c != oldProspect.nu_dse__CO_SSN_ENC__c)) {
+        if(String.isNotBlank(newProspect.nu_dse__SSN_ENC__c) == true 
+            && (Trigger.isInsert 
+                || (Trigger.isUpdate && newProspect.nu_dse__CO_SSN_ENC__c != oldProspect.nu_dse__CO_SSN_ENC__c))) {
             
             newProspect.nu_dse__Co_SSN__c = newProspect.nu_dse__CO_SSN_ENC__c;
         }
