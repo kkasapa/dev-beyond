@@ -43,7 +43,6 @@ public class OperationalStateTriggerHandler extends TriggerHandler {
         	if((!isUpdate && lsObj.State__c != null) || 
                (isUpdate && mapOfOldStateRecs != null && (
                 (lsObj.State__c != mapOfOldStateRecs.get(lsObj.Id).State__c && lsObj.State__c != null) || 
-                lsObj.Active__c != mapOfOldStateRecs.get(lsObj.Id).Active__c || 
                 lsObj.ADR_Beyond_Overlapping_States__c != mapOfOldStateRecs.get(lsObj.Id).ADR_Beyond_Overlapping_States__c ||
                 lsObj.ADR_Operational_State__c != mapOfOldStateRecs.get(lsObj.Id).ADR_Operational_State__c ||
                 lsObj.ADR_Selling_to_ClearOne__c != mapOfOldStateRecs.get(lsObj.Id).ADR_Selling_to_ClearOne__c || 
@@ -52,7 +51,9 @@ public class OperationalStateTriggerHandler extends TriggerHandler {
                 lsObj.Beyond_Operational_State__c != mapOfOldStateRecs.get(lsObj.Id).Beyond_Operational_State__c || 
                 lsObj.Discounted_and_Free_Legal__c != mapOfOldStateRecs.get(lsObj.Id).Discounted_and_Free_Legal__c ||
                 lsObj.Full_BLP_States__c != mapOfOldStateRecs.get(lsObj.Id).Full_BLP_States__c ||
-                lsObj.Limited_BLP_States__c != mapOfOldStateRecs.get(lsObj.Id).Limited_BLP_States__c
+                lsObj.Limited_BLP_States__c != mapOfOldStateRecs.get(lsObj.Id).Limited_BLP_States__c ||
+                lsObj.CFT__c != mapOfOldStateRecs.get(lsObj.Id).CFT__c ||
+                lsObj.ClearOne_GCS__c != mapOfOldStateRecs.get(lsObj.Id).ClearOne_GCS__c   
             	))){
             	setOfStates.add(lsObj.State__c);                   
         	}    
@@ -61,7 +62,8 @@ public class OperationalStateTriggerHandler extends TriggerHandler {
             list<Operational_State__c> lstOfStates = [SELECT Id,State__c,ADR_Beyond_Overlapping_States__c,
                                                    ADR_Operational_State__c,ADR_Selling_to_ClearOne__c,ADR_Sell_to_GRT__c,
                                                    ADR_Sell_to_Signature__c,Beyond_Operational_State__c,Discounted_and_Free_Legal__c,
-                                                   Full_BLP_States__c,Limited_BLP_States__c FROM Operational_State__c WHERE State__c IN:setOfStates];
+                                                   Full_BLP_States__c,Limited_BLP_States__c,CFT__c,ClearOne_GCS__c
+                                                   FROM Operational_State__c WHERE State__c IN:setOfStates];
             for(Operational_State__c lsObj : lstOfStates){
                 
                 if(lsObj.ADR_Beyond_Overlapping_States__c){
@@ -91,6 +93,12 @@ public class OperationalStateTriggerHandler extends TriggerHandler {
                 if(lsObj.Limited_BLP_States__c){
                     prepareStateAsKey('9',lsObj);                
                 }
+                if(lsObj.CFT__c){
+                    prepareStateAsKey('10',lsObj);                
+                }
+                if(lsObj.ClearOne_GCS__c){
+                    prepareStateAsKey('11',lsObj);                
+                }
             }
             map<string,map<string,list<string>>> mapOfFildWithStateAsKey = new map<string,map<string,list<string>>>();
             for(string strKey : mapOfKeyWithStates.keySet()){
@@ -117,7 +125,9 @@ public class OperationalStateTriggerHandler extends TriggerHandler {
                            (lsObj.Beyond_Operational_State__c && mapOfFildWithStateAsKey.get('6') != null && mapOfFildWithStateAsKey.get('6').get(lsObj.State__c) != null && mapOfFildWithStateAsKey.get('6').get(lsObj.State__c).Size() > 0) ||
                            (lsObj.Discounted_and_Free_Legal__c && mapOfFildWithStateAsKey.get('7') != null && mapOfFildWithStateAsKey.get('7').get(lsObj.State__c) != null && mapOfFildWithStateAsKey.get('7').get(lsObj.State__c).Size() > 0) ||
                            (lsObj.Full_BLP_States__c && mapOfFildWithStateAsKey.get('8') != null && mapOfFildWithStateAsKey.get('8').get(lsObj.State__c) != null && mapOfFildWithStateAsKey.get('8').get(lsObj.State__c).Size() > 0) ||
-                           (lsObj.Limited_BLP_States__c && mapOfFildWithStateAsKey.get('9') != null && mapOfFildWithStateAsKey.get('9').get(lsObj.State__c) != null && mapOfFildWithStateAsKey.get('9').get(lsObj.State__c).Size() > 0)
+                           (lsObj.Limited_BLP_States__c && mapOfFildWithStateAsKey.get('9') != null && mapOfFildWithStateAsKey.get('9').get(lsObj.State__c) != null && mapOfFildWithStateAsKey.get('9').get(lsObj.State__c).Size() > 0) ||
+                           (lsObj.CFT__c && mapOfFildWithStateAsKey.get('10') != null && mapOfFildWithStateAsKey.get('10').get(lsObj.State__c) != null && mapOfFildWithStateAsKey.get('10').get(lsObj.State__c).Size() > 0) ||
+                           (lsObj.ClearOne_GCS__c && mapOfFildWithStateAsKey.get('11') != null && mapOfFildWithStateAsKey.get('11').get(lsObj.State__c) != null && mapOfFildWithStateAsKey.get('11').get(lsObj.State__c).Size() > 0)
                           ){
                         	lsObj.addError('Duplicate State');    
                         }                         	
@@ -130,7 +140,9 @@ public class OperationalStateTriggerHandler extends TriggerHandler {
                            (lsObj.Beyond_Operational_State__c && mapOfFildWithStateAsKey.get('6') != null && mapOfFildWithStateAsKey.get('6').get(lsObj.State__c) != null && mapOfFildWithStateAsKey.get('6').get(lsObj.State__c).Size() > 1) ||
                            (lsObj.Discounted_and_Free_Legal__c && mapOfFildWithStateAsKey.get('7') != null && mapOfFildWithStateAsKey.get('7').get(lsObj.State__c) != null && mapOfFildWithStateAsKey.get('7').get(lsObj.State__c).Size() > 1) ||
                            (lsObj.Full_BLP_States__c && mapOfFildWithStateAsKey.get('8') != null && mapOfFildWithStateAsKey.get('8').get(lsObj.State__c) != null && mapOfFildWithStateAsKey.get('8').get(lsObj.State__c).Size() > 1) ||
-                           (lsObj.Limited_BLP_States__c && mapOfFildWithStateAsKey.get('9') != null && mapOfFildWithStateAsKey.get('9').get(lsObj.State__c) != null && mapOfFildWithStateAsKey.get('9').get(lsObj.State__c).Size() > 1)
+                           (lsObj.Limited_BLP_States__c && mapOfFildWithStateAsKey.get('9') != null && mapOfFildWithStateAsKey.get('9').get(lsObj.State__c) != null && mapOfFildWithStateAsKey.get('9').get(lsObj.State__c).Size() > 1) ||
+                           (lsObj.CFT__c && mapOfFildWithStateAsKey.get('10') != null && mapOfFildWithStateAsKey.get('10').get(lsObj.State__c) != null && mapOfFildWithStateAsKey.get('10').get(lsObj.State__c).Size() > 1) ||
+                           (lsObj.ClearOne_GCS__c && mapOfFildWithStateAsKey.get('11') != null && mapOfFildWithStateAsKey.get('11').get(lsObj.State__c) != null && mapOfFildWithStateAsKey.get('11').get(lsObj.State__c).Size() > 1)
                           ){
                         	lsObj.addError('Duplicate State');    
                         }
@@ -147,10 +159,9 @@ public class OperationalStateTriggerHandler extends TriggerHandler {
                 isUpdate = true;    
             }             
             for(Operational_State__c lsObj : lstOfStatesRecords){
-                if((!isUpdate && lsObj.State__c != null && lsObj.Active__c) || 
+                if((!isUpdate && lsObj.State__c != null) || 
                 (isUpdate && mapOfOldStateRecs != null && (
                     (lsObj.State__c != mapOfOldStateRecs.get(lsObj.Id).State__c && lsObj.State__c != null) || 
-                    lsObj.Active__c != mapOfOldStateRecs.get(lsObj.Id).Active__c || 
                     lsObj.ADR_Beyond_Overlapping_States__c != mapOfOldStateRecs.get(lsObj.Id).ADR_Beyond_Overlapping_States__c ||
                     lsObj.ADR_Operational_State__c != mapOfOldStateRecs.get(lsObj.Id).ADR_Operational_State__c ||
                     lsObj.ADR_Selling_to_ClearOne__c != mapOfOldStateRecs.get(lsObj.Id).ADR_Selling_to_ClearOne__c || 
@@ -159,7 +170,9 @@ public class OperationalStateTriggerHandler extends TriggerHandler {
                     lsObj.Beyond_Operational_State__c != mapOfOldStateRecs.get(lsObj.Id).Beyond_Operational_State__c || 
                     lsObj.Discounted_and_Free_Legal__c != mapOfOldStateRecs.get(lsObj.Id).Discounted_and_Free_Legal__c ||
                     lsObj.Full_BLP_States__c != mapOfOldStateRecs.get(lsObj.Id).Full_BLP_States__c ||
-                    lsObj.Limited_BLP_States__c != mapOfOldStateRecs.get(lsObj.Id).Limited_BLP_States__c
+                    lsObj.Limited_BLP_States__c != mapOfOldStateRecs.get(lsObj.Id).Limited_BLP_States__c||
+                    lsObj.CFT__c != mapOfOldStateRecs.get(lsObj.Id).CFT__c ||
+                    lsObj.ClearOne_GCS__c != mapOfOldStateRecs.get(lsObj.Id).ClearOne_GCS__c
                 ))){
                     lstOfRecords.add(lsObj);
                 }            
@@ -170,12 +183,12 @@ public class OperationalStateTriggerHandler extends TriggerHandler {
             set<string> setOf1 = new set<string>();set<string> setOf2 = new set<string>();set<string> setOf3 = new set<string>();
             set<string> setOf4 = new set<string>();set<string> setOf5 = new set<string>();set<string> setOf6 = new set<string>();
             set<string> setOf7 = new set<string>();set<string> setOf8 = new set<string>();set<string> setOf9 = new set<string>();
-            
-            for(Operational_State__c lsObj : [SELECT Id,State__c,Active__c,ADR_Beyond_Overlapping_States__c,
+            set<string> setOf10 = new set<string>();set<string> setOf11 = new set<string>();
+            for(Operational_State__c lsObj : [SELECT Id,State__c,ADR_Beyond_Overlapping_States__c,
                                            ADR_Operational_State__c,ADR_Selling_to_ClearOne__c,ADR_Sell_to_GRT__c,
                                            ADR_Sell_to_Signature__c,Beyond_Operational_State__c,Discounted_and_Free_Legal__c,
-                                           Full_BLP_States__c,Limited_BLP_States__c
-                                           FROM Operational_State__c WHERE Active__c = TRUE AND State__c != null LIMIT 500000]){
+                                           Full_BLP_States__c,Limited_BLP_States__c,CFT__c,ClearOne_GCS__c
+                                           FROM Operational_State__c WHERE State__c != null LIMIT 500000]){
             	setOfStateCodes.add(lsObj.State__c);   
                 if(lsObj.ADR_Beyond_Overlapping_States__c){
                 	setOf1.add(lsObj.State__c);
@@ -204,6 +217,12 @@ public class OperationalStateTriggerHandler extends TriggerHandler {
                 if(lsObj.Limited_BLP_States__c){
                 	setOf9.add(lsObj.State__c);    
                 }
+                if(lsObj.CFT__c){
+                	setOf10.add(lsObj.State__c);    
+                }
+                if(lsObj.ClearOne_GCS__c){
+                	setOf11.add(lsObj.State__c);    
+                }                               
                                                
             }
             if(!setOfStateCodes.isEmpty()){                
@@ -217,6 +236,8 @@ public class OperationalStateTriggerHandler extends TriggerHandler {
                 stateCodes.Discounted_and_Free_Legal_States__c = prepareStates(setOf7);
                 stateCodes.Full_BLP_States__c = prepareStates(setOf8);
                 stateCodes.Limited_BLP_States__c = prepareStates(setOf9);
+                stateCodes.CFT__c = prepareStates(setOf10);
+                stateCodes.ClearOne_GCS__c = prepareStates(setOf11);
                 upsert stateCodes;				
             }
         }       			
