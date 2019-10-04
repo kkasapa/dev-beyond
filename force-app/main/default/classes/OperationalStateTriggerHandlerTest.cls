@@ -4,8 +4,7 @@ private class OperationalStateTriggerHandlerTest {
     @TestSetup
     static void makeData(){
     	Operational_State__c lsObj = new Operational_State__c(
-        	Active__c = true,
-            State__c  = 'AL'
+        	State__c  = 'AL'
         );
         insert lsObj;
     }
@@ -13,7 +12,7 @@ private class OperationalStateTriggerHandlerTest {
     @isTest
     public static void testUpdateStateCodes() {
         test.startTest();
-            Operational_State__c lsObj = [SELECT Id,State__c,Active__c FROM Operational_State__c LIMIT 1];   
+            Operational_State__c lsObj = [SELECT Id,State__c FROM Operational_State__c LIMIT 1];   
             lsObj.State__c = 'AK';
         	update lsObj;
         	lsObj.ADR_Beyond_Overlapping_States__c = true;
@@ -24,8 +23,10 @@ private class OperationalStateTriggerHandlerTest {
         	lsObj.Beyond_Operational_State__c = true;
         	lsObj.Discounted_and_Free_Legal__c = true;
         	lsObj.Full_BLP_States__c = true;
-        	update lsObj;
         	lsObj.Limited_BLP_States__c = true;
+        	lsObj.CFT__c = true;
+        	update lsObj;
+        	lsObj.ClearOne_GCS__c = true;
         	try{
             	update lsObj;    
             }catch(Exception Ex){}
@@ -38,14 +39,13 @@ private class OperationalStateTriggerHandlerTest {
         	lsObj.Beyond_Operational_State__c = false;
         	lsObj.Discounted_and_Free_Legal__c = false;
         	lsObj.Full_BLP_States__c = false;
-        	lsObj.Limited_BLP_States__c = true;
+        	lsObj.ClearOne_GCS__c = true;
         	try{
             	update lsObj;    
             }catch(Exception Ex){}
-            system.assertEquals(lsObj.Active__c,true);
+            //system.assertEquals(lsObj.Active__c,true);
         	try{
             	lsObj = new Operational_State__c(
-                    Active__c = true,
                     State__c  = 'AK'
                 );
                 insert lsObj;                
@@ -53,12 +53,10 @@ private class OperationalStateTriggerHandlerTest {
         	try{
                 list<Operational_State__c> lstOfState = new list<Operational_State__c>();
                 lsObj = new Operational_State__c(
-                    Active__c = true,
                     State__c  = 'AK'
                 );
                 lstOfState.add(lsObj); 
                 lsObj = new Operational_State__c(
-                    Active__c = true,
                     State__c  = 'AK'
                 );
                 lstOfState.add(lsObj); 
@@ -66,23 +64,22 @@ private class OperationalStateTriggerHandlerTest {
             }catch(Exception Ex){}
         
         lsObj = new Operational_State__c(
-        	Active__c = true,
-            State__c  = 'OH'
+        	State__c  = 'OH'
             
         );
         insert lsObj;
-        lsObj.Limited_BLP_States__c = true;
+        lsObj.ClearOne_GCS__c = true;
         update lsObj;
         
         lsObj = new Operational_State__c(
-        	Active__c = true,
-            State__c  = 'OH',
-			Limited_BLP_States__c = true            
+        	State__c  = 'OH',
+			ClearOne_GCS__c = true            
         );
         try{
             insert lsObj;    
         }catch(Exception Ex){}
-        
+        lsObj = [SELECT Id,State__c FROM Operational_State__c LIMIT 1];  
+        delete lsObj;
         test.stopTest();
     }
 	

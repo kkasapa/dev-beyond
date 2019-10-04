@@ -96,6 +96,12 @@ public class ProgramHandler extends TriggerHandler {
 
     //filters Programs that are to be synced with BLP
     public void createBLP_BusList(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram) {
+        
+         if (newProgram.BLP_Member_Type__c =='Club Member' || newProgram.BLP_Member_Type__c == 'Flat Fee')
+        {
+            system.debug('added');
+            BLPBUSEvents.add(new BLP_Bus__e(action__c='create', program_id__c=newProgram.Id));
+        }
 
         if (String.isNotBlank(newProgram.nu_dse__Fee_Template__c) == true 
                 && newProgram.Legal_Plan_Included__c == true) {
