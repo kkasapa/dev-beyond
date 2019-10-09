@@ -68,17 +68,14 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
 
             for(nu_dse__Program__c program : Database.query(queryStr)) {
 
-                nu_dse__Program__c updateProgram = new nu_dse__Program__c(Id = program.Id, 
-                    Estimated_Month_2_Balance__c = null, Estimated_Month_3_Balance__c = null, 
-                    Estimated_Month_6_Balance__c = null, Estimated_Month_9_Balance__c = null,
-                    Estimated_Month_12_Balance__c = null);
+                nu_dse__Program__c updateProgram = new nu_dse__Program__c(Id = program.Id);
 
                 Decimal programBal = 0;
                 
                 if(program.nu_dse__Trust_Account_Balance__c != null) {
                     programBal = program.nu_dse__Trust_Account_Balance__c;
                 }
-                updateProgram.Current_Month_Balance__c = programBal;
+                updateProgram.Estimated_Current_Month_Balance__c = programBal;
 
                 for(nu_dse__Payment__c payment : program.nu_dse__Payments__r) {
                     
@@ -91,7 +88,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
                     
                     if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(1).addDays(-1)) {
                 
-                        updateProgram.Current_Month_Balance__c = programBal;
+                        updateProgram.Estimated_Current_Month_Balance__c = programBal;
                     
                     } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(2).addDays(-1)) {
 
@@ -114,6 +111,27 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
                         updateProgram.Estimated_Month_12_Balance__c = programBal;
 
                     }
+                }
+
+                if(updateProgram.Estimated_Month_2_Balance__c == null 
+                    && updateProgram.Estimated_Current_Month_Balance__c != null) {
+                    updateProgram.Estimated_Month_2_Balance__c = updateProgram.Estimated_Current_Month_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_3_Balance__c == null 
+                    && updateProgram.Estimated_Month_2_Balance__c != null) {
+                    updateProgram.Estimated_Month_3_Balance__c = updateProgram.Estimated_Month_2_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_6_Balance__c == null 
+                    && updateProgram.Estimated_Month_3_Balance__c != null) {
+                    updateProgram.Estimated_Month_6_Balance__c = updateProgram.Estimated_Month_3_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_9_Balance__c == null 
+                    && updateProgram.Estimated_Month_6_Balance__c != null) {
+                    updateProgram.Estimated_Month_9_Balance__c = updateProgram.Estimated_Month_6_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_12_Balance__c == null 
+                    && updateProgram.Estimated_Month_9_Balance__c != null) {
+                    updateProgram.Estimated_Month_12_Balance__c = updateProgram.Estimated_Month_9_Balance__c;
                 }
                 updateProgram.Estimated_Balance_Calculations_Timestamp__c = System.now();
                 programToUpdateMap.put(updateProgram.Id, updateProgram);

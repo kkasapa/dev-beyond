@@ -4,11 +4,12 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
     Set<String> dataMappingNameSet = new Set<String>{'Create_Payments_SMS_Reminders', 'Create_Payments_Email_Reminders'};
     Set<String> paymentFieldsToQuerySet = new Set<String>{'Create_Payment_Reminder_Tasks__c'};
     Set<String> programStatusExclusionSet = new Set<String>();
+    Set<Id> programIds; //set of programIds to which the batch can be run
     
     Id draftRecordTypeId;
     public Integer activityPaddingDays;
     
-    public Batch_ProcessesInPayment(Integer paddingDays) {
+    public Batch_ProcessesInPayment(Integer paddingDays, Set<Id> programIdSet) {
 
         String query = 'SELECT nu_dse__Data_Mapping__r.External_Id__c, ' + Utility.getQueryFields('nu_dse__Field_mapping__c') +  ' FROM nu_dse__Field_mapping__c ' +
                             ' WHERE nu_dse__Data_Mapping__r.External_Id__c IN :dataMappingNameSet';
@@ -25,7 +26,6 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
 
                 paymentFieldsToQuerySet.add(fieldMapping.nu_dse__Source_Field__c);
             }
-            system.debug('dataMappingAndFieldMappingMap::'+dataMappingAndFieldMappingMap);
         }
 
         draftRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Draft').getRecordTypeId();
@@ -45,15 +45,25 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
         
         } else {
         
-            activityPaddingDays = -2;
+            activityPaddingDays = -3;
         } 
-        system.debug('activityPaddingDays::::'+activityPaddingDays);
+        if(programIdSet != null && programIdSet.isEmpty() == false) {
+        
+            programIds = programIdSet;
+        } 
     }
 
     public Database.QueryLocator start(Database.BatchableContext BC) {
 
         //need some index field filter
-        return Database.getQueryLocator('SELECT Id FROM nu_dse__Payment__c WHERE RecordTypeId = :draftRecordTypeId AND Create_Payment_Reminder_Tasks__c = True AND Program_Status__c != :programStatusExclusionSet');
+        String queryStr = 'SELECT Id FROM nu_dse__Payment__c '+
+                           'WHERE RecordTypeId = :draftRecordTypeId AND Create_Payment_Reminder_Tasks__c = True '+
+                           'AND Program_Status__c != :programStatusExclusionSet';
+
+        if(programIds != null && programIds.isEmpty() == false) {
+            queryStr = ' AND nu_dse__Program__c IN :programIds';
+        }
+        return Database.getQueryLocator(queryStr);
         //RecordTypeId = :draftRecordTypeId AND Create_Payment_Reminder_Tasks__c = True');
     }
 
@@ -67,7 +77,6 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
             Map<Id, nu_dse__Payment__c> paymentMap = new Map<Id, nu_dse__Payment__c>((List<nu_dse__Payment__c>)scope);
             Set<Id> paymentIdSet = new Set<Id>(paymentMap.keySet());
             //paymentMap.clear();
-            system.debug('activityPaddingDays::::'+activityPaddingDays);
 
             String paymentsQueryFields = '';
 
@@ -84,21 +93,17 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
 
                 paymentsQueryFields = ' Id ';
             }
-            system.debug('paymentIdSet::'+paymentIdSet);
             String paymentsQuery = 'SELECT ' + paymentsQueryFields + ' FROM nu_dse__Payment__c WHERE Id IN :paymentIdSet';
-            
             System.debug('paymentsQuery--->'+paymentsQuery);
             
             for (nu_dse__Payment__c paymentRec : Database.query(paymentsQuery)) {
                 
-                system.debug('paymentRecTest::::'+paymentRec);
                 try {
 
                     if (paymentRec.Create_Payment_Reminder_Tasks__c && dataMappingAndFieldMappingMap.containsKey('Create_Payments_SMS_Reminders')) {
 
                         Task paymentSMSReminder = new Task();
                         paymentSMSReminder.Unique_Identifier__c = paymentRec.Id + 'Payment Reminder - SMS';
-                        system.debug('paymentRecSMS::::'+paymentRec);
                         populateValuesInInstance(paymentSMSReminder, paymentRec, dataMappingAndFieldMappingMap.get('Create_Payments_SMS_Reminders'));
                         tasksToUpsertList.add(paymentSMSReminder);
                     }
@@ -107,7 +112,6 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
 
                         Task paymentEmailReminder = new Task();
                         paymentEmailReminder.Unique_Identifier__c = paymentRec.Id + 'Payment Reminder - Email';
-                        system.debug('paymentRec::'+paymentRec);
                         populateValuesInInstance(paymentEmailReminder, paymentRec, dataMappingAndFieldMappingMap.get('Create_Payments_Email_Reminders'));
                         tasksToUpsertList.add(paymentEmailReminder);
                     }
@@ -204,8 +208,6 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
                 String targetField = fieldMappingRec.nu_dse__Target_Field__c;
                 String targetFieldDataType = fieldMappingRec.Target_Field_Data_Type__c;
                 Object targetFieldValue;
-                
-                system.debug('activityPaddingDays::'+activityPaddingDays);
                 
                 if (fieldMappingRec.nu_dse__setDefaultValue__c) {  
 

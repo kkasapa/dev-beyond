@@ -1,6 +1,6 @@
-global class schedule_ProcessesInPaymentBatch implements Schedulable {
+public class schedule_ProcessesInPaymentBatch implements Schedulable {
    
-    global Integer paddingDays;
+    public Integer paddingDays;
     
     public schedule_ProcessesInPaymentBatch() {
 
@@ -12,14 +12,14 @@ global class schedule_ProcessesInPaymentBatch implements Schedulable {
         paddingDays = paddingDaysCount;
     }
     
-    global void execute(SchedulableContext sc) {
+    public void execute(SchedulableContext sc) {
     
         if(paddingDays == null) {
            
             paddingDays = 2;
         }   
        
-        Batch_ProcessesInPayment paymentProcessBatch = new Batch_ProcessesInPayment(paddingDays); 
+        Batch_ProcessesInPayment paymentProcessBatch = new Batch_ProcessesInPayment(paddingDays, new Set<Id>()); 
         database.executebatch(paymentProcessBatch);
     }
 }
