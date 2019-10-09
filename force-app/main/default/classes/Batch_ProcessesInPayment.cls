@@ -30,9 +30,13 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
 
         draftRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Draft').getRecordTypeId();
         
-        for (Program_Status_Exclusion__mdt programStatus : [SELECT Label FROM Program_Status_Exclusion__mdt]) {
+        Program_Status_Configuration__mdt programStatusConfig = [SELECT Label, DeveloperName, Excluded_Statuses__c 
+                                                                        FROM Program_Status_Configuration__mdt 
+                                                                        WHERE DeveloperName = 'Deposit_Reminders_Exclusion' LIMIT 1];
         
-            programStatusExclusionSet.add(programStatus.Label);
+        if(programStatusConfig != null
+            && String.isNotBlank(programStatusConfig.Excluded_Statuses__c)) {
+            programStatusExclusionSet = new Set<String>(programStatusConfig.Excluded_Statuses__c.split(',', 0));
         }
         
         if(paddingDays != null) {

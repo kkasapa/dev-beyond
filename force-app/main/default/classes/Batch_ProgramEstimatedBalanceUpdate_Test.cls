@@ -1,6 +1,7 @@
 @isTest
 public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
     
+    //setting up data for running tests
     @testSetup static void dataCreator() {
         
         Id accRecordTypeId = Schema.SObjectType.Account.getRecordTypeInfosByName().get('Client').getRecordTypeId();
@@ -88,7 +89,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
         List<nu_dse__Program__c> programList = [SELECT Id FROM nu_dse__Program__c LIMIT 1];
 
         Test.startTest();
-            
+            // executing the batch to calculate the estimated balance of 2,3,6,9,12 months
             Database.executeBatch(new Batch_ProgramEstimatedBalanceUpdate(new Set<Id>{programList[0].Id}));
 
             Schedule_ProgramEstimatedBalanceUpdate schedulerInst = new Schedule_ProgramEstimatedBalanceUpdate();
@@ -100,7 +101,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
         List<nu_dse__Program__c> updatedProgramList = [SELECT Id, Estimated_Month_2_Balance__c, Estimated_Month_3_Balance__c,
                                                     Estimated_Month_6_Balance__c, Estimated_Month_9_Balance__c, Estimated_Month_12_Balance__c
                                                 FROM nu_dse__Program__c WHERE Id =: programList[0].Id LIMIT 1];
-        
+        //checking the program's estimated balance fields after the batch run
         system.assertEquals(5400, updatedProgramList[0].Estimated_Month_2_Balance__c);
         system.assertEquals(8900, updatedProgramList[0].Estimated_Month_3_Balance__c);
         system.assertEquals(11600, updatedProgramList[0].Estimated_Month_6_Balance__c);

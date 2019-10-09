@@ -12,14 +12,15 @@
 */
 public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Database.Batchable<sObject> {
     
-    Set<Id> programIds;
-    Id draftRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Draft').getRecordTypeId();
-    Id feeRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Fee').getRecordTypeId();
-    Id settlementRecordTypeId;
+    Set<Id> programIds; //set of programIds to which the batch can be run
+    Id draftRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Draft').getRecordTypeId(); // recordType Id for draft
+    Id feeRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Fee').getRecordTypeId();  // recordType Id for fee
+    Id settlementRecordTypeId;  // recordType Id for settlement
 
     public Batch_ProgramEstimatedBalanceUpdate() {
 
     }
+    //configurable contructor to run for set of programs
     public Batch_ProgramEstimatedBalanceUpdate(Set<Id> programIdSet) {
         programIds = new Set<Id>();
         if(programIdSet != null && programIdSet.isEmpty() == false) {
@@ -33,15 +34,17 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
 
         Set<Id> recordTypeIds = new Set<Id> {draftRecordTypeId, settlementRecordTypeId, feeRecordTypeId};
         Date futureEstimateDate = system.today().toStartOfMonth().addMonths(12).addDays(-1); 
-        Set<String> programStatus = new Set<String>{'New Client', 'Active'};
+        Set<String> programStatus = new Set<String>{'New Client', 'Active'}; // by default, program status with New Client, Active will be processed
 
+        //custom metadata type for having Program status to be included for calculations
         Program_Status_Configuration__mdt progStatusConfig = [SELECT Id, MasterLabel, Included_Statuses__c 
                                     FROM Program_Status_Configuration__mdt 
                                     WHERE DeveloperName = 'Estimated_Balance_Calculations' LIMIT 1];
         
         if(progStatusConfig != null
             && String.isNotBlank(progStatusConfig.Included_Statuses__c)) {
-            programStatus = new Set<String>(progStatusConfig.Included_Statuses__c.split(',', 0));
+            programStatus = new Set<String>();
+            programStatus.addAll(progStatusConfig.Included_Statuses__c.split(',', 0));
         } 
 
         String queryStr = 'SELECT Id, nu_dse__Trust_Account_Balance__c, ' + 
@@ -56,11 +59,15 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
             queryStr += ' AND Id IN :programIds';
         }
 
+        system.debug('futureEstimateDate:::'+futureEstimateDate);
+        system.debug('queryStr:::'+queryStr);
         return Database.getQueryLocator(queryStr);
     }
     public void execute(Database.BatchableContext BC, List<nu_dse__Program__c> scope) {
         
         Map<Id, nu_dse__Program__c> programToUpdateMap = new Map<Id, nu_dse__Program__c>();
+
+        system.debug('scope:::'+scope);
 
         for(nu_dse__Program__c program : scope) {
 
@@ -75,16 +82,26 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
                 programBal = program.nu_dse__Trust_Account_Balance__c;
             }
 
+            system.debug('size:::'+program.nu_dse__Payments__r.size());
+            system.debug('programBal1:::'+programBal);
+
             for(nu_dse__Payment__c payment : program.nu_dse__Payments__r) {
                 
+                system.debug('nu_dse__Schedule_Date__c:::'+payment.nu_dse__Schedule_Date__c);
+
                 if(payment.RecordTypeId ==  draftRecordTypeId) {
                     programBal += payment.nu_dse__Amount__c;
                 } else if(payment.RecordTypeId != feeRecordTypeId 
                         || (payment.nu_dse__Payment_Type__c == 'Fee Withdrawal')) {
                     programBal -= payment.nu_dse__Total_Amount__c;
                 }
-
-                if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(2).addDays(-1)) {
+                system.debug('programBal:::'+programBal);
+                
+                if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(1).addDays(-1)) {
+              
+                    updateProgram.Current_Month_Balance__c = programBal;
+                
+                } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(2).addDays(-1)) {
 
                     updateProgram.Estimated_Month_2_Balance__c = programBal;
 
@@ -106,18 +123,19 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
 
                 }
             }
+            updateProgram.Estimated_Balance_Calculations_Timestamp__c = System.now();
             programToUpdateMap.put(updateProgram.Id, updateProgram);
         }
-
+        system.debug('programToUpdateList:::'+programToUpdateMap);
         List<nu_dse__Error_Log__c> errLogs = new List<nu_dse__Error_Log__c>();
-        for (Database.SaveResult dmlResult : Database.update(programToUpdateMap.values(), false)) {
+        for (Database.SaveResult dmlResult: Database.update(programToUpdateMap.values(), false)) {
 
             if (dmlResult.isSuccess() == false) {
                 nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(nu_dse__Class_Method__c = 'Batch_ProgramEstimatedBalanceUpdate.excute',
                                                                         nu_dse__Error_Causing_Record_Id__c = dmlResult.getId(),
                                                                         nu_dse__Stack_Trace__c = JSON.serialize(programToUpdateMap.get(dmlResult.getId())),
-                                                                        nu_dse__User_Context__c = UserInfo.getName());
-
+                                                                        nu_dse__User_Context__c = UserInfo.getName()
+                                                                        );
                 for (Database.Error error: dmlResult.getErrors()) {
                     errLog.nu_dse__Message__c += error.getMessage();
                 }
