@@ -19,6 +19,9 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
         nu_dse__Program__c program = TestRecordCreator.createProgram(clientAccount.Id, processor.Id);
         program.nu_dse__Trust_Account_Balance__c = 1000;
         insert program;
+        nu_dse__Program__c program2 = TestRecordCreator.createProgram(clientAccount.Id, processor.Id);
+        program2.nu_dse__Trust_Account_Balance__c = 500;
+        insert program2;
         
         nu_dse__TradeLine__c tradeLine = TestRecordCreator.createTradeLine(clientAccount.id, program.Id);
         insert tradeLine;
@@ -86,11 +89,11 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
 
     static testMethod void ProgramEstimatedBalanceUpdate() {
         
-        List<nu_dse__Program__c> programList = [SELECT Id FROM nu_dse__Program__c LIMIT 1];
+        List<nu_dse__Program__c> programList = [SELECT Id FROM nu_dse__Program__c LIMIT 2];
 
         Test.startTest();
             // executing the batch to calculate the estimated balance of 2,3,6,9,12 months
-            Database.executeBatch(new Batch_ProgramEstimatedBalanceUpdate(new Set<Id>{programList[0].Id}));
+            Database.executeBatch(new Batch_ProgramEstimatedBalanceUpdate(new Set<Id>{programList[0].Id, programList[1].Id}));
 
             Schedule_ProgramEstimatedBalanceUpdate schedulerInst = new Schedule_ProgramEstimatedBalanceUpdate();
             String schCronExp = '0 0 23 * * ?'; 

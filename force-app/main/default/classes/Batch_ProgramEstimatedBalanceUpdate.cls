@@ -8,6 +8,11 @@
 * @version        1.0
 * @created        2019-10-08
 * @modified       2019-10-08
+* @logic          Balance = sum of all drafts(deposits.nu_dse__Amount) in the month - sum of all settlements(withrawals.nu_dse__Total_Amount__c) in the month - sum of all Fee(Fee withdrawals.nu_dse__Total_Amount__c) 
+* @description    This batch will calculate the Estimated trust account balance at the end of current month, 2,3,6,9,12 months
+* @IMPORTANT NOTE Only the Draft(Deposit) and Settlement(Customer Withdrawal) and Fee(Fee Withdrawal) are included in the calculation.
+				  And nu_dse__Amount field will be used for Draft(Deposit) and nu_dse__Total_Amount__c will be used for Settlement(Customer Withdrawal) and Fee(Fee Withdrawal)
+				  Because the nu_dse__Total_Amount__c field in Draft(Deposit) can contain other Fees such as Affiliate Fee, Maintainence Fee, etc.
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
 public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Database.Batchable<sObject> {
@@ -141,10 +146,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
             for (Database.SaveResult dmlResult: Database.update(programToUpdateMap.values(), false)) {
 
                 if (dmlResult.isSuccess() == false) {
-                    nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(nu_dse__Class_Method__c = 'Batch_ProgramEstimatedBalanceUpdate.excute',
-                                                                            nu_dse__Error_Causing_Record_Id__c = dmlResult.getId(),
-                                                                            nu_dse__Stack_Trace__c = JSON.serialize(programToUpdateMap.get(dmlResult.getId())),
-                                                                            nu_dse__User_Context__c = UserInfo.getName());
+                    nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(nu_dse__Class_Method__c = 'Batch_ProgramEstimatedBalanceUpdate.excute',nu_dse__Error_Causing_Record_Id__c = dmlResult.getId(),nu_dse__Stack_Trace__c = JSON.serialize(programToUpdateMap.get(dmlResult.getId())), nu_dse__User_Context__c = UserInfo.getName());
 
                     for (Database.Error error: dmlResult.getErrors()) {
                         errLog.nu_dse__Message__c += error.getMessage();
@@ -156,8 +158,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
 
         } catch(Exception e) {
 
-            nu_dse__Error_Log__c errorLog = new nu_dse__Error_Log__c(nu_dse__Message__c = e.getMessage(), nu_dse__Stack_Trace__c = e.getStackTraceString(),
-                    nu_dse__User_Context__c = UserInfo.getName(), nu_dse__Class_Method__c = 'Batch_ProgramEstimatedBalanceUpdate.Execute');
+            nu_dse__Error_Log__c errorLog = new nu_dse__Error_Log__c(nu_dse__Message__c = e.getMessage(), nu_dse__Stack_Trace__c = e.getStackTraceString(), nu_dse__User_Context__c = UserInfo.getName(), nu_dse__Class_Method__c = 'Batch_ProgramEstimatedBalanceUpdate.Execute');
             
             insert errorLog;
         }

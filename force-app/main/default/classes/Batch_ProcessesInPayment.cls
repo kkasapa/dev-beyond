@@ -56,6 +56,7 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
     public Database.QueryLocator start(Database.BatchableContext BC) {
 
         //need some index field filter
+        //filter on Sch
         String queryStr = 'SELECT Id FROM nu_dse__Payment__c '+
                            'WHERE RecordTypeId = :draftRecordTypeId AND Create_Payment_Reminder_Tasks__c = True '+
                            'AND Program_Status__c != :programStatusExclusionSet';
