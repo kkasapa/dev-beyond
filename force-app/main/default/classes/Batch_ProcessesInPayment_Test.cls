@@ -1,7 +1,7 @@
 @isTest
 public class Batch_ProcessesInPayment_Test {
 
-    @testSetup static void methodName() {
+    @testSetup static void testRecordCreate() {
         
         Id accRecordTypeId = Schema.SObjectType.Account.getRecordTypeInfosByName().get('Client').getRecordTypeId();
         Id draftRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Draft').getRecordTypeId();
@@ -23,8 +23,12 @@ public class Batch_ProcessesInPayment_Test {
         insert offer;
         
         nu_dse__Payment__c payment = TestRecordCreator.createPayment(program.Id, 'Pending', 'Deposit', draftRecordTypeId, offer.Id);
-        system.debug('Payment::'+payment);
+        payment.nu_dse__Schedule_Date__c = system.today().addDays(5); 
         insert payment;
+        
+        nu_dse__Payment__c payment2 = TestRecordCreator.createPayment(program.Id, 'Pending', 'Deposit', draftRecordTypeId, offer.Id);
+        payment2.nu_dse__Schedule_Date__c = system.today().addDays(2); 
+        insert payment2;
         
         nu_dse__Data_Mapping__c smsDataMapping = TestRecordCreator.createDataMapping('Create Payments SMS Reminders', 'nu_dse__Payment__c', 'Task');
         smsDataMapping.External_Id__c = 'Create_Payments_SMS_Reminders';
@@ -71,8 +75,8 @@ public class Batch_ProcessesInPayment_Test {
     static testMethod void paymentReminderTaskCreation() {
         
         Test.startTest();
-            Integer activityPaddingDays = 2;
-            Database.executeBatch(new Batch_ProcessesInPayment(activityPaddingDays));
+            Integer activityPaddingDays = -3;
+            Database.executeBatch(new Batch_ProcessesInPayment(activityPaddingDays, null));
             
         Test.stopTest(); 
         
@@ -80,11 +84,13 @@ public class Batch_ProcessesInPayment_Test {
         
         system.assertEquals(false, paymentList[0].Create_Payment_Reminder_Tasks__c);
         
-        List<Task> taskList = [SELECT Id, Subject FROM Task];
+        List<Task> taskList = [SELECT Id, Subject, ActivityDate FROM Task];
         
-        system.assertEquals(2, taskList.size());
+        system.assertEquals(4, taskList.size());
         system.assertEquals('Payment SMS Reminder', taskList[0].Subject);
         system.assertEquals('Payment Email Reminder', taskList[1].Subject);
+        system.assertEquals(system.today().addDays(2), taskList[0].ActivityDate);
+        system.assertEquals(system.today().addDays(1), taskList[2].ActivityDate);
     }
     
     static testMethod void paymentReminderTaskCreationExceptionTest() {
@@ -94,14 +100,13 @@ public class Batch_ProcessesInPayment_Test {
         
         Test.startTest();
             
-            try {
-                Integer activityPaddingDays = 2;
-                Database.executeBatch(new Batch_ProcessesInPayment(activityPaddingDays));
-            } catch (exception e) {
-                system.assert(e.getmessage() != '');
-            }
+            Integer activityPaddingDays = -2;
+            Database.executeBatch(new Batch_ProcessesInPayment(activityPaddingDays, 'nu_dse__Schedule_Date__c > TODAY'));
             
         Test.stopTest(); 
+        
+        List<nu_dse__Error_Log__c> errorLogList = [SELECT Id FROM nu_dse__Error_Log__c];
+        system.assert(errorLogList.isEmpty() == false);
     }
     
     static testMethod void paymentReminderTaskCreationExceptionTest2() {
@@ -113,14 +118,13 @@ public class Batch_ProcessesInPayment_Test {
         
         Test.startTest();
             
-            try {
-                Integer activityPaddingDays = 2;
-                Database.executeBatch(new Batch_ProcessesInPayment(activityPaddingDays));
-            } catch (exception e) {
-                system.assert(e.getmessage() != '');
-            }
+            Integer activityPaddingDays = -2;
+            Database.executeBatch(new Batch_ProcessesInPayment(activityPaddingDays, 'Id != null'));
             
         Test.stopTest(); 
+        
+        List<nu_dse__Error_Log__c> errorLogList = [SELECT Id FROM nu_dse__Error_Log__c];
+        system.assert(errorLogList.isEmpty() == false);
     }
     
     static testMethod void paymentReminderTaskCreationExceptionTest3() {
@@ -135,13 +139,18 @@ public class Batch_ProcessesInPayment_Test {
         
         Test.startTest();
             
+            Integer activityPaddingDays = -2;
+            Database.executeBatch(new Batch_ProcessesInPayment(null, null));
+            
             try {
-                Integer activityPaddingDays = 2;
-                Database.executeBatch(new Batch_ProcessesInPayment(null));
-            } catch (exception e) {
-                system.assert(e.getmessage() != '');
+                Database.executeBatch(new Batch_ProcessesInPayment(3, null));
+            } catch(exception e) {
+                system.assert(e.getMessage().contains('Padding days should be in negative.'));
             }
             
         Test.stopTest(); 
+        
+        List<nu_dse__Error_Log__c> errorLogList = [SELECT Id FROM nu_dse__Error_Log__c];
+        system.assert(errorLogList.isEmpty() == false);
     }
 }

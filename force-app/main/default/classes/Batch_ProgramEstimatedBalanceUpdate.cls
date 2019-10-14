@@ -11,17 +11,18 @@
 * @logic          Balance = sum of all drafts(deposits.nu_dse__Amount) in the month - sum of all settlements(withrawals.nu_dse__Total_Amount__c) in the month - sum of all Fee(Fee withdrawals.nu_dse__Total_Amount__c) 
 * @description    This batch will calculate the Estimated trust account balance at the end of current month, 2,3,6,9,12 months
 * @IMPORTANT NOTE Only the Draft(Deposit) and Settlement(Customer Withdrawal) and Fee(Fee Withdrawal) are included in the calculation.
-				  And nu_dse__Amount field will be used for Draft(Deposit) and nu_dse__Total_Amount__c will be used for Settlement(Customer Withdrawal) and Fee(Fee Withdrawal)
-				  Because the nu_dse__Total_Amount__c field in Draft(Deposit) can contain other Fees such as Affiliate Fee, Maintainence Fee, etc.
+                  And nu_dse__Amount field will be used for Draft(Deposit) and nu_dse__Total_Amount__c will be used for Settlement(Customer Withdrawal) and Fee(Fee Withdrawal)
+                  Because the nu_dse__Total_Amount__c field in Draft(Deposit) can contain other Fees such as Affiliate Fee, Maintainence Fee, etc.
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
-public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Database.Batchable<sObject> {
+public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Database.Batchable<sObject>, Database.stateful {
     
     Set<Id> programIds; //set of programIds to which the batch can be run
     Id draftRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Draft').getRecordTypeId(); // recordType Id for draft
     Id feeRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Fee').getRecordTypeId();  // recordType Id for fee
     Id settlementRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Settlement').getRecordTypeId();  // recordType Id for settlement
-
+    Integer successRecordsCount, failedRecordsCount, totalRecordsCount;
+    
     public Batch_ProgramEstimatedBalanceUpdate() {
 
     }
@@ -34,7 +35,8 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
     }
 
     public Database.QueryLocator start(Database.BatchableContext BC) {
-
+        
+        successRecordsCount = 0; failedRecordsCount = 0; totalRecordsCount = 0;
         Set<String> programStatus = new Set<String>{'New Client', 'Active'}; // by default, program status with New Client, Active will be processed
         //custom metadata type for having Program status to be included for calculations
         Program_Status_Configuration__mdt progStatusConfig = [SELECT Id, MasterLabel, Included_Statuses__c 
@@ -60,6 +62,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
             
             Set<Id> recordTypeIds = new Set<Id> {draftRecordTypeId, settlementRecordTypeId, feeRecordTypeId};
             Date futureEstimateDate = system.today().toStartOfMonth().addMonths(12).addDays(-1); 
+            totalRecordsCount += scope.size();
 
             String queryStr = 'SELECT Id, nu_dse__Trust_Account_Balance__c, ' + 
                                 '(SELECT Id, nu_dse__Total_Amount__c, nu_dse__Amount__c, nu_dse__Schedule_Date__c, nu_dse__Payment_Type__c, RecordTypeId FROM nu_dse__Payments__r ' +
@@ -152,6 +155,9 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
                         errLog.nu_dse__Message__c += error.getMessage();
                     }
                     errLogs.add(errLog);
+                    failedRecordsCount += 1;
+                } else {
+                    successRecordsCount += 1;
                 }
             }
             insert errLogs;
@@ -164,6 +170,20 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
         }
     }
     public void finish(Database.BatchableContext BC) {
-
-    }
+        
+        Default_Task_Assignments_to_User__mdt taskAssignDefault = [SELECT Task_Assignement_User_Id__c 
+                                                                   FROM Default_Task_Assignments_to_User__mdt
+                                                                   WHERE DeveloperName = 'Estimated_Current_Balance_Task' LIMIT 1];
+        
+        if(taskAssignDefault != null && String.isNotBlank(taskAssignDefault.Task_Assignement_User_Id__c) == true) {                                                          
+            
+            String descripStr = 'Total Records Count: '+ totalRecordsCount +'; \n'+ 'Succesfully Processed records Count: '+
+                                successRecordsCount + '; \n' +'Failed Records Count: '+ failedRecordsCount + '; \n' + 
+                                'Processed Time: ' + system.now();
+                                
+            Task taskRec = new Task(Subject = 'Estimated Balance Calculation Job has been Completed!', ActivityDate = system.today(), 
+                                    Description = descripStr, Status = 'Completed', OwnerId = taskAssignDefault.Task_Assignement_User_Id__c);
+            insert taskRec;
+        }
+    } 
 }

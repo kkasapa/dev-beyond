@@ -1,16 +1,35 @@
+/*
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+* Batch class for Create payment reminder SMS/Email Tasks. 
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+* @author         Vignesh   <vsadhasivam@selastech.com>
+* @modifiedBy     Vignesh   <vsadhasivam@selastech.com>
+* @maintainedBy   Vignesh   <vsadhasivam@selastech.com>
+* @version        1.0
+* @created        2019-10-08
+* @modified       2019-10-11
+* @logic           
+* @description    This batch will Create payment reminder SMS/Email Tasks.
+* @IMPORTANT NOTE 
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+*/
 public with sharing class Batch_ProcessesInPayment implements Database.Batchable<sObject>, Database.Stateful {
     
-    Map<String, List<nu_dse__Field_mapping__c>> dataMappingAndFieldMappingMap = new Map<String, List<nu_dse__Field_mapping__c>>();
+    // Map of Data mapping Id and list of field mappings
+    Map<String, List<nu_dse__Field_mapping__c>> dataMappingAndFieldMappingMap = new Map<String, List<nu_dse__Field_mapping__c>>(); 
+    // Set of Data mapping names used for create communication tasks 
     Set<String> dataMappingNameSet = new Set<String>{'Create_Payments_SMS_Reminders', 'Create_Payments_Email_Reminders'};
-    Set<String> paymentFieldsToQuerySet = new Set<String>{'Create_Payment_Reminder_Tasks__c'};
-    Set<String> programStatusExclusionSet = new Set<String>();
-    Set<Id> programIds; //set of programIds to which the batch can be run
+    Set<String> paymentFieldsToQuerySet = new Set<String>{'Create_Payment_Reminder_Tasks__c'}; // Set of Payment fields to query
+    Set<String> programStatusExclusionSet = new Set<String>();// Set of Program status excludes in payment query
+    String whereConditionStr;// Addition where Condition for excute batch 
     
     Id draftRecordTypeId;
     public Integer activityPaddingDays;
     
-    public Batch_ProcessesInPayment(Integer paddingDays, Set<Id> programIdSet) {
-
+    public Batch_ProcessesInPayment(Integer paddingDays, String whereCondition) {
+        
+        // Query the data mapping to create dataMappingAndFieldMappingMap
+        
         String query = 'SELECT nu_dse__Data_Mapping__r.External_Id__c, ' + Utility.getQueryFields('nu_dse__Field_mapping__c') +  ' FROM nu_dse__Field_mapping__c ' +
                             ' WHERE nu_dse__Data_Mapping__r.External_Id__c IN :dataMappingNameSet';
         
@@ -29,7 +48,7 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
         }
 
         draftRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Draft').getRecordTypeId();
-        
+        // query Program_Status_Configuration meta data for get excluded program Statuses
         Program_Status_Configuration__mdt programStatusConfig = [SELECT Label, DeveloperName, Excluded_Statuses__c 
                                                                         FROM Program_Status_Configuration__mdt 
                                                                         WHERE DeveloperName = 'Deposit_Reminders_Exclusion' LIMIT 1];
@@ -38,21 +57,26 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
             && String.isNotBlank(programStatusConfig.Excluded_Statuses__c)) {
             programStatusExclusionSet = new Set<String>(programStatusConfig.Excluded_Statuses__c.split(',', 0));
         }
-        
+        // Assign padding days between payment scheduled date and task activity date
         if(paddingDays != null) {
-        
-            activityPaddingDays = paddingDays;
+            
+            if(paddingDays < 0) {
+                activityPaddingDays = paddingDays;
+            } else {
+                throw new applicationException('Padding days should be in negative.');
+            }
         
         } else {
         
             activityPaddingDays = -3;
         } 
-        if(programIdSet != null && programIdSet.isEmpty() == false) {
+        // Assign addition where condition for task creating payments query
+        if(String.isNotBlank(whereCondition) == true) {
         
-            programIds = programIdSet;
+            whereConditionStr = whereCondition;
         } 
     }
-
+    // Query the payments based on the condition and return to the excute method
     public Database.QueryLocator start(Database.BatchableContext BC) {
 
         //need some index field filter
@@ -61,24 +85,35 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
                            'WHERE RecordTypeId = :draftRecordTypeId AND Create_Payment_Reminder_Tasks__c = True '+
                            'AND Program_Status__c != :programStatusExclusionSet';
 
-        if(programIds != null && programIds.isEmpty() == false) {
-            queryStr = ' AND nu_dse__Program__c IN :programIds';
-        }
+        if(String.isNotBlank(whereConditionStr) == true
+            && whereConditionStr.contains('nu_dse__Schedule_Date__c')) {
+            
+            queryStr += ' AND ' + whereConditionStr;
+        
+        } else {
+            
+            if(String.isNotBlank(whereConditionStr) == true) {
+            
+                queryStr += ' AND ' + whereConditionStr;
+            }
+            Date minScheduleDate = system.today().addDays(2);
+            Date maxScheduleDate = system.today().addDays(math.abs(activityPaddingDays) + 7);
+            
+            queryStr += ' AND nu_dse__Schedule_Date__c >= :minScheduleDate AND nu_dse__Schedule_Date__c <= :maxScheduleDate';
+        }  
+        system.debug('queryStr::'+queryStr);
         return Database.getQueryLocator(queryStr);
         //RecordTypeId = :draftRecordTypeId AND Create_Payment_Reminder_Tasks__c = True');
     }
 
-    public void execute(Database.BatchableContext BC, List<sObject> scope) {
+    public void execute(Database.BatchableContext BC, List<nu_dse__Payment__c> scope) {
 
         try {
         
             List<Task> tasksToUpsertList = new List<Task>();
             List<nu_dse__Error_Log__c> errorLogsToInsertList = new List<nu_dse__Error_Log__c>();
+            Date minScheduleDate = system.today().addDays(2);
             
-            Map<Id, nu_dse__Payment__c> paymentMap = new Map<Id, nu_dse__Payment__c>((List<nu_dse__Payment__c>)scope);
-            Set<Id> paymentIdSet = new Set<Id>(paymentMap.keySet());
-            //paymentMap.clear();
-
             String paymentsQueryFields = '';
 
             for (String paymentField : paymentFieldsToQuerySet) {
@@ -94,9 +129,9 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
 
                 paymentsQueryFields = ' Id ';
             }
-            String paymentsQuery = 'SELECT ' + paymentsQueryFields + ' FROM nu_dse__Payment__c WHERE Id IN :paymentIdSet';
+            String paymentsQuery = 'SELECT ' + paymentsQueryFields + ' FROM nu_dse__Payment__c WHERE Id IN :scope AND nu_dse__Schedule_Date__c >= :minScheduleDate';
             System.debug('paymentsQuery--->'+paymentsQuery);
-            
+            // Process the payment and create the Payment Reminder - Email and Payment Reminder - SMS tasks
             for (nu_dse__Payment__c paymentRec : Database.query(paymentsQuery)) {
                 
                 try {
@@ -126,14 +161,13 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
                     errorLogsToInsertList.add(errorLog);
                 }
             }
-            paymentIdSet.clear();
 
             List<nu_dse__Payment__c> paymentsToUpdateList = new List<nu_dse__Payment__c>();
             Map<String, nu_dse__Payment__c> payIdReminderMap = new Map<String, nu_dse__Payment__c>();
             
             Integer counter = 0;
             Schema.SObjectField taskExternalIdField = Task.Unique_Identifier__c;
-
+            // Upsert the task based on unique identifier to skip duplicate and update the related payments Create Payment Reminder Tasks field
             for (Database.UpsertResult upsertResult : Database.upsert(tasksToUpsertList, taskExternalIdField, False)) {
 
                 String paymentId = tasksToUpsertList[counter].whatId;
@@ -199,7 +233,7 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
     public void finish(Database.BatchableContext BC) {
 
     }
-
+    // Method to create task based on field mapping records
     public Task populateValuesInInstance(Task taskRec, nu_dse__Payment__c paymentRec, List<nu_dse__Field_mapping__c> fieldMappingRecords) {
 
         if (taskRec != null && fieldMappingRecords != null && fieldMappingRecords.isEmpty() == False) {
@@ -232,8 +266,11 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
                             taskRec.put(targetField, Date.valueOf(targetFieldValue));
                         
                         } else {
-                        
-                            taskRec.put(targetField, Date.valueOf(targetFieldValue).addDays(activityPaddingDays));
+                            if(Date.valueOf(targetFieldValue) > system.today().addDays(math.abs(activityPaddingDays))) {
+                                taskRec.put(targetField, Date.valueOf(targetFieldValue).addDays(activityPaddingDays));
+                            } else {
+                                taskRec.put(targetField, system.today().addDays(1));
+                            } 
                         } 
 
                     } else if (targetFieldDataType == 'DateTime') {
