@@ -174,8 +174,12 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
         Default_Task_Assignments_to_User__mdt taskAssignDefault = [SELECT Task_Assignement_User_Id__c 
                                                                    FROM Default_Task_Assignments_to_User__mdt
                                                                    WHERE DeveloperName = 'Estimated_Current_Balance_Task' LIMIT 1];
-        
-        if(taskAssignDefault != null && String.isNotBlank(taskAssignDefault.Task_Assignement_User_Id__c) == true) {                                                          
+        //checks if the id is valid user id or else create error logs
+        if(taskAssignDefault != null 
+            && String.isNotBlank(taskAssignDefault.Task_Assignement_User_Id__c) == true
+            && (taskAssignDefault.Task_Assignement_User_Id__c.length() == 15 
+                || taskAssignDefault.Task_Assignement_User_Id__c.length() == 18)
+            && Id.valueOf(taskAssignDefault.Task_Assignement_User_Id__c).getSobjectType().getDescribe().getName() == 'User') {                                                          
             
             String descripStr = 'Total Records Count: '+ totalRecordsCount +'; \n'+ 'Succesfully Processed records Count: '+
                                 successRecordsCount + '; \n' +'Failed Records Count: '+ failedRecordsCount + '; \n' + 
@@ -184,6 +188,9 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
             Task taskRec = new Task(Subject = 'Estimated Balance Calculation Job has been Completed!', ActivityDate = system.today(), 
                                     Description = descripStr, Status = 'Completed', OwnerId = taskAssignDefault.Task_Assignement_User_Id__c);
             insert taskRec;
+        } else {
+            nu_dse__Error_Log__c errorLog = new nu_dse__Error_Log__c(nu_dse__Message__c = 'Invalid User Id for task assignment', nu_dse__Stack_Trace__c = 'Please check Custom metadata record with Developer Name \'Estimated_Current_Balance_Task\'', nu_dse__User_Context__c = UserInfo.getName(), nu_dse__Class_Method__c = 'Batch_ProgramEstimatedBalanceUpdate.finish');
+            insert errorLog;
         }
     } 
 }

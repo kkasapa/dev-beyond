@@ -7,7 +7,7 @@
 * @maintainedBy   Ashwin Bretto   <abretto@selastech.com>
 * @version        1.0
 * @created        2019-01-09
-* @modified       2019-08-29
+* @modified       2019-10-16
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
 public with sharing class ApprovalsController {
@@ -17,7 +17,7 @@ public with sharing class ApprovalsController {
     public String namespace;
     public List<ApprovalSet> approvalSets {get; set;}
     public Set<Id> queueIdSet = new Set<Id>();
-    public static Set<Id> subordinatesOfCurrentUser;
+    public Set<Id> subordinatesOfCurrentUser;
     public String selectedRadio{get;set;}
     public ApprovalSet currentApproval {get; set;}
     public Integer currentApprovalIndex {get;set;}
@@ -36,9 +36,11 @@ public with sharing class ApprovalsController {
     
     public void getsubordinatesOfCurrentUser() {
         
+        subordinatesOfCurrentUser = new Set<Id>();
         for (User subUser : [SELECT Id, Name, ProfileId, Profile.Name, ManagerId FROM User WHERE ManagerId = :this.userId]) {   
             subordinatesOfCurrentUser.add(subUser.Id); 
         }
+        system.debug('subordinatesOfCurrentUser::'+subordinatesOfCurrentUser);
     }
     
     public void getUserMemberGroup() {
@@ -145,7 +147,7 @@ public with sharing class ApprovalsController {
         return approvalSets;
     }
     
-    public static List<ApprovalSet> getApprovals(String selectedValue, Id userId, Set<Id> queueIdSet) {
+    public List<ApprovalSet> getApprovals(String selectedValue, Id userId, Set<Id> queueIdSet) {
         
         Map<String, ApprovalSet> processInstApprovalsMap = new Map<String, ApprovalSet>();
         Set<Id> targetObjectIdSet = new Set<Id>();
@@ -226,9 +228,12 @@ public with sharing class ApprovalsController {
                 } else if (queueIdSet.contains(appRec.asignedTo)) {                
                     appRec.showActions = TRUE;
                 } else if (subordinatesOfCurrentUser != null && subordinatesOfCurrentUser.isEmpty() == FALSE 
-                            && String.isNotBlank(appRec.submittedBy) && subordinatesOfCurrentUser.contains(appRec.submittedBy)) {                
+                            && String.isNotBlank(appRec.asignedTo) && subordinatesOfCurrentUser.contains(appRec.asignedTo)) {                
                     appRec.showActions = TRUE;
                 }
+                system.debug('appRec.asignedTo::'+appRec.asignedTo);
+                system.debug('subordinatesOfCurrentUser::'+subordinatesOfCurrentUser);
+                system.debug('appRec.showActions::'+appRec.showActions);
             }
         
             if (String.isNotBlank(targetObjId_ProcDefId)) {
