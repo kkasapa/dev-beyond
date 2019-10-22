@@ -72,7 +72,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
                         'FROM nu_dse__Program__c ' +
                         'WHERE Id IN :scope';
             
-            Map<Id, nu_dse__Program__c> programToUpdateMap = new Map<Id, nu_dse__Program__c>();
+            List<nu_dse__Program__c> programToUpdateList = new List<nu_dse__Program__c>();
 
             for(nu_dse__Program__c program : Database.query(queryStr)) {
 
@@ -142,15 +142,17 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
                     updateProgram.Estimated_Month_12_Balance__c = updateProgram.Estimated_Month_9_Balance__c;
                 }
                 updateProgram.Estimated_Balance_Calculations_Timestamp__c = System.now();
-                programToUpdateMap.put(updateProgram.Id, updateProgram);
+                programToUpdateList.add(updateProgram);
             }
 
             List<nu_dse__Error_Log__c> errLogs = new List<nu_dse__Error_Log__c>();
-            for (Database.SaveResult dmlResult: Database.update(programToUpdateMap.values(), false)) {
+            Integer count = 0;
+            for (Database.SaveResult dmlResult: Database.update(programToUpdateList, false)) {
 
                 if (dmlResult.isSuccess() == false) {
-                    nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(nu_dse__Class_Method__c = 'Batch_ProgramEstimatedBalanceUpdate.excute',nu_dse__Error_Causing_Record_Id__c = dmlResult.getId(),nu_dse__Stack_Trace__c = JSON.serialize(programToUpdateMap.get(dmlResult.getId())), nu_dse__User_Context__c = UserInfo.getName());
+                    nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(nu_dse__Class_Method__c = 'Batch_ProgramEstimatedBalanceUpdate.excute',nu_dse__Error_Causing_Record_Id__c = programToUpdateList[count].Id,nu_dse__Stack_Trace__c = JSON.serialize(programToUpdateList[count]), nu_dse__User_Context__c = UserInfo.getName());
 
+                    errLog.nu_dse__Message__c = '';
                     for (Database.Error error: dmlResult.getErrors()) {
                         errLog.nu_dse__Message__c += error.getMessage();
                     }
@@ -159,6 +161,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
                 } else {
                     successRecordsCount += 1;
                 }
+                count++;
             }
             insert errLogs;
 
