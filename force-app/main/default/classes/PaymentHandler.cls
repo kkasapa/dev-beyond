@@ -25,14 +25,16 @@ public class PaymentHandler extends TriggerHandler {
     List<nu_dse__Group_Task__c> groupTaskToInsert = new List<nu_dse__Group_Task__c>();  //grouptasks to be inserted 
     Map<String, Id> queueMap;       //Map of QueueName and QueueName
     List<nu_dse__Error_Log__c> errorLogList = new List<nu_dse__Error_Log__c>(); 
-    Set<Id> cancelledPaymentIds = new Set<Id>(); //cancelled payment ids for cancelling their tasks
+    Set<Id> cancelledPaymentIds = new Set<Id>(); //cancelled payment ids for deleting their tasks
     Map<String, Holiday> holidayMap;
     Map<String, Id> comuTempNameIdMap; // map of communication Template Name and Its Id
     static Map<Id, User> userMailMap = new Map<Id, User>(); //Map of user Id and Email
     List<nu_dse__Payment__c> verbalAuthRecivedPayments= new List<nu_dse__Payment__c>(); //payments with verbal authorization as true
     Set<Id> verbalAuthRecivedPaymentProgramIds = new Set<Id>(); // collect program id of payment which has verbal auth received = true
     Set<Id> draftDateUpdateProgramIds = new Set<Id>();
-
+    List<Task> taskToDeleteList = new List<Task>(); // Delete the Task when Payment was cancelled
+    Map<Id, Date> updatedIdscheduleDateMap = new Map<Id, Date>(); // Map of Payment Ids and those payments scheduleDate 
+ 
     String MissingCommTemps = '';
 
     public PaymentHandler() {
@@ -62,8 +64,12 @@ public class PaymentHandler extends TriggerHandler {
         for (nu_dse__Payment__c newPayment: (List<nu_dse__Payment__c>)Trigger.New) {
             //Process only for Payments on a Program and not Prospect
             if(newPayment.nu_dse__Program__c != null) {
+                // Collect Salesperson Id to update Manager email
                 collectpaymentSPIds(newPayment, oldPaymentMap.get(newPayment.Id));
-                updateNSFDate(newPayment, oldPaymentMap.get(newPayment.Id));          
+                // Update NSF date as today for failed payments
+                updateNSFDate(newPayment, oldPaymentMap.get(newPayment.Id));   
+                // Update Create Payment Reminder Tasks checkbox as true for Schedule date changed Payments.
+                updateCreatePaymentReminderTask(newPayment, oldPaymentMap.get(newPayment.Id));       
             }
         }
         if(paymentSPIds.isEmpty() == false || SPIdsForTask.isEmpty() == false) {
@@ -109,8 +115,10 @@ public class PaymentHandler extends TriggerHandler {
             if(newPayment.nu_dse__Program__c != null) {
                 // If Transaction status is changed to Completed, collecting the paymentId to update the program Phase and progress
                 collectCompletedPaymentProgramIds(newPayment, oldPaymentMap.get(newPayment.Id));
-                // collect payment Ids of Cancelled payments to Complete the existing tasks under those payments
+                // collect payment Ids of Cancelled payments to delete the existing tasks under those payments
                 collectCancelledPaymentIds(newPayment, oldPaymentMap.get(newPayment.Id));
+                // collect payment Ids and schedule date of schedule date updated payments to update the existing tasks activity date under those payments
+                collectscheduleDateUpdatedPaymentIds(newPayment, oldPaymentMap.get(newPayment.Id));
                 // collect payment Ids of Verbal Authorization Received payments to Create Group tasks under those payments and assigns it to Payment Authorization Queue
                 collectVerbalAuthPaymentIds(newPayment, oldPaymentMap.get(newPayment.Id));
                 // Collect Program Ids to update next Draft Payment date
@@ -127,9 +135,11 @@ public class PaymentHandler extends TriggerHandler {
             // updates program with Complete % and Phase
             updateProgramPhaseAndProgress();  
         }
-        if(cancelledPaymentIds.isEmpty() == false) {
-            // When a payment is cancelled, it's Scheduled task will be completed to skip them from Batch processing it
-            completeTasksforCancelledPayments();
+        if(cancelledPaymentIds.isEmpty() == false
+            || updatedIdscheduleDateMap.isEmpty() == false) {
+            // When a payment was cancelled, We delete the task to skip them from Batch processing it
+            // or schedule date changed, We change the Task activity date. 
+            updateTasksforPayments();
         }
         if(verbalAuthRecivedPaymentProgramIds.isEmpty() == false) {
             //creates a Group tasks for Verbal Authorization and assigns it to Payment Authorization Queue
@@ -143,6 +153,7 @@ public class PaymentHandler extends TriggerHandler {
         upsert taskToUpsertMap.values() Unique_Identifier__c; // finally upsertng tasks based on Unique_Identifier__c field
         upsert groupTaskToInsert nu_dse__Unique_Identifier__c ; //finally upserting group tasks
         insert errorLogList; // if any error logs were captured during execution it will be inserted for track of failure
+        delete taskToDeleteList; // delete the cancelled payment related tasks list
     }
     /* * Filter for "Send Salesperson Cleared Payment Notifiication" process
        * If first draft payment's Transaction Status or Payment Sequence Number changes and Transaction status is Completed/Cleared 
@@ -192,6 +203,15 @@ public class PaymentHandler extends TriggerHandler {
             }
         }
     }
+    /* Update Create Payment Reminder Tasks checkbox as true for Schedule date changed Payments.
+       This checkbox update used for updating activity date based on Padding days in processInPayment batch  */
+    public void updateCreatePaymentReminderTask(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
+        
+        if(newPayment.nu_dse__Schedule_date__c != null
+            && oldPayment.nu_dse__Schedule_date__c  != newPayment.nu_dse__Schedule_date__c) {
+            newPayment.Create_Payment_Reminder_Tasks__c = true;
+        }
+    }
     /* When a Transaction Status is changed from Completed or To Completed,
         collecting programIds for processing
     */
@@ -203,11 +223,18 @@ public class PaymentHandler extends TriggerHandler {
             completedPaymentProgramIds.add(newPayment.nu_dse__Program__c);   
         }
     }
-    //If nu_dse__Transaction_Status__c changes to Cancelled, we collect paymentIds to Compelete the Tasks under the payment
+    //If nu_dse__Transaction_Status__c changes to Cancelled, we collect paymentIds to delete the Tasks under the payment
     public void collectCancelledPaymentIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
         if(newPayment.nu_dse__Transaction_Status__c == 'Cancelled'
             && oldPayment.nu_dse__Transaction_Status__c != newPayment.nu_dse__Transaction_Status__c) {
             cancelledPaymentIds.add(newPayment.Id);
+        }
+    }
+    //If nu_dse__Schedule_date__c updates, we collect paymentIds and Schedule date to update the Tasks activity date under the payment
+    public void collectscheduleDateUpdatedPaymentIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
+        if(newPayment.nu_dse__Schedule_date__c != null
+            && oldPayment.nu_dse__Schedule_date__c != newPayment.nu_dse__Schedule_date__c) {
+            updatedIdscheduleDateMap.put(newPayment.Id, newPayment.nu_dse__Schedule_date__c);
         }
     }
     //If nu_dse__Transaction_Status__c changes to Failed, we collect paymentIds to Create the Group Tasks under the payment
@@ -427,13 +454,19 @@ public class PaymentHandler extends TriggerHandler {
             programsToBeUpdatedMap.put(program.Id, program);
         }
     }
-    // for all cancelled payments, updating child tasks as Completed status
-    public void completeTasksforCancelledPayments() {
+    // for all cancelled payments, deleting child tasks
+    // and schedule date changed, Updating child Tasks activity date. 
+    public void updateTasksforPayments() {
     
         for(Task task : [SELECT Id, Unique_Identifier__c, WhatId FROM Task WHERE Status != 'Completed' AND Unique_Identifier__c != null 
-                                                                                 AND WhatId IN :cancelledPaymentIds]) {
-            task.Status = 'Completed';
-            taskToUpsertMap.put(task.Unique_Identifier__c, task);
+                                                                                 AND (WhatId IN :cancelledPaymentIds
+                                                                                 OR WhatId IN :updatedIdscheduleDateMap.keySet())]) {
+            if(cancelledPaymentIds.contains(task.WhatId) == true) {
+                taskToDeleteList.add(task);
+            } else if(updatedIdscheduleDateMap.containsKey(task.WhatId)){
+                task.activityDate = updatedIdscheduleDateMap.get(task.WhatId).addDays(-1);
+                taskToUpsertMap.put(task.Unique_Identifier__c, task);
+            }
         }
     } 
     //creates a Group task and assigns to a Queue if Verbal_Authorization_Received__c = true
