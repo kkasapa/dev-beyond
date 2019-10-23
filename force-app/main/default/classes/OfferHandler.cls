@@ -17,12 +17,18 @@ public class OfferHandler extends TriggerHandler {
     private Map<Id, nu_dse__Offer__c> newOfferMap;
     private Map<Id, nu_dse__Offer__c> oldOfferMap;
     private Set<ID> offerIds;
+    private Map<Id, nu_dse__Tradeline__c> newTradelineMap;
+    private Map<Id, nu_dse__Tradeline__c> oldTradelineMap;   
+    
+    List<nu_dse__Program__c> ProgramList = new List<nu_dse__Program__c>(); //List of Programs
 
     public OfferHandler() {
         this.newOfferMap = (Map<Id, nu_dse__Offer__c>) Trigger.newMap;
         this.oldOfferMap = (Map<Id, nu_dse__Offer__c>) Trigger.oldMap;
         this.offerIds = trigger.newMap.keySet();
     }
+
+    Set<Id> cancelledOfferIds = new Set<Id>();
 
     public override void afterInsert()
     {
@@ -48,11 +54,32 @@ public class OfferHandler extends TriggerHandler {
             {
                 OfferstoUpdate.add(newOffer.ID);  
             }
-           
+            // To collect the Cancelled offers Ids to delete the related payments 
+            collectCancelledOffers(newOffer, oldOfferMap.get(newOffer.Id));
         }
-        savingsCalc(OfferstoUpdate);
+        // Updated by Vignesh on 31-10-2019 to fix Future method cannot be called from a future or batch method
+        if(OfferstoUpdate.isEmpty() == false) {
+            savingsCalc(OfferstoUpdate);
+        }
+        // Delete Cancelled Offer related Payments
+        if(cancelledOfferIds.isEmpty() == false) {
+            deletePayments(cancelledOfferIds);        
+        }
+    }
+    // Method to collect the Cancelled offers Ids to delete the related payments 
+    public void collectCancelledOffers(nu_dse__Offer__c newOffer, nu_dse__Offer__c oldOffer) {
+
+        if(newOffer.nu_dse__Status__c == '01-Offer Canceled by Negotiator'
+            && newOffer.nu_dse__Status__c != oldOffer.nu_dse__Status__c) {
+            cancelledOfferIds.add(newOffer.Id);
+        }
     }
     
+    //delete all payments under cancelled offers
+    public void deletePayments(Set<Id> cancelledOfferIds) {
+        delete [SELECT Id FROM nu_dse__Payment__c WHERE nu_dse__Offer__c IN :cancelledOfferIds];
+    }
+
  	@future(callout=true)
     public static void savingsCalc(Set<ID> recordIds)
     {   
@@ -128,5 +155,15 @@ public class OfferHandler extends TriggerHandler {
             
         }
         update offersToUpdate;
+    }
+    
+    // Method to fillout TL Delinquent (DQ) Days on Offer Accepted Date.
+    public void DQDays(nu_dse__Offer__c newOffer, nu_dse__Offer__c oldOffer,nu_dse__Tradeline__c oldTradeline, nu_dse__Tradeline__c newTradeline) {
+        if(newOffer.nu_dse__Status__c == '05-Offer Accepted by Payment Team'
+            && newOffer.nu_dse__Status__c != oldOffer.nu_dse__Status__c
+          	&& oldTradeline.DQ_at_Offer_Created_Date__c == null) {
+              system.debug('This works');
+                newTradeline.DQ_at_Offer_Created_Date__c = oldTradeline.TL_Delinquent_DQ_Days__c; 
+        }
     }
 }

@@ -1,7 +1,6 @@
 @istest
 public class PaymentHandler_Test {
 
-    
     @testsetup
     public static void testData(){
         
@@ -171,14 +170,15 @@ public class PaymentHandler_Test {
                                                  FROM nu_dse__Payment__c WHERE nu_dse__Dont_Consider__c = false];
         if(paymentsList.size()>0) {
         
+        Test.startTest();
             Task taskInst = new Task(whatId = paymentsList[0].Id, Subject = 'Payments Reminder SMS Task', ActivityDate = system.Today().addDays(1),
                                       Unique_Identifier__c = paymentsList[0].Id+'Payments Reminder SMS',nu_dse__Is_System_Task__c = true);
             insert taskInst;
             nu_dse__Payment__c paymenInst = new nu_dse__Payment__c(Id = paymentsList[0].Id, nu_dse__Transaction_Status__c = 'Cancelled');
             update paymenInst;
-            
+            Test.stopTest();
             List<Task> taskList = [SELECT Id, Status FROM Task WHERE WhatId = :paymentsList[0].Id];
-            System.assertEquals('Completed', taskList[0].Status);
+            System.assert(taskList.isEmpty() == true);
         }
     } 
     
@@ -203,4 +203,37 @@ public class PaymentHandler_Test {
                                                  WHERE Id = :paymentsList[0].nu_dse__Program__c];
          System.assertEquals(null, completedProgramList[0].Next_Draft_Date__c);
      }
+
+     static testMethod void taskActivityDateTest(){
+        
+        nu_dse__Payment__c paymentInst = [SELECT Id, nu_dse__Schedule_Date__c
+                                          FROM nu_dse__Payment__c LIMIT 1];
+        
+        List<Task> taskList = new List<Task>();
+        for(Integer i = 1; i <= 2; i ++){
+            Task taskInst = new Task();
+            taskInst.WhatId = paymentInst.Id;
+            taskInst.ActivityDate = system.today();
+            if(math.mod(i, 2) == 0){
+                taskInst.Subject = 'SMS REMINDER';
+                taskInst.Unique_Identifier__c = 'Payment Reminder - SMS 1';
+            }
+            else{
+                taskInst.Subject = 'EMAIL REMINDER';
+                taskInst.Unique_Identifier__c = 'Payment Reminder - Email 1';
+            }
+            taskList.add(taskInst);
+        }
+        insert taskList;
+        
+        Test.startTest();
+            paymentInst.nu_dse__Schedule_Date__c = system.today().addDays(7);
+            paymentInst.nu_dse__Transaction_Status__c = 'Pending'; 
+            update paymentInst;
+        Test.stopTest();
+        
+        List<Task> updatedTaskList = [SELECT Id, ActivityDate FROM Task 
+                                      WHERE WhatId = :paymentInst.Id];
+        System.assertEquals(system.today().addDays(5), updatedTaskList[0].ActivityDate);  
+    }
 }

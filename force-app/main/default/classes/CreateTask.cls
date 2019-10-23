@@ -14,15 +14,15 @@ global class CreateTask {
         
         for(CreateTaskRequest tr: request){
            
-          Date activityDate = tr.activityDate; 
+          //Date activityDate = tr.activityDate; 
             
-          activityDate =   Holidays.getNextWorkingDay(holidayMap, ActivityDate);
+          //activityDate =   Holidays.getNextWorkingDay(holidayMap, ActivityDate);
         
           Task t = new Task(); 
         
           t.subject = tr.subject; 
         
-          t.ActivityDate = activityDate; 
+          t.ActivityDate = tr.activityDate; 
         
           t.Unique_Identifier__c = tr.uniqueIdentifier;
          

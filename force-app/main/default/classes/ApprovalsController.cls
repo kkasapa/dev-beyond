@@ -7,7 +7,7 @@
 * @maintainedBy   Ashwin Bretto   <abretto@selastech.com>
 * @version        1.0
 * @created        2019-01-09
-* @modified       2019-08-29
+* @modified       2019-10-16
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
 public with sharing class ApprovalsController {
@@ -17,28 +17,57 @@ public with sharing class ApprovalsController {
     public String namespace;
     public List<ApprovalSet> approvalSets {get; set;}
     public Set<Id> queueIdSet = new Set<Id>();
-    public static Set<Id> subordinatesOfCurrentUser;
+    public Set<Id> subordinatesOfCurrentUser;
     public String selectedRadio{get;set;}
     public ApprovalSet currentApproval {get; set;}
     public Integer currentApprovalIndex {get;set;}
     public Boolean reAssign {get; set;}
-    
+    public Boolean modifyAllProspect {get; set;}
+    public Boolean modifyAllOffer {get; set;}
+
     public ApprovalsController() {
     
         this.userId = UserInfo.getUserId();
+        this.modifyAllProspect = false;
+        this.modifyAllOffer = false;
         namespace = 'nu_dse__';
         getsubordinatesOfCurrentUser();
         getUserMemberGroup();
+        getModifyAllPermisnofUser();
         selectedRadio = 'nu_dse__Prospect__c';
         reAssign = false;
         this.currentApproval = new ApprovalSet();
     }
+
+    public void getModifyAllPermisnofUser() {
+
+        for (ObjectPermissions objpermission: [SELECT ParentId , SObjectType, Parent.Name
+                                                FROM ObjectPermissions 
+                                                WHERE PermissionsModifyAllRecords = true 
+                                                    AND ParentId IN (SELECT PermissionSetId 
+                                                            FROM PermissionSetAssignment
+                                                            WHERE AssigneeId = :this.userId)
+                                                    AND (SObjectType = 'nu_dse__Prospect__c' 
+                                                        OR SObjectType = 'nu_dse__Offer__c')]) {
+
+            if (objpermission.SObjectType == 'nu_dse__Prospect__c') {
+                modifyAllProspect = true;
+            } else if (objpermission.SObjectType == 'nu_dse__Offer__c') {
+                modifyAllOffer = true;
+            }                                     
+            //System.debug('objpermission.ParentId-->'+objpermission.ParentId);    
+            //System.debug('objpermission.Parent.Name-->'+objpermission.Parent.Name);    
+            //System.debug('objpermission.SObjectType-->'+objpermission.SObjectType);                            
+        }
+    }
     
     public void getsubordinatesOfCurrentUser() {
         
+        subordinatesOfCurrentUser = new Set<Id>();
         for (User subUser : [SELECT Id, Name, ProfileId, Profile.Name, ManagerId FROM User WHERE ManagerId = :this.userId]) {   
             subordinatesOfCurrentUser.add(subUser.Id); 
         }
+        system.debug('subordinatesOfCurrentUser::'+subordinatesOfCurrentUser);
     }
     
     public void getUserMemberGroup() {
@@ -145,7 +174,7 @@ public with sharing class ApprovalsController {
         return approvalSets;
     }
     
-    public static List<ApprovalSet> getApprovals(String selectedValue, Id userId, Set<Id> queueIdSet) {
+    public List<ApprovalSet> getApprovals(String selectedValue, Id userId, Set<Id> queueIdSet) {
         
         Map<String, ApprovalSet> processInstApprovalsMap = new Map<String, ApprovalSet>();
         Set<Id> targetObjectIdSet = new Set<Id>();
@@ -280,8 +309,14 @@ public with sharing class ApprovalsController {
                 }
 
             }
+            String queryStr = '';
             // Added query to get target object records created date[SF-62]
-            String queryStr = 'SELECT Id, CreatedDate FROM '+ selectedValue + ' WHERE Id IN :targetObjectIdSet';
+            if(selectedValue != 'nu_dse__Offer__c') {
+                queryStr = 'SELECT Id, CreatedDate FROM '+ selectedValue + ' WHERE Id IN :targetObjectIdSet';
+            } else  {
+                queryStr = 'SELECT Id, CreatedDate, nu_dse__First_Payment_Date__c FROM '+ selectedValue + ' WHERE Id IN :targetObjectIdSet';
+            }
+
             Map<Id, SObject> selectedObjectMap = new Map<Id, SObject>(Database.query(queryStr));
             // Assign page showing approval record target object createdDate[SF-62]
             for(String approvalId : processInstApprovalsMap.keySet()) {
@@ -291,6 +326,15 @@ public with sharing class ApprovalsController {
                     
                     DateTime createdDate  = DateTime.valueOf((selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('CreatedDate')));
                     processInstApprovalsMap.get(approvalId).approval.CreatedDate = createdDate.format('MM-dd-YYYY');
+                    processInstApprovalsMap.get(approvalId).approval.CreatedDateInMs = createdDate.getTime();
+
+                    if(selectedValue == 'nu_dse__Offer__c' 
+                        && selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('nu_dse__First_Payment_Date__c') != null) {
+                        Date fistPaymentDate = Date.valueOf(selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('nu_dse__First_Payment_Date__c'));
+                        DateTime firstPaymentDateTime = DateTime.newInstance(fistPaymentDate, Time.newInstance(0,0,0,0));
+                        processInstApprovalsMap.get(approvalId).approval.fistPaymentDate = firstPaymentDateTime.format('MM-dd-YYYY');
+                        processInstApprovalsMap.get(approvalId).approval.fistPaymentDateInMs = firstPaymentDateTime.getTime();
+                    }
                 }
             }
         }
@@ -368,6 +412,9 @@ public with sharing class ApprovalsController {
         public String targetObjectName {get; set;}
         // Changed CompletedDate variable as TargetObject createdDate[SF-62]
         public String createdDate {get; set;}
+        public Long CreatedDateInMs {get; set;}
+        public String fistPaymentDate {get; set;}
+        public Long fistPaymentDateInMs {get; set;}
         public Id workItemId {get; set;}
         public Id instanceId {get; set;}
         public String approvalType { get; set;}

@@ -1,0 +1,66 @@
+<aura:component controller = "ProposalController">
+    <aura:attribute name="myObjects" type="nu_dse__Payment__c[]"/>
+    
+    <lightning:button label="Simulate" onclick="{!c.getMyObjects}"/> 
+    
+    <table>
+    <tr>
+        <td>
+            Name
+        </td>
+        &nbsp;
+        
+        <td>            
+            Amount
+        </td>
+        &nbsp;
+        <td>            
+            Scheduled Date
+        </td>
+        &nbsp;
+        <td>            
+            Type
+        </td>
+        &nbsp;
+        <td>            
+            Transaction Status
+        </td>
+        
+    </tr>
+    
+ </table>    
+    
+    <aura:iteration items="{!v.myObjects}" var="obj">
+        <table>
+            <tr>
+                <td>
+                    {!obj.Name}
+                </td>            
+                
+                &nbsp;        
+                
+                <td>
+                    {!obj.nu_dse__Amount__c}
+                </td>            
+                
+                &nbsp;        
+                
+                <td>{!obj.nu_dse__Schedule_Date__c}
+                </td>
+                
+                
+                &nbsp; 
+                
+                <td>{!obj.nu_dse__Type__c}
+                </td>
+                
+                &nbsp; 
+                
+                <td>{!obj.nu_dse__Transaction_Status__c}
+                </td>            
+            </tr>
+        </table>  
+    </aura:iteration>
+
+   
+</aura:component>
