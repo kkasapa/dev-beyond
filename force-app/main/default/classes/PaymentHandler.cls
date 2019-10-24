@@ -7,7 +7,7 @@
 * @maintainedBy   Ashwin Bretto   <abretto@selastech.com>
 * @version        1.0
 * @created        2019-05-16
-* @modified       2019-05-20
+* @modified       2019-10-23
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
 
@@ -32,7 +32,6 @@ public class PaymentHandler extends TriggerHandler {
     List<nu_dse__Payment__c> verbalAuthRecivedPayments= new List<nu_dse__Payment__c>(); //payments with verbal authorization as true
     Set<Id> verbalAuthRecivedPaymentProgramIds = new Set<Id>(); // collect program id of payment which has verbal auth received = true
     Set<Id> draftDateUpdateProgramIds = new Set<Id>();
-    List<Task> taskToDeleteList = new List<Task>(); // Delete the Task when Payment was cancelled
     Map<Id, Date> updatedIdscheduleDateMap = new Map<Id, Date>(); // Map of Payment Ids and those payments scheduleDate 
  
     String MissingCommTemps = '';
@@ -139,7 +138,7 @@ public class PaymentHandler extends TriggerHandler {
             || updatedIdscheduleDateMap.isEmpty() == false) {
             // When a payment was cancelled, We delete the task to skip them from Batch processing it
             // or schedule date changed, We change the Task activity date. 
-            updateTasksforPayments();
+            PaymentHandler.updateDeleteTask(cancelledPaymentIds, updatedIdscheduleDateMap);
         }
         if(verbalAuthRecivedPaymentProgramIds.isEmpty() == false) {
             //creates a Group tasks for Verbal Authorization and assigns it to Payment Authorization Queue
@@ -153,7 +152,6 @@ public class PaymentHandler extends TriggerHandler {
         upsert taskToUpsertMap.values() Unique_Identifier__c; // finally upsertng tasks based on Unique_Identifier__c field
         upsert groupTaskToInsert nu_dse__Unique_Identifier__c ; //finally upserting group tasks
         insert errorLogList; // if any error logs were captured during execution it will be inserted for track of failure
-        delete taskToDeleteList; // delete the cancelled payment related tasks list
     }
     /* * Filter for "Send Salesperson Cleared Payment Notifiication" process
        * If first draft payment's Transaction Status or Payment Sequence Number changes and Transaction status is Completed/Cleared 
@@ -232,7 +230,8 @@ public class PaymentHandler extends TriggerHandler {
     }
     //If nu_dse__Schedule_date__c updates, we collect paymentIds and Schedule date to update the Tasks activity date under the payment
     public void collectscheduleDateUpdatedPaymentIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
-        if(newPayment.nu_dse__Schedule_date__c != null
+        if(newPayment.RecordTypeId == draftRecordTypeId
+            && newPayment.nu_dse__Schedule_date__c != null
             && oldPayment.nu_dse__Schedule_date__c != newPayment.nu_dse__Schedule_date__c) {
             updatedIdscheduleDateMap.put(newPayment.Id, newPayment.nu_dse__Schedule_date__c);
         }
@@ -454,21 +453,7 @@ public class PaymentHandler extends TriggerHandler {
             programsToBeUpdatedMap.put(program.Id, program);
         }
     }
-    // for all cancelled payments, deleting child tasks
-    // and schedule date changed, Updating child Tasks activity date. 
-    public void updateTasksforPayments() {
     
-        for(Task task : [SELECT Id, Unique_Identifier__c, WhatId FROM Task WHERE Status != 'Completed' AND Unique_Identifier__c != null 
-                                                                                 AND (WhatId IN :cancelledPaymentIds
-                                                                                 OR WhatId IN :updatedIdscheduleDateMap.keySet())]) {
-            if(cancelledPaymentIds.contains(task.WhatId) == true) {
-                taskToDeleteList.add(task);
-            } else if(updatedIdscheduleDateMap.containsKey(task.WhatId)){
-                task.activityDate = updatedIdscheduleDateMap.get(task.WhatId).addDays(-1);
-                taskToUpsertMap.put(task.Unique_Identifier__c, task);
-            }
-        }
-    } 
     //creates a Group task and assigns to a Queue if Verbal_Authorization_Received__c = true
     public void createVerbalAuthGroupTask() { 
         
@@ -548,5 +533,61 @@ public class PaymentHandler extends TriggerHandler {
             this.activityDate = activityDateParam;
             this.paymentInstance = paymentInstanceParam;
         }
+    }
+
+    // for all cancelled payments, deleting child tasks
+    // and schedule date changed, Updating child Tasks activity date. 
+    @future
+    public static void updateDeleteTask(Set<Id> cancelledPaymentIds, Map<Id, Date> updatedIdscheduleDateMap) {
+
+        List<Task> taskToDeleteList = new List<Task>(); // Delete the Task when Payment was cancelled
+        Map<String, Task> taskToUpsertMap = new Map<String, Task>(); //tasks to be upserted based on unique Identifier
+        Map<Integer, Integer> paddingDaysMap = new Map<Integer, Integer>(); 
+
+        for(Deposit_Reminder_Configuration__mdt depositReminderConfig : [SELECT Padding_Days__c, Sequence_number__c 
+                                                                         FROM Deposit_Reminder_Configuration__mdt
+                                                                         WHERE Padding_Days__c < 0
+                                                                         ORDER BY Padding_Days__c DESC]){
+            paddingDaysMap.put(Integer.valueOf(depositReminderConfig.Sequence_number__c), Integer.valueOf(depositReminderConfig.Padding_Days__c));
+        }
+
+        for(Task task : [SELECT Id, Unique_Identifier__c, WhatId FROM Task WHERE Status != 'Completed' AND Unique_Identifier__c != null 
+                                                                                 AND nu_dse__Communication_Sent__c != true
+                                                                                 AND (WhatId IN :cancelledPaymentIds
+                                                                                 OR WhatId IN :updatedIdscheduleDateMap.keySet())]) {
+            if(cancelledPaymentIds.contains(task.WhatId) == true) {
+                taskToDeleteList.add(task);
+            } else if(updatedIdscheduleDateMap.containsKey(task.WhatId)){
+                
+                Integer padding = 0;
+
+                if(task.Unique_Identifier__c.contains('SMS') 
+                    && paddingDaysMap.containsKey(Integer.valueOf(task.Unique_Identifier__c.substringAfterLast('SMS ')))) {
+                    
+                    padding = paddingDaysMap.get(Integer.valueOf(task.Unique_Identifier__c.substringAfterLast('SMS ')));
+                    if(updatedIdscheduleDateMap.get(task.WhatId).addDays(padding) > system.today()) {
+                        task.activityDate = updatedIdscheduleDateMap.get(task.WhatId).addDays(padding);
+                    } else {
+                        task.activityDate = system.today().addDays(1);
+                    }
+                    taskToUpsertMap.put(task.Unique_Identifier__c, task);
+                } else if(task.Unique_Identifier__c.contains('Email') 
+                    && paddingDaysMap.containsKey(Integer.valueOf(task.Unique_Identifier__c.substringAfterLast('Email ')))) {
+                    
+                    padding = paddingDaysMap.get(Integer.valueOf(task.Unique_Identifier__c.substringAfterLast('Email ')));
+                    if(updatedIdscheduleDateMap.get(task.WhatId).addDays(padding) > system.today()) {
+                        task.activityDate = updatedIdscheduleDateMap.get(task.WhatId).addDays(padding);
+                    } else {
+                        task.activityDate = system.today().addDays(1);
+                    }
+                    taskToUpsertMap.put(task.Unique_Identifier__c, task);
+                
+                } else {
+                    taskToDeleteList.add(task);
+                }
+            }
+        }
+        upsert taskToUpsertMap.values() Unique_Identifier__c; // finally upsertng tasks based on Unique_Identifier__c field
+        delete taskToDeleteList; // delete the cancelled payment related tasks list
     }
 }
