@@ -65,14 +65,17 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
             totalRecordsCount += scope.size();
 
             String queryStr = 'SELECT Id, nu_dse__Trust_Account_Balance__c, ' + 
-                                '(SELECT Id, nu_dse__Total_Amount__c, nu_dse__Amount__c, nu_dse__Schedule_Date__c, nu_dse__Payment_Type__c, RecordTypeId FROM nu_dse__Payments__r ' +
-                                'WHERE nu_dse__Schedule_Date__c >= TODAY '+  
-                                    'AND nu_dse__Schedule_Date__c <= :futureEstimateDate AND RecordTypeId IN :recordTypeIds '+
-                                    'AND (nu_dse__Transaction_Status__c = \'Scheduled\' OR nu_dse__Transaction_Status__c = \'In Progress\') ORDER BY nu_dse__Schedule_Date__c ASC) '+
+                                '(SELECT Id, nu_dse__Total_Amount__c, nu_dse__Amount__c, nu_dse__Schedule_Date__c, nu_dse__Payment_Type__c, nu_dse__Transaction_Status__c'+ 
+                                'RecordTypeId, nu_dse__Offer__c, nu_dse__Offer__r.nu_dse__TradeLine__c FROM nu_dse__Payments__r ' +
+                                'WHERE RecordTypeId IN :recordTypeIds '+
+                                    'AND (nu_dse__Transaction_Status__c = \'Scheduled\' OR nu_dse__Transaction_Status__c = \'In Progress\' '+
+                                    'OR nu_dse__Transaction_Status__c = \'Completed\' OR nu_dse__Transaction_Status__c = \'Cleared\') ' +
+                                    'ORDER BY nu_dse__Schedule_Date__c ASC) '+
                         'FROM nu_dse__Program__c ' +
                         'WHERE Id IN :scope';
             
             List<nu_dse__Program__c> programToUpdateList = new List<nu_dse__Program__c>();
+            Map<Id, nu_dse__TradeLine__c> tradelineIdRecMap = new Map<Id, nu_dse__TradeLine__c>();
 
             for(nu_dse__Program__c program : Database.query(queryStr)) {
 
@@ -86,38 +89,83 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
                 updateProgram.Estimated_Current_Month_Balance__c = programBal;
 
                 for(nu_dse__Payment__c payment : program.nu_dse__Payments__r) {
+                    // To calculate Program estimated balance
+                    if(payment.nu_dse__Schedule_Date__c >= system.today()
+                        && payment.nu_dse__Schedule_Date__c < futureEstimateDate
+                        && (payment.nu_dse__Transaction_Status__c == 'Scheduled' 
+                            || payment.nu_dse__Transaction_Status__c == 'In Progress')) {
+                        
+                        if(payment.RecordTypeId ==  draftRecordTypeId) {
+                            programBal += payment.nu_dse__Amount__c;
+                        } else if((payment.RecordTypeId == feeRecordTypeId 
+                                    && payment.nu_dse__Payment_Type__c == 'Fee Withdrawal')
+                                    || (payment.RecordTypeId == settlementRecordTypeId 
+                                        && payment.nu_dse__Payment_Type__c == 'Withdrawal')) {
+
+                            programBal -= payment.nu_dse__Total_Amount__c;
+                        }
+                        
+                        if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(1).addDays(-1)) {
                     
-                    if(payment.RecordTypeId ==  draftRecordTypeId) {
-                        programBal += payment.nu_dse__Amount__c;
-                    } else if(payment.RecordTypeId != feeRecordTypeId 
-                            || (payment.nu_dse__Payment_Type__c == 'Fee Withdrawal')) {
-                        programBal -= payment.nu_dse__Total_Amount__c;
+                            updateProgram.Estimated_Current_Month_Balance__c = programBal;
+                        
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(2).addDays(-1)) {
+
+                            updateProgram.Estimated_Month_2_Balance__c = programBal;
+
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(3).addDays(-1)) {
+
+                            updateProgram.Estimated_Month_3_Balance__c = programBal;
+
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(6).addDays(-1)) {
+
+                            updateProgram.Estimated_Month_6_Balance__c = programBal;
+
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(9).addDays(-1)) {
+
+                            updateProgram.Estimated_Month_9_Balance__c = programBal;
+
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(12).addDays(-1)) {
+
+                            updateProgram.Estimated_Month_12_Balance__c = programBal;
+
+                        }
                     }
-                    
-                    if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(1).addDays(-1)) {
-                
-                        updateProgram.Estimated_Current_Month_Balance__c = programBal;
-                    
-                    } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(2).addDays(-1)) {
+                    // To calculate Tradeline Creditor_Payments_Made, Creditor_Payments_Outstanding, Fees_Collected and Fees_Outstanding
+                    if(payment.RecordTypeId != draftRecordTypeId
+                        && ((payment.RecordTypeId == feeRecordTypeId 
+                            && payment.nu_dse__Payment_Type__c == 'Fee Withdrawal')
+                            || (payment.RecordTypeId == settlementRecordTypeId 
+                                && payment.nu_dse__Payment_Type__c == 'Withdrawal'))
+                        && payment.nu_dse__Offer__r.nu_dse__TradeLine__c != null) {
+                        
+                        nu_dse__TradeLine__c tradeLineInst = new nu_dse__TradeLine__c(Id = payment.nu_dse__Offer__r.nu_dse__TradeLine__c, 
+                            Creditor_Payments_Made__c = 0, Creditor_Payments_Outstanding__c = 0, 
+                            Fees_Collected__c = 0, Fees_Outstanding__c = 0);
+                        
+                        if(tradelineIdRecMap.containsKey(tradeLineInst.Id) == true) {
+                            tradeLineInst = tradelineIdRecMap.get(tradeLineInst.Id);
+                        }
 
-                        updateProgram.Estimated_Month_2_Balance__c = programBal;
+                        if(payment.RecordTypeId == feeRecordTypeId) {
+                            
+                            if (payment.nu_dse__Transaction_Status__c == 'Completed'
+                                || payment.nu_dse__Transaction_Status__c == 'Cleared') {
+                                tradeLineInst.Creditor_Payments_Made__c += payment.nu_dse__Total_Amount__c;
+                            } else {
+                                tradeLineInst.Creditor_Payments_Outstanding__c += payment.nu_dse__Total_Amount__c;
+                            }
 
-                    } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(3).addDays(-1)) {
-
-                        updateProgram.Estimated_Month_3_Balance__c = programBal;
-
-                    } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(6).addDays(-1)) {
-
-                        updateProgram.Estimated_Month_6_Balance__c = programBal;
-
-                    } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(9).addDays(-1)) {
-
-                        updateProgram.Estimated_Month_9_Balance__c = programBal;
-
-                    } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(12).addDays(-1)) {
-
-                        updateProgram.Estimated_Month_12_Balance__c = programBal;
-
+                        } else {
+                            
+                            if (payment.nu_dse__Transaction_Status__c == 'Completed'
+                                || payment.nu_dse__Transaction_Status__c == 'Cleared') {
+                                tradeLineInst.Fees_Collected__c += payment.nu_dse__Total_Amount__c;
+                            } else {
+                                tradeLineInst.Fees_Outstanding__c += payment.nu_dse__Total_Amount__c;
+                            }
+                        }
+                        tradelineIdRecMap.put(tradeLineInst.Id, tradeLineInst);
                     }
                 }
 
@@ -161,6 +209,21 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
                 } else {
                     successRecordsCount += 1;
                 }
+                count++;
+            }
+            List<nu_dse__TradeLine__c> tradelineToUpdateList = new List<nu_dse__TradeLine__c>{tradelineIdRecMap.values()};
+            count = 0;
+            for (Database.SaveResult dmlResult: Database.update(tradelineToUpdateList, false)) {
+
+                if (dmlResult.isSuccess() == false) {
+                    nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(nu_dse__Class_Method__c = 'Batch_ProgramEstimatedBalanceUpdate.excute',nu_dse__Error_Causing_Record_Id__c = tradelineToUpdateList[count].Id,nu_dse__Stack_Trace__c = JSON.serialize(tradelineToUpdateList[count]), nu_dse__User_Context__c = UserInfo.getName());
+
+                    errLog.nu_dse__Message__c = '';
+                    for (Database.Error error: dmlResult.getErrors()) {
+                        errLog.nu_dse__Message__c += error.getMessage();
+                    }
+                    errLogs.add(errLog);
+                } 
                 count++;
             }
             insert errLogs;

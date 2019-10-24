@@ -50,8 +50,8 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
         maxPaddingDay = 0;
         for(Deposit_Reminder_Configuration__mdt depositReminderConfig : [SELECT Sequence_number__c, Padding_Days__c 
                                                                             FROM Deposit_Reminder_Configuration__mdt
-                                                                            WHERE Padding_Days__c < 0
-                                                                            ORDER BY Padding_Days__c DESC]) {
+                                                                            WHERE Padding_Days__c > 0
+                                                                            ORDER BY Padding_Days__c ASC]) {
             paddingDaysMap.put(Integer.valueOf(depositReminderConfig.Sequence_number__c), Integer.valueOf(depositReminderConfig.Padding_Days__c));
             maxPaddingDay = Integer.valueOf(depositReminderConfig.Padding_Days__c);
         }
@@ -69,7 +69,7 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
 
         // Assign padding days between payment scheduled date and task activity date
         if(paddingDaysMap.isEmpty() == true) {
-            throw new applicationException('No Deposit Reminder Configuration metadata record found or Padding days should be in negative.');
+            throw new applicationException('No Deposit Reminder Configuration metadata record found');
         }
         
         // Assign addition where condition for task creating payments query
@@ -99,7 +99,7 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
                 queryStr += ' AND ' + whereConditionStr;
             }
             Date minScheduleDate = system.today().addDays(2);
-            Date maxScheduleDate = system.today().addDays(math.abs(maxPaddingDay) + 7);
+            Date maxScheduleDate = system.today().addDays(maxPaddingDay + 7);
             
             queryStr += ' AND nu_dse__Schedule_Date__c >= :minScheduleDate AND nu_dse__Schedule_Date__c <= :maxScheduleDate';
         }  
@@ -113,6 +113,9 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
         
             List<Task> tasksToUpsertList = new List<Task>();
             List<nu_dse__Error_Log__c> errorLogsToInsertList = new List<nu_dse__Error_Log__c>();
+            Set<Id> EmailPaymentIdSet = new Set<Id>();
+            Set<Id> SMSPaymentIdSet = new Set<Id>();
+
             Date minScheduleDate = system.today().addDays(2);
             
             String paymentsQueryFields = '';
@@ -139,19 +142,29 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
 
                     try {
 
-                        if (paymentRec.Create_Payment_Reminder_Tasks__c && dataMappingAndFieldMappingMap.containsKey('Create_Payments_SMS_Reminders')) {
+                        if (paymentRec.Create_Payment_Reminder_Tasks__c 
+                            && dataMappingAndFieldMappingMap.containsKey('Create_Payments_SMS_Reminders')
+                            && SMSPaymentIdSet.contains(paymentRec.Id) == false) {
 
                             Task paymentSMSReminder = new Task();
-                            paymentSMSReminder.Unique_Identifier__c = paymentRec.Id + 'Payment Reminder - SMS '+math.abs(sequenceNum);
+                            paymentSMSReminder.Unique_Identifier__c = paymentRec.Id + 'Payment Reminder - SMS '+sequenceNum;
                             populateValuesInInstance(paymentSMSReminder, paymentRec, dataMappingAndFieldMappingMap.get('Create_Payments_SMS_Reminders'), paddingDaysMap.get(sequenceNum));
+                            if(paymentSMSReminder.activityDate == system.today().addDays(1)) {
+                                SMSPaymentIdSet.add(paymentSMSReminder.whatId);
+                            }
                             tasksToUpsertList.add(paymentSMSReminder);
                         }
                         
-                        if (paymentRec.Create_Payment_Reminder_Tasks__c && dataMappingAndFieldMappingMap.containsKey('Create_Payments_Email_Reminders')) {
+                        if (paymentRec.Create_Payment_Reminder_Tasks__c 
+                            && dataMappingAndFieldMappingMap.containsKey('Create_Payments_Email_Reminders')
+                            && EmailPaymentIdSet.contains(paymentRec.Id) == false) {
 
                             Task paymentEmailReminder = new Task();
-                            paymentEmailReminder.Unique_Identifier__c = paymentRec.Id + 'Payment Reminder - Email '+math.abs(sequenceNum);
+                            paymentEmailReminder.Unique_Identifier__c = paymentRec.Id + 'Payment Reminder - Email '+sequenceNum;
                             populateValuesInInstance(paymentEmailReminder, paymentRec, dataMappingAndFieldMappingMap.get('Create_Payments_Email_Reminders'), paddingDaysMap.get(sequenceNum));
+                            if(paymentEmailReminder.activityDate == system.today().addDays(1)) {
+                                EmailPaymentIdSet.add(paymentEmailReminder.whatId);
+                            }
                             tasksToUpsertList.add(paymentEmailReminder);
                         }
 
@@ -270,8 +283,8 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
                             taskRec.put(targetField, Date.valueOf(targetFieldValue));
                         
                         } else {
-                            if(Date.valueOf(targetFieldValue) > system.today().addDays(math.abs(paddingDays))) {
-                                taskRec.put(targetField, Date.valueOf(targetFieldValue).addDays(paddingDays));
+                            if(Date.valueOf(targetFieldValue) > system.today().addDays(paddingDays)) {
+                                taskRec.put(targetField, Date.valueOf(targetFieldValue).addDays(-paddingDays));
                             } else {
                                 taskRec.put(targetField, system.today().addDays(1));
                             } 
@@ -294,7 +307,7 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
                         if(targetField != 'Subject') {
                             taskRec.put(targetField, Date.valueOf(targetFieldValue));
                         } else {
-                            taskRec.put(targetField, String.valueOf(targetFieldValue) + ' - DAY '+math.abs(paddingDays));
+                            taskRec.put(targetField, String.valueOf(targetFieldValue) + ' - DAY '+paddingDays);
                         }
                     } 
 

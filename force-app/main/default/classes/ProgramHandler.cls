@@ -3,11 +3,11 @@
 * Handler class for ProgramTrigger, extends the TriggerHandler. 
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 * @author         Vignesh   <vsadhasivam@selastech.com>
-* @modifiedBy     Ashwin Bretto   <abretto@selastech.com>
+* @modifiedBy     Peter Le  <ple@beyondfinance.com>
 * @maintainedBy   Vignesh   <vsadhasivam@selastech.com>
 * @version        1.0
 * @created        2019-05-16
-* @modified       2019-08-17
+* @modified       2019-10-21
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
 public class ProgramHandler extends TriggerHandler {
@@ -49,7 +49,7 @@ public class ProgramHandler extends TriggerHandler {
         }
 
         if (BLPBUSEvents.isEmpty() == false) {
-            EventBus.publish(BLPBUSEvents); // implementing the 
+            EventBus.publish(BLPBUSEvents); // publishing the PE for BLP API push
         }
     }
 
@@ -62,7 +62,7 @@ public class ProgramHandler extends TriggerHandler {
     }
 
     public override void afterUpdate() {
-
+        System.debug('after update');
         for (nu_dse__Program__c newProgram : (List<nu_dse__Program__c>)Trigger.New) {
             // Create Group Task for Which Program Cross Collateralized are true 
             createCCGroupTask(newProgram, oldProgramMap.get(newProgram.Id));   
@@ -76,7 +76,10 @@ public class ProgramHandler extends TriggerHandler {
             // Create Group Task for Programs Status as Termination Pending
             createTermPendingGroupTask(newProgram, oldProgramMap.get(newProgram.Id)); 
             // publishing Platform Event BLP Bus for triggering sync with BLP
+            system.debug('blp bus list');
             createBLP_BusList(newProgram, oldProgramMap.get(newProgram.Id));
+            // Creating Loan Record based on Interested Status
+            createLoan(newProgram, oldProgramMap.get(newProgram.Id));
 
         }
         if(terminatedProgramIds.isEmpty() == false) {
@@ -97,15 +100,15 @@ public class ProgramHandler extends TriggerHandler {
     //filters Programs that are to be synced with BLP
     public void createBLP_BusList(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram) {
         
-         if (newProgram.BLP_Member_Type__c =='Club Member' || newProgram.BLP_Member_Type__c == 'Flat Fee')
+        system.debug(newProgram.BLP_Member_Type__c);
+        if (newProgram.BLP_Member_Type__c =='Club Member' || newProgram.BLP_Member_Type__c == 'Flat Fee')
         {
             system.debug('added');
             BLPBUSEvents.add(new BLP_Bus__e(action__c='create', program_id__c=newProgram.Id));
         }
-
         if (String.isNotBlank(newProgram.nu_dse__Fee_Template__c) == true 
                 && newProgram.Legal_Plan_Included__c == true) {
-            //create BLP Bus events and append to scope variable.
+            //create BLP Bus events and append to scope variable
             if (Trigger.isInsert) {
                 BLPBUSEvents.add(new BLP_Bus__e(action__c='create', program_id__c=newProgram.Id));
             } else if (newProgram.nu_dse__Program_Status__c != oldProgram.nu_dse__Program_Status__c) {
@@ -153,7 +156,7 @@ public class ProgramHandler extends TriggerHandler {
             
             nu_dse__Group_Task__c groupTask = new nu_dse__Group_Task__c(OwnerId = newProgram.Salesperson_ID__c, Subject_Pick_List__c = 'Cross Collateralized',
                                                                         nu_dse__ActivityDate__c = system.today().addDays(14), nu_dse__Related_To__c = newProgram.Id,
-                                                                        nu_dse__Status__c = 'Not Started', nu_dse__Unique_Identifier__c = newProgram.Id + 'Cross Collateralized');
+                                                                        nu_dse__Unique_Identifier__c = newProgram.Id + 'Cross Collateralized');
             groupTaskList.add(groupTask);
         }
     }
@@ -310,6 +313,25 @@ public class ProgramHandler extends TriggerHandler {
                 newProgram.Campaign_Disposition__c = 'STOPSA';
                 newProgram.Campaign_Updated__c = true;
             }
+        }
+    }
+    
+    // Create New Lender Application Data for Interested Program Enrolled Clients
+    // Uses Loan Interest Status = "Interested" to Run
+    public void createLoan(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram){
+        if (newProgram.Loan_Interest_Status__c == 'Interested' && newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c && Trigger.isUpdate){
+            futureFlowCall(newProgram.Id);
+        }
+    }
+    @future(callout=true)
+    public static void futureFlowCall(string ProgramId){
+        Map<String, Object> params = new Map<String, Object>();
+        params.put('ProgramId', ProgramId);
+        try {
+            Flow.Interview.Create_Loan Create_Loan = new Flow.Interview.Create_Loan(params);
+            Create_Loan.start();
+        } catch (Exception e){
+            system.debug('Exception caught: ' + e.getMessage());
         }
     }
 }

@@ -22,16 +22,43 @@ public with sharing class ApprovalsController {
     public ApprovalSet currentApproval {get; set;}
     public Integer currentApprovalIndex {get;set;}
     public Boolean reAssign {get; set;}
-    
+    public Boolean modifyAllProspect {get; set;}
+    public Boolean modifyAllOffer {get; set;}
+
     public ApprovalsController() {
     
         this.userId = UserInfo.getUserId();
+        this.modifyAllProspect = false;
+        this.modifyAllOffer = false;
         namespace = 'nu_dse__';
         getsubordinatesOfCurrentUser();
         getUserMemberGroup();
+        getModifyAllPermisnofUser();
         selectedRadio = 'nu_dse__Prospect__c';
         reAssign = false;
         this.currentApproval = new ApprovalSet();
+    }
+
+    public void getModifyAllPermisnofUser() {
+
+        for (ObjectPermissions objpermission: [SELECT ParentId , SObjectType, Parent.Name
+                                                FROM ObjectPermissions 
+                                                WHERE PermissionsModifyAllRecords = true 
+                                                    AND ParentId IN (SELECT PermissionSetId 
+                                                            FROM PermissionSetAssignment
+                                                            WHERE AssigneeId = '00546000002CNTQAA4')
+                                                    AND (SObjectType = 'nu_dse__Prospect__c' 
+                                                        OR SObjectType = 'nu_dse__Offer__c')]) {
+
+            if (objpermission.SObjectType == 'nu_dse__Prospect__c') {
+                modifyAllProspect = true;
+            } else if (objpermission.SObjectType == 'nu_dse__Offer__c') {
+                modifyAllOffer = true;
+            }                                     
+            //System.debug('objpermission.ParentId-->'+objpermission.ParentId);    
+            //System.debug('objpermission.Parent.Name-->'+objpermission.Parent.Name);    
+            //System.debug('objpermission.SObjectType-->'+objpermission.SObjectType);                            
+        }
     }
     
     public void getsubordinatesOfCurrentUser() {

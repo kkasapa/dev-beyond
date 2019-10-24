@@ -138,6 +138,7 @@ public class ProgramHandler_Test {
         nu_dse__Payment__c payment = TestRecordCreator.createPayment(programList[0].Id, 'Scheduled', 'Deposit', draftRecordTypeId, offer.Id);
         insert payment;
         programList[0].nu_dse__Program_Status__c = 'Terminated';
+        programList[0].nu_dse__Program_Sub_Status__c = 'NSF 1';
         Test.startTest();
             // Updated Program Status to Terminated
             update programList;
@@ -289,5 +290,26 @@ public class ProgramHandler_Test {
             // Inserted Program with Velocify Id
             insert program;
         Test.stopTest();
+    }
+    
+    
+    // Create New Lender Application Data for Interested Program Enrolled Clients
+    // Uses Loan Interest Status = "Interested" to Run
+    public void createLoan(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram){
+        if (newProgram.Loan_Interest_Status__c == 'Interested' && newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c && Trigger.isUpdate){
+            futureFlowCall(newProgram.Id);
+        }
+    }
+    
+    @future(callout=true)
+    public static void futureFlowCall(string ProgramId){
+        Map<String, Object> params = new Map<String, Object>();
+        params.put('ProgramId', ProgramId);
+        try {
+            Flow.Interview.Create_Loan Create_Loan = new Flow.Interview.Create_Loan(params);
+            Create_Loan.start();
+        } catch (Exception e){
+            system.debug('Exception caught: ' + e.getMessage());
+        }
     }
 }

@@ -33,7 +33,8 @@ public class PaymentHandler extends TriggerHandler {
     Set<Id> verbalAuthRecivedPaymentProgramIds = new Set<Id>(); // collect program id of payment which has verbal auth received = true
     Set<Id> draftDateUpdateProgramIds = new Set<Id>();
     Map<Id, Date> updatedIdscheduleDateMap = new Map<Id, Date>(); // Map of Payment Ids and those payments scheduleDate 
- 
+    static Set<Id> processedPaymentIds = new Set<Id>(); 
+
     String MissingCommTemps = '';
 
     public PaymentHandler() {
@@ -206,7 +207,8 @@ public class PaymentHandler extends TriggerHandler {
     public void updateCreatePaymentReminderTask(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
         
         if(newPayment.nu_dse__Schedule_date__c != null
-            && oldPayment.nu_dse__Schedule_date__c  != newPayment.nu_dse__Schedule_date__c) {
+            && oldPayment.nu_dse__Schedule_date__c  != newPayment.nu_dse__Schedule_date__c
+            && newPayment.nu_dse__Schedule_date__c > system.today().addDays(1)) {
             newPayment.Create_Payment_Reminder_Tasks__c = true;
         }
     }
@@ -224,16 +226,20 @@ public class PaymentHandler extends TriggerHandler {
     //If nu_dse__Transaction_Status__c changes to Cancelled, we collect paymentIds to delete the Tasks under the payment
     public void collectCancelledPaymentIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
         if(newPayment.nu_dse__Transaction_Status__c == 'Cancelled'
-            && oldPayment.nu_dse__Transaction_Status__c != newPayment.nu_dse__Transaction_Status__c) {
+            && oldPayment.nu_dse__Transaction_Status__c != newPayment.nu_dse__Transaction_Status__c
+            && processedPaymentIds.contains(newPayment.Id) == false) {
             cancelledPaymentIds.add(newPayment.Id);
+            processedPaymentIds.add(newPayment.Id);
         }
     }
     //If nu_dse__Schedule_date__c updates, we collect paymentIds and Schedule date to update the Tasks activity date under the payment
     public void collectscheduleDateUpdatedPaymentIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
         if(newPayment.RecordTypeId == draftRecordTypeId
             && newPayment.nu_dse__Schedule_date__c != null
-            && oldPayment.nu_dse__Schedule_date__c != newPayment.nu_dse__Schedule_date__c) {
+            && oldPayment.nu_dse__Schedule_date__c != newPayment.nu_dse__Schedule_date__c
+            && processedPaymentIds.contains(newPayment.Id) == false) {
             updatedIdscheduleDateMap.put(newPayment.Id, newPayment.nu_dse__Schedule_date__c);
+            processedPaymentIds.add(newPayment.Id);
         }
     }
     //If nu_dse__Transaction_Status__c changes to Failed, we collect paymentIds to Create the Group Tasks under the payment
@@ -543,18 +549,22 @@ public class PaymentHandler extends TriggerHandler {
         List<Task> taskToDeleteList = new List<Task>(); // Delete the Task when Payment was cancelled
         Map<String, Task> taskToUpsertMap = new Map<String, Task>(); //tasks to be upserted based on unique Identifier
         Map<Integer, Integer> paddingDaysMap = new Map<Integer, Integer>(); 
+        Map<Id, Date> prospectIdSMSTaskMaxSchDateMap = new Map<Id, Date>();
+        Set<Id> EmailPaymentIdSet = new Set<Id>();
+        Set<Id> SMSPaymentIdSet = new Set<Id>();
 
         for(Deposit_Reminder_Configuration__mdt depositReminderConfig : [SELECT Padding_Days__c, Sequence_number__c 
                                                                          FROM Deposit_Reminder_Configuration__mdt
-                                                                         WHERE Padding_Days__c < 0
+                                                                         WHERE Padding_Days__c > 0
                                                                          ORDER BY Padding_Days__c DESC]){
             paddingDaysMap.put(Integer.valueOf(depositReminderConfig.Sequence_number__c), Integer.valueOf(depositReminderConfig.Padding_Days__c));
         }
 
-        for(Task task : [SELECT Id, Unique_Identifier__c, WhatId FROM Task WHERE Status != 'Completed' AND Unique_Identifier__c != null 
+        for(Task task : [SELECT Id, Unique_Identifier__c, WhatId, activityDate FROM Task WHERE Status != 'Completed' AND Unique_Identifier__c != null 
                                                                                  AND nu_dse__Communication_Sent__c != true
                                                                                  AND (WhatId IN :cancelledPaymentIds
-                                                                                 OR WhatId IN :updatedIdscheduleDateMap.keySet())]) {
+                                                                                 OR WhatId IN :updatedIdscheduleDateMap.keySet())
+                                                                                 ORDER BY activityDate DESC]) {
             if(cancelledPaymentIds.contains(task.WhatId) == true) {
                 taskToDeleteList.add(task);
             } else if(updatedIdscheduleDateMap.containsKey(task.WhatId)){
@@ -562,26 +572,44 @@ public class PaymentHandler extends TriggerHandler {
                 Integer padding = 0;
 
                 if(task.Unique_Identifier__c.contains('SMS') 
+                    && String.isNotBlank(task.Unique_Identifier__c.substringAfterLast('SMS '))
                     && paddingDaysMap.containsKey(Integer.valueOf(task.Unique_Identifier__c.substringAfterLast('SMS ')))) {
                     
                     padding = paddingDaysMap.get(Integer.valueOf(task.Unique_Identifier__c.substringAfterLast('SMS ')));
-                    if(updatedIdscheduleDateMap.get(task.WhatId).addDays(padding) > system.today()) {
-                        task.activityDate = updatedIdscheduleDateMap.get(task.WhatId).addDays(padding);
-                    } else {
+                    if(updatedIdscheduleDateMap.get(task.WhatId).addDays(-padding) > system.today()) {
+                        task.activityDate = updatedIdscheduleDateMap.get(task.WhatId).addDays(-padding);
+                        taskToUpsertMap.put(task.Unique_Identifier__c, task);
+                    } else if(updatedIdscheduleDateMap.get(task.WhatId) != system.today()
+                              && SMSPaymentIdSet.contains(task.WhatId) == false) {
                         task.activityDate = system.today().addDays(1);
+                        taskToUpsertMap.put(task.Unique_Identifier__c, task);
+                    } else {
+                        taskToDeleteList.add(task);
                     }
-                    taskToUpsertMap.put(task.Unique_Identifier__c, task);
+
+                    if(task.activityDate == system.today().addDays(1)) {
+                        SMSPaymentIdSet.add(task.WhatId);
+                    }
+
                 } else if(task.Unique_Identifier__c.contains('Email') 
+                    && String.isNotBlank(task.Unique_Identifier__c.substringAfterLast('Email '))
                     && paddingDaysMap.containsKey(Integer.valueOf(task.Unique_Identifier__c.substringAfterLast('Email ')))) {
                     
                     padding = paddingDaysMap.get(Integer.valueOf(task.Unique_Identifier__c.substringAfterLast('Email ')));
-                    if(updatedIdscheduleDateMap.get(task.WhatId).addDays(padding) > system.today()) {
-                        task.activityDate = updatedIdscheduleDateMap.get(task.WhatId).addDays(padding);
-                    } else {
+                    if(updatedIdscheduleDateMap.get(task.WhatId).addDays(-padding) > system.today()) {
+                        task.activityDate = updatedIdscheduleDateMap.get(task.WhatId).addDays(-padding);
+                        taskToUpsertMap.put(task.Unique_Identifier__c, task);
+                    } else if(updatedIdscheduleDateMap.get(task.WhatId) != system.today()
+                              && EmailPaymentIdSet.contains(task.WhatId) == false){
                         task.activityDate = system.today().addDays(1);
+                        taskToUpsertMap.put(task.Unique_Identifier__c, task);
+                    } else {
+                        taskToDeleteList.add(task);
                     }
-                    taskToUpsertMap.put(task.Unique_Identifier__c, task);
-                
+
+                    if(task.activityDate == system.today().addDays(1)) {
+                        EmailPaymentIdSet.add(task.WhatId);
+                    }
                 } else {
                     taskToDeleteList.add(task);
                 }

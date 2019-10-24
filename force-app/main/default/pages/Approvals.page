@@ -479,36 +479,36 @@
                                                 <td>
                                                     <!-- Added new Reassign action in Actions colum [SF-100]-->
                                                     <div>
-                                                        <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator') && approvalSet.workItemId != null}">
+                                                        <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator' || ((selectedRadio == 'nu_dse__Prospect__c' && modifyAllProspect) || (selectedRadio == 'nu_dse__Offer__c' && modifyAllOffer))) && approvalSet.workItemId != null}">
                                                             <span class="approval-set--aprove-button">
                                                                 <a href="{!'/p/process/ProcessInstanceWorkitemWizardStageManager?id=' + approvalSet.workItemId + '&retURL=%2F' + approvalSet.recordId}" target="_blank" >Approve/Reject</a>
                                                             </span>
                                                         </apex:outputPanel>
-                                                        <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator') && approvalSet.workItemId != null}">
+                                                        <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator' && ((selectedRadio != 'nu_dse__Prospect__c' || !(modifyAllProspect)) && (selectedRadio != 'nu_dse__Offer__c' || !(modifyAllOffer)))) && approvalSet.workItemId != null}">
                                                             <span class="approval-set--aprove-button">
                                                                 <a disabled="true" class="diabled-anchor">Approve/Reject</a>
                                                             </span>
                                                         </apex:outputPanel>
                                                     </div>
                                                     <div>
-                                                        <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator') && approvalSet.workItemId != null}">
+                                                        <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator' || ((selectedRadio == 'nu_dse__Prospect__c' && modifyAllProspect) || (selectedRadio == 'nu_dse__Offer__c' && modifyAllOffer))) && approvalSet.workItemId != null}">
                                                             <span class="approval-set--aprove-button">
                                                                 <a href="{!'/'+ approvalSet.workItemId + '/e?et=REASSIGN&retURL=%2F' + approvalSet.recordId}" target="_blank" >Reassign</a>
                                                             </span>
                                                         </apex:outputPanel>
-                                                        <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator') && approvalSet.workItemId != null}">
+                                                        <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator' && ((selectedRadio != 'nu_dse__Prospect__c' || !(modifyAllProspect)) && (selectedRadio != 'nu_dse__Offer__c' || !(modifyAllOffer)))) && approvalSet.workItemId != null}">
                                                             <span class="approval-set--aprove-button">
                                                                 <a disabled="true" class="diabled-anchor">Reassign</a>
                                                             </span>
                                                         </apex:outputPanel>
                                                     </div>        
                                                     <div>
-                                                        <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator') && approvalSet.workItemId != null}">
+                                                        <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator' || ((selectedRadio == 'nu_dse__Prospect__c' && modifyAllProspect) || (selectedRadio == 'nu_dse__Offer__c' && modifyAllOffer))) && approvalSet.workItemId != null}">
                                                             <span class="approval-set--aprove-button">
                                                                 <a id="{!count}" onclick="showSpinner(); setCurrentApproval(event.target.id);">Reassign to me</a>
                                                             </span>
                                                         </apex:outputPanel>
-                                                        <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator') && approvalSet.workItemId != null}">
+                                                        <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator' && ((selectedRadio != 'nu_dse__Prospect__c' || !(modifyAllProspect)) && (selectedRadio != 'nu_dse__Offer__c' || !(modifyAllOffer)))) && approvalSet.workItemId != null}">
                                                             <span class="approval-set--aprove-button">
                                                                 <a disabled="true" class="diabled-anchor">Reassign to me</a>
                                                             </span>
