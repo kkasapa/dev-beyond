@@ -65,7 +65,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
             totalRecordsCount += scope.size();
 
             String queryStr = 'SELECT Id, nu_dse__Trust_Account_Balance__c, ' + 
-                                '(SELECT Id, nu_dse__Total_Amount__c, nu_dse__Amount__c, nu_dse__Schedule_Date__c, nu_dse__Payment_Type__c, nu_dse__Transaction_Status__c'+ 
+                                '(SELECT Id, nu_dse__Total_Amount__c, nu_dse__Amount__c, nu_dse__Schedule_Date__c, nu_dse__Payment_Type__c, nu_dse__Transaction_Status__c, '+ 
                                 'RecordTypeId, nu_dse__Offer__c, nu_dse__Offer__r.nu_dse__TradeLine__c FROM nu_dse__Payments__r ' +
                                 'WHERE RecordTypeId IN :recordTypeIds '+
                                     'AND (nu_dse__Transaction_Status__c = \'Scheduled\' OR nu_dse__Transaction_Status__c = \'In Progress\' '+
@@ -211,7 +211,8 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
                 }
                 count++;
             }
-            List<nu_dse__TradeLine__c> tradelineToUpdateList = new List<nu_dse__TradeLine__c>{tradelineIdRecMap.values()};
+            List<nu_dse__TradeLine__c> tradelineToUpdateList = new List<nu_dse__TradeLine__c>();
+            tradelineToUpdateList.addall(tradelineIdRecMap.values());
             count = 0;
             for (Database.SaveResult dmlResult: Database.update(tradelineToUpdateList, false)) {
 

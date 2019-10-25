@@ -319,11 +319,11 @@ public class ProgramHandler extends TriggerHandler {
     // Create New Lender Application Data for Interested Program Enrolled Clients
     // Uses Loan Interest Status = "Interested" to Run
     public void createLoan(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram){
-        if (newProgram.Loan_Interest_Status__c == 'Interested' && newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c && Trigger.isUpdate){
+        if (newProgram.Loan_Interest_Status__c == 'Interested' && newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c){
             futureFlowCall(newProgram.Id);
         }
     }
-    @future(callout=true)
+    //@future(callout=true)
     public static void futureFlowCall(string ProgramId){
         Map<String, Object> params = new Map<String, Object>();
         params.put('ProgramId', ProgramId);

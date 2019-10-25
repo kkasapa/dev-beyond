@@ -580,6 +580,7 @@ public class PaymentHandler extends TriggerHandler {
                         task.activityDate = updatedIdscheduleDateMap.get(task.WhatId).addDays(-padding);
                         taskToUpsertMap.put(task.Unique_Identifier__c, task);
                     } else if(updatedIdscheduleDateMap.get(task.WhatId) != system.today()
+                              && updatedIdscheduleDateMap.get(task.WhatId) != system.today().addDays(1)
                               && SMSPaymentIdSet.contains(task.WhatId) == false) {
                         task.activityDate = system.today().addDays(1);
                         taskToUpsertMap.put(task.Unique_Identifier__c, task);
@@ -600,6 +601,7 @@ public class PaymentHandler extends TriggerHandler {
                         task.activityDate = updatedIdscheduleDateMap.get(task.WhatId).addDays(-padding);
                         taskToUpsertMap.put(task.Unique_Identifier__c, task);
                     } else if(updatedIdscheduleDateMap.get(task.WhatId) != system.today()
+                              && updatedIdscheduleDateMap.get(task.WhatId) != system.today().addDays(1)
                               && EmailPaymentIdSet.contains(task.WhatId) == false){
                         task.activityDate = system.today().addDays(1);
                         taskToUpsertMap.put(task.Unique_Identifier__c, task);

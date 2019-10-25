@@ -84,8 +84,8 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
         //need some index field filter
         //filter on Sch
         String queryStr = 'SELECT Id FROM nu_dse__Payment__c '+
-                           'WHERE RecordTypeId = :draftRecordTypeId AND Create_Payment_Reminder_Tasks__c = True '+
-                           'AND Program_Status__c != :programStatusExclusionSet';
+                           'WHERE RecordTypeId = :draftRecordTypeId AND ((Create_Payment_Reminder_Tasks__c = True '+
+                           'AND Program_Status__c != :programStatusExclusionSet) OR nu_dse__Transaction_Status__c = \'Cancelled\')';
 
         if(String.isNotBlank(whereConditionStr) == true
             && whereConditionStr.contains('nu_dse__Schedule_Date__c')) {
@@ -112,6 +112,8 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
         try {
         
             List<Task> tasksToUpsertList = new List<Task>();
+            new List<Task>();
+            Set<Id> cancelledPaymentIdSet = new Set<Id>();
             List<nu_dse__Error_Log__c> errorLogsToInsertList = new List<nu_dse__Error_Log__c>();
             Set<Id> EmailPaymentIdSet = new Set<Id>();
             Set<Id> SMSPaymentIdSet = new Set<Id>();
@@ -122,7 +124,9 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
 
             for (String paymentField : paymentFieldsToQuerySet) {
 
-                paymentsQueryFields += paymentField + ', ';
+                if(paymentField != 'nu_dse__Transaction_Status__c') {
+                    paymentsQueryFields += paymentField + ', ';
+                }
             }
 
             if (String.isNotBlank(paymentsQueryFields)) {
@@ -133,49 +137,55 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
 
                 paymentsQueryFields = ' Id ';
             }
-            String paymentsQuery = 'SELECT ' + paymentsQueryFields + ' FROM nu_dse__Payment__c WHERE Id IN :scope AND nu_dse__Schedule_Date__c >= :minScheduleDate';
+            String paymentsQuery = 'SELECT nu_dse__Transaction_Status__c, ' + paymentsQueryFields + ' FROM nu_dse__Payment__c WHERE Id IN :scope AND nu_dse__Schedule_Date__c >= :minScheduleDate';
             System.debug('paymentsQuery--->'+paymentsQuery);
             // Process the payment and create the Payment Reminder - Email and Payment Reminder - SMS tasks
             for (nu_dse__Payment__c paymentRec : Database.query(paymentsQuery)) {
                 
-                for(Integer sequenceNum : paddingDaysMap.keySet()) {
+                if(paymentRec.nu_dse__Transaction_Status__c != 'Cancelled') {
 
-                    try {
+                    for(Integer sequenceNum : paddingDaysMap.keySet()) {
 
-                        if (paymentRec.Create_Payment_Reminder_Tasks__c 
-                            && dataMappingAndFieldMappingMap.containsKey('Create_Payments_SMS_Reminders')
-                            && SMSPaymentIdSet.contains(paymentRec.Id) == false) {
+                        try {
 
-                            Task paymentSMSReminder = new Task();
-                            paymentSMSReminder.Unique_Identifier__c = paymentRec.Id + 'Payment Reminder - SMS '+sequenceNum;
-                            populateValuesInInstance(paymentSMSReminder, paymentRec, dataMappingAndFieldMappingMap.get('Create_Payments_SMS_Reminders'), paddingDaysMap.get(sequenceNum));
-                            if(paymentSMSReminder.activityDate == system.today().addDays(1)) {
-                                SMSPaymentIdSet.add(paymentSMSReminder.whatId);
+                            if (paymentRec.Create_Payment_Reminder_Tasks__c 
+                                && dataMappingAndFieldMappingMap.containsKey('Create_Payments_SMS_Reminders')
+                                && SMSPaymentIdSet.contains(paymentRec.Id) == false) {
+
+                                Task paymentSMSReminder = new Task();
+                                paymentSMSReminder.Unique_Identifier__c = paymentRec.Id + 'Payment Reminder - SMS '+sequenceNum;
+                                populateValuesInInstance(paymentSMSReminder, paymentRec, dataMappingAndFieldMappingMap.get('Create_Payments_SMS_Reminders'), paddingDaysMap.get(sequenceNum));
+                                if(paymentSMSReminder.activityDate == system.today().addDays(1)) {
+                                    SMSPaymentIdSet.add(paymentSMSReminder.whatId);
+                                }
+                                tasksToUpsertList.add(paymentSMSReminder);
                             }
-                            tasksToUpsertList.add(paymentSMSReminder);
-                        }
-                        
-                        if (paymentRec.Create_Payment_Reminder_Tasks__c 
-                            && dataMappingAndFieldMappingMap.containsKey('Create_Payments_Email_Reminders')
-                            && EmailPaymentIdSet.contains(paymentRec.Id) == false) {
+                            
+                            if (paymentRec.Create_Payment_Reminder_Tasks__c 
+                                && dataMappingAndFieldMappingMap.containsKey('Create_Payments_Email_Reminders')
+                                && EmailPaymentIdSet.contains(paymentRec.Id) == false) {
 
-                            Task paymentEmailReminder = new Task();
-                            paymentEmailReminder.Unique_Identifier__c = paymentRec.Id + 'Payment Reminder - Email '+sequenceNum;
-                            populateValuesInInstance(paymentEmailReminder, paymentRec, dataMappingAndFieldMappingMap.get('Create_Payments_Email_Reminders'), paddingDaysMap.get(sequenceNum));
-                            if(paymentEmailReminder.activityDate == system.today().addDays(1)) {
-                                EmailPaymentIdSet.add(paymentEmailReminder.whatId);
+                                Task paymentEmailReminder = new Task();
+                                paymentEmailReminder.Unique_Identifier__c = paymentRec.Id + 'Payment Reminder - Email '+sequenceNum;
+                                populateValuesInInstance(paymentEmailReminder, paymentRec, dataMappingAndFieldMappingMap.get('Create_Payments_Email_Reminders'), paddingDaysMap.get(sequenceNum));
+                                if(paymentEmailReminder.activityDate == system.today().addDays(1)) {
+                                    EmailPaymentIdSet.add(paymentEmailReminder.whatId);
+                                }
+                                tasksToUpsertList.add(paymentEmailReminder);
                             }
-                            tasksToUpsertList.add(paymentEmailReminder);
+
+                        } catch(Exception e) {
+
+                            nu_dse__Error_Log__c errorLog = new nu_dse__Error_Log__c(nu_dse__Message__c = e.getMessage(), nu_dse__Stack_Trace__c = e.getStackTraceString(),
+                                    nu_dse__User_Context__c = UserInfo.getName(), nu_dse__Class_Method__c = 'Batch_ProcessesInPayment.Execute[Payment Iteration]', 
+                                    nu_dse__Error_Causing_Record_Id__c = paymentRec.Id);
+
+                            errorLogsToInsertList.add(errorLog);
                         }
-
-                    } catch(Exception e) {
-
-                        nu_dse__Error_Log__c errorLog = new nu_dse__Error_Log__c(nu_dse__Message__c = e.getMessage(), nu_dse__Stack_Trace__c = e.getStackTraceString(),
-                                nu_dse__User_Context__c = UserInfo.getName(), nu_dse__Class_Method__c = 'Batch_ProcessesInPayment.Execute[Payment Iteration]', 
-                                nu_dse__Error_Causing_Record_Id__c = paymentRec.Id);
-
-                        errorLogsToInsertList.add(errorLog);
                     }
+                } else {
+
+                    cancelledPaymentIdSet.add(paymentRec.Id);
                 }
             }
 
@@ -220,6 +230,17 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
             }
             
             update payIdReminderMap.values();
+
+            List<Task> tasksToDeleteList = [SELECT Id FROM Task 
+                                            WHERE whatId IN:cancelledPaymentIdSet AND Status != 'Completed'
+                                                AND nu_dse__Communication_Sent__c != true];
+            try {
+                delete tasksToDeleteList;
+            } catch(exception e) {
+                nu_dse__Error_Log__c errorLog = new nu_dse__Error_Log__c(nu_dse__Message__c = e.getMessage(), nu_dse__Stack_Trace__c = e.getStackTraceString(),
+                    nu_dse__User_Context__c = UserInfo.getName(), nu_dse__Class_Method__c = 'Batch_ProcessesInPayment.Execute');
+                errorLogsToInsertList.add(errorLog);
+            }
             insert errorLogsToInsertList;
 
             /*List<sObject> sobjectsToUpdateList = new List<sObject>();
