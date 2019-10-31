@@ -18,6 +18,7 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
     // Map of Data mapping Id and list of field mappings
     Map<String, List<nu_dse__Field_mapping__c>> dataMappingAndFieldMappingMap = new Map<String, List<nu_dse__Field_mapping__c>>(); 
     // Set of Data mapping names used for create communication tasks 
+    Set<Id> draftPaymentIds = new Set<Id>(); //set of payment Ids for running batch for specific tests
     Set<String> dataMappingNameSet = new Set<String>{'Create_Payments_SMS_Reminders', 'Create_Payments_Email_Reminders'};
     Set<String> paymentFieldsToQuerySet = new Set<String>{'Create_Payment_Reminder_Tasks__c'}; // Set of Payment fields to query
     Set<String> programStatusExclusionSet = new Set<String>();// Set of Program status excludes in payment query
@@ -26,9 +27,30 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
     Integer maxPaddingDay;
     
     Id draftRecordTypeId;
-    
+
     public Batch_ProcessesInPayment(String whereCondition) {
         
+        getMappings();
+        getPaddingDayConfigurations();
+        // Assign addition where condition for task creating payments query
+        if(String.isNotBlank(whereCondition) == true) {
+        
+            whereConditionStr = whereCondition;
+        } 
+    }
+
+    
+    public Batch_ProcessesInPayment(Set<Id> paymentIds) {
+        String whereClauseStr;
+        getMappings();
+        getPaddingDayConfigurations();
+        if(paymentIds.isEmpty() == false) {
+            draftPaymentIds = paymentIds;
+            whereConditionStr = ' Id IN :draftPaymentIds';
+        } 
+    }
+
+    public void getMappings(){
         // Query the data mapping to create dataMappingAndFieldMappingMap
         
         String query = 'SELECT nu_dse__Data_Mapping__r.External_Id__c, ' + Utility.getQueryFields('nu_dse__Field_mapping__c') +  ' FROM nu_dse__Field_mapping__c ' +
@@ -47,21 +69,63 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
                 paymentFieldsToQuerySet.add(fieldMapping.nu_dse__Source_Field__c);
             }
         }
+    }
+
+    public List<Deposit_Reminder_Configuration__mdt> getDepositRemidersCMD() {
+
+        List<Deposit_Reminder_Configuration__mdt> depositReminderConfigList = new List<Deposit_Reminder_Configuration__mdt>();
+
+        if (Test.isRunningTest() == true) {
+            depositReminderConfigList = new List<Deposit_Reminder_Configuration__mdt>{ 
+                                                                        new Deposit_Reminder_Configuration__mdt(
+                                                                            MasterLabel = 'Deposit Reminder One', 
+                                                                            DeveloperName = 'Deposit_Reminder_One', 
+                                                                            Padding_Days__c = 2, 
+                                                                            Sequence_number__c = 1)};
+
+        } else {
+            depositReminderConfigList = [SELECT Sequence_number__c, Padding_Days__c 
+                                                                        FROM Deposit_Reminder_Configuration__mdt
+                                                                        WHERE Padding_Days__c > 0
+                                                                        ORDER BY Padding_Days__c ASC];
+
+        }
+        return depositReminderConfigList;
+    }
+
+    public Program_Status_Configuration__mdt getProgramConfigurationsCMD() {
+
+        Program_Status_Configuration__mdt progStatusConfig = new Program_Status_Configuration__mdt();
+
+        if (Test.isRunningTest() == true) {
+            progStatusConfig = new Program_Status_Configuration__mdt(
+                                        MasterLabel = 'Deposit Reminder Exclusion', 
+                                        DeveloperName = 'Deposit_Reminders_Exclusion', 
+                                        Excluded_Statuses__c = 'Terminated, Graduated');
+
+        } else {
+            progStatusConfig = [SELECT Label, DeveloperName, Excluded_Statuses__c 
+                                        FROM Program_Status_Configuration__mdt 
+                                        WHERE DeveloperName = 'Deposit_Reminders_Exclusion' LIMIT 1];
+
+        }
+        return progStatusConfig;
+    }
+
+    public void getPaddingDayConfigurations() {
+
         maxPaddingDay = 0;
-        for(Deposit_Reminder_Configuration__mdt depositReminderConfig : [SELECT Sequence_number__c, Padding_Days__c 
-                                                                            FROM Deposit_Reminder_Configuration__mdt
-                                                                            WHERE Padding_Days__c > 0
-                                                                            ORDER BY Padding_Days__c ASC]) {
+        List<Deposit_Reminder_Configuration__mdt> depositReminderConfigList = getDepositRemidersCMD();
+
+        for(Deposit_Reminder_Configuration__mdt depositReminderConfig : depositReminderConfigList) {
             paddingDaysMap.put(Integer.valueOf(depositReminderConfig.Sequence_number__c), Integer.valueOf(depositReminderConfig.Padding_Days__c));
             maxPaddingDay = Integer.valueOf(depositReminderConfig.Padding_Days__c);
         }
         
         draftRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Draft').getRecordTypeId();
         // query Program_Status_Configuration meta data for get excluded program Statuses
-        Program_Status_Configuration__mdt programStatusConfig = [SELECT Label, DeveloperName, Excluded_Statuses__c 
-                                                                        FROM Program_Status_Configuration__mdt 
-                                                                        WHERE DeveloperName = 'Deposit_Reminders_Exclusion' LIMIT 1];
-        
+        Program_Status_Configuration__mdt programStatusConfig = getProgramConfigurationsCMD();
+
         if(programStatusConfig != null
             && String.isNotBlank(programStatusConfig.Excluded_Statuses__c)) {
             programStatusExclusionSet = new Set<String>(programStatusConfig.Excluded_Statuses__c.split(',', 0));
@@ -69,14 +133,8 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
 
         // Assign padding days between payment scheduled date and task activity date
         if(paddingDaysMap.isEmpty() == true) {
-            throw new applicationException('No Deposit Reminder Configuration metadata record found');
+            throw new applicationException('Deposit Reminder Configuration metadata record does not have enough information');
         }
-        
-        // Assign addition where condition for task creating payments query
-        if(String.isNotBlank(whereCondition) == true) {
-        
-            whereConditionStr = whereCondition;
-        } 
     }
     // Query the payments based on the condition and return to the excute method
     public Database.QueryLocator start(Database.BatchableContext BC) {

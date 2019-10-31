@@ -251,4 +251,11 @@ public with sharing class TestRecordCreator {
                                                                                              Secret__c = 'AB12');
         return awsCredentialsSetting ;
     }
+    
+    public static Loan_Application__c createLoanApplication(Id programId) {
+        
+        Loan_Application__c loan = new Loan_Application__c (program_name__c =  programId,
+                                                    		Application_Status__c = '04-Preapproved');
+        return loan ;
+    }
 }

@@ -35,7 +35,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
         draftPayment1.nu_dse__Schedule_Date__c  = system.today().addMonths(1);
         nu_dse__Payment__c draftPayment2 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Deposit', draftRecordTypeId, offer.Id);
         draftPayment2.nu_dse__Amount__c = 4000;
-        draftPayment2.nu_dse__Schedule_Date__c  = system.today().addMonths(2).addDays(10);
+        draftPayment2.nu_dse__Schedule_Date__c  = system.today().addMonths(2);
         nu_dse__Payment__c draftPayment3 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Deposit', draftRecordTypeId, offer.Id);
         draftPayment3.nu_dse__Amount__c = 3000;
         draftPayment3.nu_dse__Schedule_Date__c  = system.today().addMonths(4);
@@ -51,7 +51,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
         feepPayment1.nu_dse__Schedule_Date__c  = system.today().addMonths(1);
         nu_dse__Payment__c feepPayment2 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Fee Withdrawal', feeRecordTypeId, offer.Id);
         feepPayment2.nu_dse__Amount__c = 400;
-        feepPayment2.nu_dse__Schedule_Date__c  = system.today().addMonths(2).addDays(10);
+        feepPayment2.nu_dse__Schedule_Date__c  = system.today().addMonths(2);
         nu_dse__Payment__c feepPayment3 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Fee Withdrawal', feeRecordTypeId, offer.Id);
         feepPayment3.nu_dse__Amount__c = 300;
         feepPayment3.nu_dse__Schedule_Date__c  = system.today().addMonths(4);
@@ -66,7 +66,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
         settlementPayment1.nu_dse__Amount__c = 100;
         nu_dse__Payment__c settlementPayment2 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Withdrawal', settlementRecordTypeId, offer.Id);
         settlementPayment2.nu_dse__Amount__c = 100;
-        settlementPayment2.nu_dse__Schedule_Date__c  = system.today().addMonths(2).addDays(10);
+        settlementPayment2.nu_dse__Schedule_Date__c  = system.today().addMonths(2);
         nu_dse__Payment__c settlementPayment3 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Withdrawal', settlementRecordTypeId, offer.Id);
         settlementPayment3.nu_dse__Amount__c = 100;
         settlementPayment3.nu_dse__Schedule_Date__c  = system.today().addMonths(10);

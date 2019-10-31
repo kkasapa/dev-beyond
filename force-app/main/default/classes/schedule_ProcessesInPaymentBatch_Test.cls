@@ -5,7 +5,7 @@ public class schedule_ProcessesInPaymentBatch_Test {
     
         Test.StartTest();
         
-        schedule_ProcessesInPaymentBatch schedulerInst = new schedule_ProcessesInPaymentBatch(2);
+        schedule_ProcessesInPaymentBatch schedulerInst = new schedule_ProcessesInPaymentBatch();
         String schCronExp = '0 0 23 * * ?'; 
         system.schedule('Test ProcessesInPaymentBatch Schedule', schCronExp, schedulerInst); 
         
@@ -16,7 +16,7 @@ public class schedule_ProcessesInPaymentBatch_Test {
     
         Test.StartTest();
         
-        schedule_ProcessesInPaymentBatch schedulerInst = new schedule_ProcessesInPaymentBatch(null);
+        schedule_ProcessesInPaymentBatch schedulerInst = new schedule_ProcessesInPaymentBatch();
         String schCronExp = '0 0 23 * * ?'; 
         system.schedule('Test ProcessesInPaymentBatch Schedule', schCronExp, schedulerInst); 
         

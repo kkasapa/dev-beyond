@@ -1,0 +1,16 @@
+<aura:component implements="flexipage:availableForAllPageTypes" access="global" controller = "SimulatorController">
+    
+       <ui:inputNumber value="{!v.Full_Name__c}" label ="Offer Amount" />
+    <!--lightning:inputname value="{!v.Full_Name__c}" label ="Full Name Tex " />-->
+    
+    <aura:attribute name ="Payments" type = "nu_dse__Payment__c[]" />
+    <lightning:button label ="Payments Info" onclick ="{!c.getPays}" />
+    
+    <aura:iteration var ="payment" items ="{!v.Payments}" >
+    <p>  {!payment.Name} :  {!payment.nu_dse__Amount__c}  : {!payment.nu_dse__Schedule_Date__c} : {!payment.nu_dse__Type__c} : {!payment.nu_dse__Transaction_Status__c}</p> 
+    </aura:iteration>
+    
+ 
+    <!--lightning:button label ="Simulate" value ="Simulate" onclick ="{!c.Simulate}" />-->
+    
+</aura:component>

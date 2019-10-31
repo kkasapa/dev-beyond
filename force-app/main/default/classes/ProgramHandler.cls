@@ -80,6 +80,7 @@ public class ProgramHandler extends TriggerHandler {
             createBLP_BusList(newProgram, oldProgramMap.get(newProgram.Id));
             // Creating Loan Record based on Interested Status
             createLoan(newProgram, oldProgramMap.get(newProgram.Id));
+            //updateLoanApplication(newProgram, oldProgramMap.get(newProgram.Id));
 
         }
         if(terminatedProgramIds.isEmpty() == false) {
@@ -316,14 +317,28 @@ public class ProgramHandler extends TriggerHandler {
         }
     }
     
+    // Updates Flow Initiated Checkbox if Client No longer Interested in a Loan
+    public void updateLoanApplication(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram){
+        if(newProgram.Loan_Interest_Status__c != 'Interested' && newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c){
+            newProgram.Flow_Initiated__c = false;
+            update newProgram;
+        }
+    }
+
     // Create New Lender Application Data for Interested Program Enrolled Clients
     // Uses Loan Interest Status = "Interested" to Run
     public void createLoan(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram){
-        if (newProgram.Loan_Interest_Status__c == 'Interested' && newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c){
-            futureFlowCall(newProgram.Id);
-        }
+        if (newProgram.Loan_Interest_Status_2__c == 'Skybridge - Interested'){
+            if(newProgram.Loan_Interest_Status_2__c != oldProgram.Loan_Interest_Status_2__c){
+                // A Check to Make Sure flow runs once, so multiple loan are not created
+                if(!newProgram.Flow_Initiated__c){
+                    futureFlowCall(newProgram.Id);
+                }
+            }
+        } 
     }
-    //@future(callout=true)
+    
+    @future(callout=true)
     public static void futureFlowCall(string ProgramId){
         Map<String, Object> params = new Map<String, Object>();
         params.put('ProgramId', ProgramId);
@@ -334,4 +349,5 @@ public class ProgramHandler extends TriggerHandler {
             system.debug('Exception caught: ' + e.getMessage());
         }
     }
+
 }

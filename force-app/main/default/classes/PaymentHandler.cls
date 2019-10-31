@@ -53,6 +53,9 @@ public class PaymentHandler extends TriggerHandler {
                 collectpaymentSPIds(newPayment, null);
                 updateNSFDate(newPayment, null);          
             }
+            // mark the payments for creating deposit reminders
+            updateCreateDepositRemindersCheckbox(newPayment, null);
+
         }
         if(paymentSPIds.isEmpty() == false || SPIdsForTask.isEmpty() == false) {
             updateManagerEmail();
@@ -64,6 +67,8 @@ public class PaymentHandler extends TriggerHandler {
         for (nu_dse__Payment__c newPayment: (List<nu_dse__Payment__c>)Trigger.New) {
             //Process only for Payments on a Program and not Prospect
             if(newPayment.nu_dse__Program__c != null) {
+                // mark the payments for creating deposit reminders
+                updateCreateDepositRemindersCheckbox(newPayment, oldPaymentMap.get(newPayment.Id));
                 // Collect Salesperson Id to update Manager email
                 collectpaymentSPIds(newPayment, oldPaymentMap.get(newPayment.Id));
                 // Update NSF date as today for failed payments
@@ -154,6 +159,26 @@ public class PaymentHandler extends TriggerHandler {
         upsert groupTaskToInsert nu_dse__Unique_Identifier__c ; //finally upserting group tasks
         insert errorLogList; // if any error logs were captured during execution it will be inserted for track of failure
     }
+
+    // Update Check_Payment_Reminder_Tasks as true if the payment is ready for reminders
+    public void updateCreateDepositRemindersCheckbox(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
+    
+        if( newPayment.nu_dse__Program__c != null
+            && newPayment.RecordTypeId == draftRecordTypeId
+            && (Trigger.isInsert 
+                || oldPayment.nu_dse__Transaction_Status__c != newPayment.nu_dse__Transaction_Status__c)) {
+           
+            if (newPayment.nu_dse__Transaction_Status__c == 'Pending' 
+                || newPayment.nu_dse__Transaction_Status__c == 'Scheduled') {
+                newPayment.Create_Payment_Reminder_Tasks__c = true; // this update will mark that payment to be picked by the daily batch job for creating reminders(tasks)
+            } else if (newPayment.nu_dse__Transaction_Status__c == 'Completed' 
+                        || newPayment.nu_dse__Transaction_Status__c == 'Cleared'
+                        || newPayment.nu_dse__Transaction_Status__c == 'Failed') {
+                newPayment.Create_Payment_Reminder_Tasks__c = false; // this update will mark that payment not to be picked by the daily batch job for creating reminders(tasks)
+            }
+        } 
+    }
+
     /* * Filter for "Send Salesperson Cleared Payment Notifiication" process
        * If first draft payment's Transaction Status or Payment Sequence Number changes and Transaction status is Completed/Cleared 
        * and salesperson ID formula is not null, collecting payment instance to assign with salesperson Email.
@@ -235,6 +260,8 @@ public class PaymentHandler extends TriggerHandler {
     //If nu_dse__Schedule_date__c updates, we collect paymentIds and Schedule date to update the Tasks activity date under the payment
     public void collectscheduleDateUpdatedPaymentIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
         if(newPayment.RecordTypeId == draftRecordTypeId
+            && (newPayment.nu_dse__Transaction_Status__c == 'Pending' 
+                || newPayment.nu_dse__Transaction_Status__c == 'Scheduled')
             && newPayment.nu_dse__Schedule_date__c != null
             && oldPayment.nu_dse__Schedule_date__c != newPayment.nu_dse__Schedule_date__c
             && processedPaymentIds.contains(newPayment.Id) == false) {

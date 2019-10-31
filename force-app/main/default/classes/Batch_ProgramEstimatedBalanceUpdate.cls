@@ -8,7 +8,10 @@
 * @version        1.0
 * @created        2019-10-08
 * @modified       2019-10-08
-* @logic          Balance = sum of all drafts(deposits.nu_dse__Amount) in the month - sum of all settlements(withrawals.nu_dse__Total_Amount__c) in the month - sum of all Fee(Fee withdrawals.nu_dse__Total_Amount__c) 
+* @logic          Program:
+                  Balance = sum of all drafts(deposits.nu_dse__Amount) in the month - sum of all settlements(withrawals.nu_dse__Total_Amount__c) in the month - sum of all Fee(Fee withdrawals.nu_dse__Total_Amount__c) 
+                  Tradeline:
+                  Completed/Cleared Withdrawal/Fee Withdrawal payments aggregated to Creditor_Payments_Made, Creditor_Payments_Outstanding, Fees_Collected, Fees_Outstanding. And Timestamp in Creditor_Fee_Payments_Calculated_on
 * @description    This batch will calculate the Estimated trust account balance at the end of current month, 2,3,6,9,12 months
 * @IMPORTANT NOTE Only the Draft(Deposit) and Settlement(Customer Withdrawal) and Fee(Fee Withdrawal) are included in the calculation.
                   And nu_dse__Amount field will be used for Draft(Deposit) and nu_dse__Total_Amount__c will be used for Settlement(Customer Withdrawal) and Fee(Fee Withdrawal)
@@ -21,7 +24,8 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
     Id draftRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Draft').getRecordTypeId(); // recordType Id for draft
     Id feeRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Fee').getRecordTypeId();  // recordType Id for fee
     Id settlementRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Settlement').getRecordTypeId();  // recordType Id for settlement
-    Integer successRecordsCount, failedRecordsCount, totalRecordsCount;
+    Integer successProgramRecordsCount, failedProgramRecordsCount, totalProgramRecordsCount, 
+            totalTradelinesCount, updatedTradelinesCount, failedTradelinesCount;
     
     public Batch_ProgramEstimatedBalanceUpdate() {
 
@@ -36,7 +40,8 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
 
     public Database.QueryLocator start(Database.BatchableContext BC) {
         
-        successRecordsCount = 0; failedRecordsCount = 0; totalRecordsCount = 0;
+        successProgramRecordsCount = 0; failedProgramRecordsCount = 0; totalProgramRecordsCount = 0;
+        updatedTradelinesCount = 0; failedTradelinesCount = 0; totalTradelinesCount = 0;
         Set<String> programStatus = new Set<String>{'New Client', 'Active'}; // by default, program status with New Client, Active will be processed
         //custom metadata type for having Program status to be included for calculations
         Program_Status_Configuration__mdt progStatusConfig = [SELECT Id, MasterLabel, Included_Statuses__c 
@@ -62,7 +67,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
             
             Set<Id> recordTypeIds = new Set<Id> {draftRecordTypeId, settlementRecordTypeId, feeRecordTypeId};
             Date futureEstimateDate = system.today().toStartOfMonth().addMonths(12).addDays(-1); 
-            totalRecordsCount += scope.size();
+            totalProgramRecordsCount += scope.size();
 
             String queryStr = 'SELECT Id, nu_dse__Trust_Account_Balance__c, ' + 
                                 '(SELECT Id, nu_dse__Total_Amount__c, nu_dse__Amount__c, nu_dse__Schedule_Date__c, nu_dse__Payment_Type__c, nu_dse__Transaction_Status__c, '+ 
@@ -142,7 +147,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
                         nu_dse__TradeLine__c tradeLineInst = new nu_dse__TradeLine__c(Id = payment.nu_dse__Offer__r.nu_dse__TradeLine__c, 
                             Creditor_Payments_Made__c = 0, Creditor_Payments_Outstanding__c = 0, 
                             Fees_Collected__c = 0, Fees_Outstanding__c = 0);
-                        
+                        System.debug('payment.nu_dse__Offer__r.nu_dse__TradeLine__c-->'+payment.nu_dse__Offer__r.nu_dse__TradeLine__c);
                         if(tradelineIdRecMap.containsKey(tradeLineInst.Id) == true) {
                             tradeLineInst = tradelineIdRecMap.get(tradeLineInst.Id);
                         }
@@ -151,20 +156,22 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
                             
                             if (payment.nu_dse__Transaction_Status__c == 'Completed'
                                 || payment.nu_dse__Transaction_Status__c == 'Cleared') {
-                                tradeLineInst.Creditor_Payments_Made__c += payment.nu_dse__Total_Amount__c;
+                                tradeLineInst.Fees_Collected__c += payment.nu_dse__Total_Amount__c;
                             } else {
-                                tradeLineInst.Creditor_Payments_Outstanding__c += payment.nu_dse__Total_Amount__c;
+                                tradeLineInst.Fees_Outstanding__c += payment.nu_dse__Total_Amount__c;
                             }
 
                         } else {
                             
                             if (payment.nu_dse__Transaction_Status__c == 'Completed'
                                 || payment.nu_dse__Transaction_Status__c == 'Cleared') {
-                                tradeLineInst.Fees_Collected__c += payment.nu_dse__Total_Amount__c;
+                                tradeLineInst.Creditor_Payments_Made__c += payment.nu_dse__Total_Amount__c;
                             } else {
-                                tradeLineInst.Fees_Outstanding__c += payment.nu_dse__Total_Amount__c;
+                                tradeLineInst.Creditor_Payments_Outstanding__c += payment.nu_dse__Total_Amount__c;
+                                
                             }
                         }
+                        tradeLineInst.Creditor_Fee_Payments_Calculated_on__c = System.now();
                         tradelineIdRecMap.put(tradeLineInst.Id, tradeLineInst);
                     }
                 }
@@ -205,9 +212,9 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
                         errLog.nu_dse__Message__c += error.getMessage();
                     }
                     errLogs.add(errLog);
-                    failedRecordsCount += 1;
+                    failedProgramRecordsCount += 1;
                 } else {
-                    successRecordsCount += 1;
+                    successProgramRecordsCount += 1;
                 }
                 count++;
             }
@@ -215,7 +222,8 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
             tradelineToUpdateList.addall(tradelineIdRecMap.values());
             count = 0;
             for (Database.SaveResult dmlResult: Database.update(tradelineToUpdateList, false)) {
-
+                
+                totalTradelinesCount += 1;
                 if (dmlResult.isSuccess() == false) {
                     nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(nu_dse__Class_Method__c = 'Batch_ProgramEstimatedBalanceUpdate.excute',nu_dse__Error_Causing_Record_Id__c = tradelineToUpdateList[count].Id,nu_dse__Stack_Trace__c = JSON.serialize(tradelineToUpdateList[count]), nu_dse__User_Context__c = UserInfo.getName());
 
@@ -224,7 +232,11 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
                         errLog.nu_dse__Message__c += error.getMessage();
                     }
                     errLogs.add(errLog);
-                } 
+                    failedTradelinesCount += 1;
+                } else {
+                    updatedTradelinesCount +=1;
+                }
+                
                 count++;
             }
             insert errLogs;
@@ -248,11 +260,15 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
                 || taskAssignDefault.Task_Assignement_User_Id__c.length() == 18)
             && Id.valueOf(taskAssignDefault.Task_Assignement_User_Id__c).getSobjectType().getDescribe().getName() == 'User') {                                                          
             
-            String descripStr = 'Total Records Count: '+ totalRecordsCount +'; \n'+ 'Succesfully Processed records Count: '+
-                                successRecordsCount + '; \n' +'Failed Records Count: '+ failedRecordsCount + '; \n' + 
+            String descripStr = 'PROGRAMS: \n'+
+                                'Total Programs Processed: '+ totalProgramRecordsCount +'; \n'+ 'No of Programs Updated Successfully: '+
+                                successProgramRecordsCount + '; \n' +'No of Programs Failed: '+ failedProgramRecordsCount + '; \n' + 
+                                'TRADELINES: \n'+
+                                'Total Tradelines Processed: '+ totalTradelinesCount +'; \n'+ 'No of Tradelines Updated Successfully: '+
+                                updatedTradelinesCount + '; \n' +'No of Tradelines Failed: '+ failedTradelinesCount + '; \n' + 
                                 'Processed Time: ' + system.now();
                                 
-            Task taskRec = new Task(Subject = 'Estimated Balance Calculation Job has been Completed!', ActivityDate = system.today(), 
+            Task taskRec = new Task(Subject = 'Estimated Balance Calculation/Tradeline Settlement Payments Calculations Job has been Completed!', ActivityDate = system.today(), 
                                     Description = descripStr, Status = 'Completed', OwnerId = taskAssignDefault.Task_Assignement_User_Id__c);
             insert taskRec;
         } else {

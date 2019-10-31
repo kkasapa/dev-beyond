@@ -171,14 +171,15 @@ public class PaymentHandler_Test {
                                                  FROM nu_dse__Payment__c WHERE nu_dse__Dont_Consider__c = false];
         if(paymentsList.size()>0) {
         
+        Test.startTest();
             Task taskInst = new Task(whatId = paymentsList[0].Id, Subject = 'Payments Reminder SMS Task', ActivityDate = system.Today().addDays(1),
                                       Unique_Identifier__c = paymentsList[0].Id+'Payments Reminder SMS',nu_dse__Is_System_Task__c = true);
             insert taskInst;
             nu_dse__Payment__c paymenInst = new nu_dse__Payment__c(Id = paymentsList[0].Id, nu_dse__Transaction_Status__c = 'Cancelled');
             update paymenInst;
-            
+            Test.stopTest();
             List<Task> taskList = [SELECT Id, Status FROM Task WHERE WhatId = :paymentsList[0].Id];
-            System.assertEquals('Completed', taskList[0].Status);
+            System.assert(taskList.isEmpty() == true);
         }
     } 
     

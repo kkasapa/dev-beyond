@@ -46,7 +46,7 @@ public with sharing class ApprovalsController {
                                                 WHERE PermissionsModifyAllRecords = true 
                                                     AND ParentId IN (SELECT PermissionSetId 
                                                             FROM PermissionSetAssignment
-                                                            WHERE AssigneeId = '00546000002CNTQAA4')
+                                                            WHERE AssigneeId = :this.userId)
                                                     AND (SObjectType = 'nu_dse__Prospect__c' 
                                                         OR SObjectType = 'nu_dse__Offer__c')]) {
 
@@ -255,10 +255,11 @@ public with sharing class ApprovalsController {
                 } else if (queueIdSet.contains(appRec.asignedTo)) {                
                     appRec.showActions = TRUE;
                 } else if (subordinatesOfCurrentUser != null && subordinatesOfCurrentUser.isEmpty() == FALSE 
-                            && String.isNotBlank(appRec.asignedTo) && subordinatesOfCurrentUser.contains(appRec.asignedTo)) {                
+                            && String.isNotBlank(appRec.submittedBy) && subordinatesOfCurrentUser.contains(appRec.submittedBy)) {                
                     appRec.showActions = TRUE;
                 }
                 system.debug('appRec.asignedTo::'+appRec.asignedTo);
+                system.debug('appRec.submittedBy::'+appRec.submittedBy);
                 system.debug('subordinatesOfCurrentUser::'+subordinatesOfCurrentUser);
                 system.debug('appRec.showActions::'+appRec.showActions);
             }
