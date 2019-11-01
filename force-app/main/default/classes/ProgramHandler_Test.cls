@@ -304,12 +304,12 @@ public class ProgramHandler_Test {
     // Create New Lender Application Data for Interested Program Enrolled Clients
     // Uses Loan Interest Status = "Interested" to Run
     public void createLoan(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram){
-        if (newProgram.Loan_Interest_Status_2__c == 'Skybridge - Interested'){
-            if(newProgram.Loan_Interest_Status_2__c != oldProgram.Loan_Interest_Status_2__c){
-                if(!newProgram.Flow_Initiated__c){
+        if (newProgram.Loan_Interest_Status__c == 'Skybridge - Interested'){
+            if(newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c){
+                //if(!newProgram.Flow_Initiated__c){
                     System.debug('loan if statement');
                     futureFlowCall(newProgram.Id);
-                }
+                //}
             }
         }
     }
