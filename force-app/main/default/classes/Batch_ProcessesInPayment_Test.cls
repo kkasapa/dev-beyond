@@ -1,6 +1,6 @@
 @isTest
 public class Batch_ProcessesInPayment_Test {
-
+    
     @testSetup static void testRecordCreate() {
         
         Id accRecordTypeId = Schema.SObjectType.Account.getRecordTypeInfosByName().get('Client').getRecordTypeId();
@@ -75,8 +75,8 @@ public class Batch_ProcessesInPayment_Test {
     static testMethod void paymentReminderTaskCreation() {
         
         Test.startTest();
-            Database.executeBatch(new Batch_ProcessesInPayment(''));
-            
+        Database.executeBatch(new Batch_ProcessesInPayment(''));
+        
         Test.stopTest(); 
         
         List<nu_dse__Payment__c> paymentList = [SELECT Id, Create_Payment_Reminder_Tasks__c FROM nu_dse__Payment__c];
@@ -85,30 +85,27 @@ public class Batch_ProcessesInPayment_Test {
         
         List<Task> taskList = [SELECT Id, Subject, ActivityDate FROM Task];
         
-        //system.assertEquals(4, taskList.size());
+        system.assertEquals(4, taskList.size());
         system.assert(taskList[0].Subject.contains('Payment SMS Reminder'));
-        system.assert(taskList[1].Subject.contains('Payment SMS Reminder'));
-        //system.assertEquals(system.today().addDays(2), taskList[0].ActivityDate);
-        //system.assertEquals(system.today().addDays(1), taskList[2].ActivityDate);
+        system.assert(taskList[1].Subject.contains('Payment Email Reminder'));
+        system.assertEquals(system.today().addDays(3), taskList[0].ActivityDate);
+        system.assertEquals(system.today().addDays(1), taskList[2].ActivityDate);
     }
     
-    static testMethod void paymentReminderTaskCreationExceptionTest() {
+    static testMethod void deleteMappingExceptionTest() {
         
         List<nu_dse__Field_mapping__c> emailfieldMapping = [SELECT Id FROM nu_dse__Field_mapping__c WHERE nu_dse__Target_Field__c = 'WhatId' LIMIT 1];
         delete emailfieldMapping;
         
         Test.startTest();
-            
-            Integer activityPaddingDays = -2;
             Database.executeBatch(new Batch_ProcessesInPayment('nu_dse__Schedule_Date__c > TODAY'));
-            
         Test.stopTest(); 
         
         List<nu_dse__Error_Log__c> errorLogList = [SELECT Id FROM nu_dse__Error_Log__c];
         system.assert(errorLogList.isEmpty() == false);
     }
     
-    static testMethod void paymentReminderTaskCreationExceptionTest2() {
+    static testMethod void invalidValueMappingExceptionTest() {
         
         List<nu_dse__Field_mapping__c> emailfieldMapping = [SELECT Id FROM nu_dse__Field_mapping__c WHERE nu_dse__Target_Field__c = 'ActivityDate' LIMIT 1];
         emailfieldMapping[0].nu_dse__setDefaultValue__c = true;
@@ -116,17 +113,14 @@ public class Batch_ProcessesInPayment_Test {
         update emailfieldMapping;
         
         Test.startTest();
-            
-            Integer activityPaddingDays = -2;
             Database.executeBatch(new Batch_ProcessesInPayment('Id != null'));
-            
         Test.stopTest(); 
         
         List<nu_dse__Error_Log__c> errorLogList = [SELECT Id FROM nu_dse__Error_Log__c];
         system.assert(errorLogList.isEmpty() == false);
     }
     
-    static testMethod void paymentReminderTaskCreationExceptionTest3() {
+    static testMethod void defaultValueExceptionTest() {
         
         List<Account> accList = [SELECT Id FROM Account LIMIT 1];
         
@@ -137,28 +131,65 @@ public class Batch_ProcessesInPayment_Test {
         update emailfieldMapping;
         
         Test.startTest();
-            
-            Batch_ProcessesInPayment depositreminders = new Batch_ProcessesInPayment('');
-            Database.executeBatch(depositreminders);
-            
-            try {
-                Database.executeBatch(depositreminders);
-
-            } catch(exception e) {
-                system.assert(String.isNotBlank(e.getMessage()));
-            }
-            
+            Database.executeBatch(new Batch_ProcessesInPayment(''));
         Test.stopTest(); 
         
         List<nu_dse__Error_Log__c> errorLogList = [SELECT Id FROM nu_dse__Error_Log__c];
         system.assert(errorLogList.isEmpty() == false);
     }
-
-
+    
     static testMethod void paymentRemiderbasedOnIdSet() {
         
-            List<nu_dse__Payment__c> paymentList = [SELECT Id, Create_Payment_Reminder_Tasks__c FROM nu_dse__Payment__c];        
-            Database.executeBatch(new Batch_ProcessesInPayment(new Set<Id>{paymentList[0].Id}));
+        List<nu_dse__Payment__c> paymentList = [SELECT Id, Create_Payment_Reminder_Tasks__c FROM nu_dse__Payment__c];        
+        Database.executeBatch(new Batch_ProcessesInPayment(new Set<Id>{paymentList[0].Id}));
         
+    }
+    
+    //Check SMS/EMail Task Deleted while Status Updation
+    static testMethod void checkTaskDelete(){
+
+        nu_dse__Payment__c paymentInst = [SELECT Id, nu_dse__Transaction_Status__c
+                                          FROM nu_dse__Payment__c LIMIT 1];
+        paymentInst.nu_dse__Transaction_Status__c = 'Cancelled';
+        update paymentInst;
+
+        List<Task> taskList = new List<Task>();
+        for(Integer i = 1; i <= 4; i ++){
+            Task taskInst = new Task();
+            taskInst.WhatId = paymentInst.Id;
+            if(math.mod(i, 2) == 0){
+                taskInst.Subject = 'SMS REMINDER';
+            }
+            else{
+                taskInst.Subject = 'EMAIL REMINDER';
+            }
+            taskList.add(taskInst);
         }
+        insert taskList;
+        
+        Test.startTest();
+            Database.executeBatch(new Batch_ProcessesInPayment(''));
+        Test.stopTest();
+        
+        List<Task> taskList3 = [SELECT Id, ActivityDate, WhatId, Subject FROM Task 
+                                WHERE WhatId = :paymentInst.Id];
+        System.assertEquals(taskList3.size(), 0);  
+    }
+    //Check Task Scheduled Date updated or not while Payment Scheduled Date update
+    static testMethod void checkTaskScheduledDateUpdate(){
+        
+        nu_dse__Payment__c paymentInst = [SELECT Id, nu_dse__Schedule_Date__c 
+                                          FROM nu_dse__Payment__c LIMIT 1];
+        paymentInst.nu_dse__Schedule_Date__c = Date.today().addDays(7);
+        update paymentInst;
+        
+        Test.startTest();
+            Set<Id> paymentIdSet = new Set<Id>{paymentInst.Id};
+            Database.executeBatch(new Batch_ProcessesInPayment(paymentIdSet));
+        Test.stopTest();
+        
+        List<Task> taskList = [SELECT Id, ActivityDate, WhatId, Subject FROM Task 
+                               WHERE WhatId = :paymentInst.Id];
+        System.assertEquals(Date.today().addDays(5), taskList[0].ActivityDate);
+    }
 }

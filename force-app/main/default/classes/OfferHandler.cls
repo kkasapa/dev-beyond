@@ -50,7 +50,10 @@ public class OfferHandler extends TriggerHandler {
             }
            
         }
-        savingsCalc(OfferstoUpdate);
+        // Updated by Vignesh on 31-10-2019 to fix Future method cannot be called from a future or batch method
+        if(OfferstoUpdate.isEmpty() == false) {
+            savingsCalc(OfferstoUpdate);
+        }
     }
     
  	@future(callout=true)

@@ -7,7 +7,7 @@
 * @maintainedBy   Ashwin Bretto   <abretto@selastech.com>
 * @version        1.0
 * @created        2019-05-16
-* @modified       2019-10-23
+* @modified       2019-10-31
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
 
@@ -72,9 +72,7 @@ public class PaymentHandler extends TriggerHandler {
                 // Collect Salesperson Id to update Manager email
                 collectpaymentSPIds(newPayment, oldPaymentMap.get(newPayment.Id));
                 // Update NSF date as today for failed payments
-                updateNSFDate(newPayment, oldPaymentMap.get(newPayment.Id));   
-                // Update Create Payment Reminder Tasks checkbox as true for Schedule date changed Payments.
-                updateCreatePaymentReminderTask(newPayment, oldPaymentMap.get(newPayment.Id));       
+                updateNSFDate(newPayment, oldPaymentMap.get(newPayment.Id));        
             }
         }
         if(paymentSPIds.isEmpty() == false || SPIdsForTask.isEmpty() == false) {
@@ -160,16 +158,19 @@ public class PaymentHandler extends TriggerHandler {
         insert errorLogList; // if any error logs were captured during execution it will be inserted for track of failure
     }
 
-    // Update Check_Payment_Reminder_Tasks as true if the payment is ready for reminders
+    /* Update Create Payment Reminder Tasks checkbox as true if the payment is ready for reminders.
+       This checkbox update used for updating activity date based on Padding days in processInPayment batch  */
     public void updateCreateDepositRemindersCheckbox(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
     
-        if( newPayment.nu_dse__Program__c != null
-            && newPayment.RecordTypeId == draftRecordTypeId
+        if(newPayment.RecordTypeId == draftRecordTypeId
+            && newPayment.nu_dse__Schedule_date__c != null
             && (Trigger.isInsert 
-                || oldPayment.nu_dse__Transaction_Status__c != newPayment.nu_dse__Transaction_Status__c)) {
+                || (oldPayment.nu_dse__Transaction_Status__c != newPayment.nu_dse__Transaction_Status__c
+                    || oldPayment.nu_dse__Schedule_date__c  != newPayment.nu_dse__Schedule_date__c))) {
            
-            if (newPayment.nu_dse__Transaction_Status__c == 'Pending' 
-                || newPayment.nu_dse__Transaction_Status__c == 'Scheduled') {
+            if ((newPayment.nu_dse__Transaction_Status__c == 'Pending' 
+                    || newPayment.nu_dse__Transaction_Status__c == 'Scheduled')
+                && newPayment.nu_dse__Schedule_date__c > system.today().addDays(1)) {
                 newPayment.Create_Payment_Reminder_Tasks__c = true; // this update will mark that payment to be picked by the daily batch job for creating reminders(tasks)
             } else if (newPayment.nu_dse__Transaction_Status__c == 'Completed' 
                         || newPayment.nu_dse__Transaction_Status__c == 'Cleared'
@@ -227,16 +228,7 @@ public class PaymentHandler extends TriggerHandler {
             }
         }
     }
-    /* Update Create Payment Reminder Tasks checkbox as true for Schedule date changed Payments.
-       This checkbox update used for updating activity date based on Padding days in processInPayment batch  */
-    public void updateCreatePaymentReminderTask(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
-        
-        if(newPayment.nu_dse__Schedule_date__c != null
-            && oldPayment.nu_dse__Schedule_date__c  != newPayment.nu_dse__Schedule_date__c
-            && newPayment.nu_dse__Schedule_date__c > system.today().addDays(1)) {
-            newPayment.Create_Payment_Reminder_Tasks__c = true;
-        }
-    }
+    
     /* When a Transaction Status is changed from Completed or To Completed,
         collecting programIds for processing
     */

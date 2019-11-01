@@ -49,7 +49,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
         nu_dse__Payment__c feepPayment1 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Fee Withdrawal', feeRecordTypeId, offer.Id);
         feepPayment1.nu_dse__Amount__c = 500;
         feepPayment1.nu_dse__Schedule_Date__c  = system.today().addMonths(1);
-        nu_dse__Payment__c feepPayment2 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Fee Withdrawal', feeRecordTypeId, offer.Id);
+        nu_dse__Payment__c feepPayment2 = TestRecordCreator.createPayment(program.Id, 'In Progress', 'Fee Withdrawal', feeRecordTypeId, offer.Id);
         feepPayment2.nu_dse__Amount__c = 400;
         feepPayment2.nu_dse__Schedule_Date__c  = system.today().addMonths(2);
         nu_dse__Payment__c feepPayment3 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Fee Withdrawal', feeRecordTypeId, offer.Id);
@@ -61,6 +61,9 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
         nu_dse__Payment__c feepPayment5 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Fee Withdrawal', feeRecordTypeId, offer.Id);
         feepPayment5.nu_dse__Amount__c = 100;
         feepPayment5.nu_dse__Schedule_Date__c  = system.today().addMonths(10);
+        nu_dse__Payment__c feepPayment6 = TestRecordCreator.createPayment(program.Id, 'Completed', 'Fee Withdrawal', feeRecordTypeId, offer.Id);
+        feepPayment6.nu_dse__Amount__c = 250;
+        feepPayment6.nu_dse__Schedule_Date__c  = system.today().addMonths(-1);
         
         nu_dse__Payment__c settlementPayment1 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Withdrawal', settlementRecordTypeId, offer.Id);
         settlementPayment1.nu_dse__Amount__c = 100;
@@ -70,6 +73,9 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
         nu_dse__Payment__c settlementPayment3 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Withdrawal', settlementRecordTypeId, offer.Id);
         settlementPayment3.nu_dse__Amount__c = 100;
         settlementPayment3.nu_dse__Schedule_Date__c  = system.today().addMonths(10);
+        nu_dse__Payment__c settlementPayment4 = TestRecordCreator.createPayment(program.Id, 'Completed', 'Withdrawal', settlementRecordTypeId, offer.Id);
+        settlementPayment4.nu_dse__Amount__c = 50;
+        settlementPayment4.nu_dse__Schedule_Date__c  = system.today().addMonths(-1);
 
         paymentList.add(draftPayment1);
         paymentList.add(draftPayment2);
@@ -81,9 +87,11 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
         paymentList.add(feepPayment3);
         paymentList.add(feepPayment4);
         paymentList.add(feepPayment5);
+        paymentList.add(feepPayment6);
         paymentList.add(settlementPayment1);
         paymentList.add(settlementPayment2);
         paymentList.add(settlementPayment3);
+        paymentList.add(settlementPayment4);
         insert paymentList;
     }
 
@@ -110,5 +118,23 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
         system.assertEquals(11600, updatedProgramList[0].Estimated_Month_6_Balance__c);
         system.assertEquals(13400, updatedProgramList[0].Estimated_Month_9_Balance__c);
         system.assertEquals(14200, updatedProgramList[0].Estimated_Month_12_Balance__c);
+
+        List<nu_dse__TradeLine__c> updatedTradelineList = [SELECT Id, Fees_Outstanding__c, Creditor_Payments_Outstanding__c,
+                                                            Creditor_Payments_Made__c,  Fees_Collected__c  
+                                                          FROM nu_dse__TradeLine__c LIMIT 1];
+
+        system.assertEquals(1500, updatedTradelineList[0].Fees_Outstanding__c);
+        system.assertEquals(300, updatedTradelineList[0].Creditor_Payments_Outstanding__c);
+        system.assertEquals(250, updatedTradelineList[0].Fees_Collected__c);
+        system.assertEquals(50, updatedTradelineList[0].Creditor_Payments_Made__c);
+
+        List<nu_dse__Offer__c> updatedOfferList = [SELECT Id, Fees_Outstanding__c, Creditor_Payments_Outstanding__c,
+                                                    Creditor_Payments_Made__c, Fees_Collected__c   
+                                                   FROM nu_dse__Offer__c LIMIT 1];
+
+        system.assertEquals(1500, updatedOfferList[0].Fees_Outstanding__c);
+        system.assertEquals(300, updatedOfferList[0].Creditor_Payments_Outstanding__c);
+        system.assertEquals(250, updatedOfferList[0].Fees_Collected__c);
+        system.assertEquals(50, updatedOfferList[0].Creditor_Payments_Made__c);
     }
 }

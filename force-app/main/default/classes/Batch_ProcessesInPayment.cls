@@ -7,7 +7,7 @@
 * @maintainedBy   Vignesh   <vsadhasivam@selastech.com>
 * @version        1.0
 * @created        2019-10-08
-* @modified       2019-10-11
+* @modified       2019-10-31
 * @logic           
 * @description    This batch will Create payment reminder SMS/Email Tasks.
 * @IMPORTANT NOTE 
@@ -289,15 +289,19 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
             
             update payIdReminderMap.values();
 
-            List<Task> tasksToDeleteList = [SELECT Id FROM Task 
-                                            WHERE whatId IN:cancelledPaymentIdSet AND Status != 'Completed'
-                                                AND nu_dse__Communication_Sent__c != true];
-            try {
-                delete tasksToDeleteList;
-            } catch(exception e) {
-                nu_dse__Error_Log__c errorLog = new nu_dse__Error_Log__c(nu_dse__Message__c = e.getMessage(), nu_dse__Stack_Trace__c = e.getStackTraceString(),
-                    nu_dse__User_Context__c = UserInfo.getName(), nu_dse__Class_Method__c = 'Batch_ProcessesInPayment.Execute');
-                errorLogsToInsertList.add(errorLog);
+            if(cancelledPaymentIdSet.isEmpty() == false) {
+
+                List<Task> tasksToDeleteList = [SELECT Id FROM Task 
+                                                WHERE whatId IN:cancelledPaymentIdSet AND Status != 'Completed'
+                                                    AND nu_dse__Communication_Sent__c != true];
+        
+                try {
+                    delete tasksToDeleteList;
+                } catch(exception e) {
+                    nu_dse__Error_Log__c errorLog = new nu_dse__Error_Log__c(nu_dse__Message__c = e.getMessage(), nu_dse__Stack_Trace__c = e.getStackTraceString(),
+                        nu_dse__User_Context__c = UserInfo.getName(), nu_dse__Class_Method__c = 'Batch_ProcessesInPayment.Execute');
+                    errorLogsToInsertList.add(errorLog);
+                }
             }
             insert errorLogsToInsertList;
 
@@ -384,7 +388,7 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
                     } else {
 
                         if(targetField != 'Subject') {
-                            taskRec.put(targetField, Date.valueOf(targetFieldValue));
+                            taskRec.put(targetField, String.valueOf(targetFieldValue));
                         } else {
                             taskRec.put(targetField, String.valueOf(targetFieldValue) + ' - DAY '+paddingDays);
                         }

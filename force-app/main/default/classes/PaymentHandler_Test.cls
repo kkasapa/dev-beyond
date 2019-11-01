@@ -1,7 +1,6 @@
 @istest
 public class PaymentHandler_Test {
 
-    
     @testsetup
     public static void testData(){
         
@@ -204,4 +203,37 @@ public class PaymentHandler_Test {
                                                  WHERE Id = :paymentsList[0].nu_dse__Program__c];
          System.assertEquals(null, completedProgramList[0].Next_Draft_Date__c);
      }
+
+     static testMethod void taskActivityDateTest(){
+        
+        nu_dse__Payment__c paymentInst = [SELECT Id, nu_dse__Schedule_Date__c
+                                          FROM nu_dse__Payment__c LIMIT 1];
+        
+        List<Task> taskList = new List<Task>();
+        for(Integer i = 1; i <= 2; i ++){
+            Task taskInst = new Task();
+            taskInst.WhatId = paymentInst.Id;
+            taskInst.ActivityDate = system.today();
+            if(math.mod(i, 2) == 0){
+                taskInst.Subject = 'SMS REMINDER';
+                taskInst.Unique_Identifier__c = 'Payment Reminder - SMS 1';
+            }
+            else{
+                taskInst.Subject = 'EMAIL REMINDER';
+                taskInst.Unique_Identifier__c = 'Payment Reminder - Email 1';
+            }
+            taskList.add(taskInst);
+        }
+        insert taskList;
+        
+        Test.startTest();
+            paymentInst.nu_dse__Schedule_Date__c = system.today().addDays(7);
+            paymentInst.nu_dse__Transaction_Status__c = 'Pending'; 
+            update paymentInst;
+        Test.stopTest();
+        
+        List<Task> updatedTaskList = [SELECT Id, ActivityDate FROM Task 
+                                      WHERE WhatId = :paymentInst.Id];
+        System.assertEquals(system.today().addDays(5), updatedTaskList[0].ActivityDate);  
+    }
 }
