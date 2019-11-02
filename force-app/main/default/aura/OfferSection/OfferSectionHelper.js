@@ -1,21 +1,75 @@
 ({
+    
+    getPicklist: function(component, event) {
+        var action = component.get("c.getPgm");
+        action.setParams({
+            pgmId : component.get("v.recordId")
+        });
+        action.setCallback(this, function(response) {
+            var state = response.getState();
+            if (state === "SUCCESS") {
+                var result = response.getReturnValue();
+                var pgmMap = [];
+                for(var key in result){
+                    pgmMap.push({key: key, value: result[key]});
+                }
+                component.set("v.pgmMap", pgmMap);
+            }
+        });
+        $A.enqueueAction(action);
+    },
+    getOfferPicklist: function(component, event) {
+        var action = component.get("c.getOffers");
+        action.setParams({
+            pgmId : component.get("v.recordId")
+        });
+        action.setCallback(this, function(response) {
+            var state = response.getState();
+            if (state === "SUCCESS") {
+                var result = response.getReturnValue();
+                var ofMap = [];
+                for(var key in result){
+                    ofMap.push({key: key, value: result[key]});
+                }
+                component.set("v.ofMap", ofMap);
+            }
+        });
+        $A.enqueueAction(action);
+    },
+   
+     getPayments: function(component, event) {
+         
+         
+        var action = component.get("c.getObjects");
+         action.setParams({
+            pgmId : component.get("v.parameters")
+        });
+        action.setCallback(this, function(response){
+            var state = response.getState();
+            if (state === "SUCCESS") {
+                component.set("v.myObjects", response.getReturnValue());
+            }
+        });
+        $A.enqueueAction(action);
+    },
     loadProgram : function(component) {
-    var action = component.get("c.getPgm");
-	console.log('action is-->>' + action);
-    action.setParams({
-        pgmId : component.get("v.recordId")
-    });
-
-    action.setCallback(this, function(a) {
-        if (a.getState() === "SUCCESS") {
-            component.set("v.program", a.getReturnValue());
-        } else if (a.getState() === "ERROR") {
-            $A.log("Errors", a.getError());
-        }
-    });
-
-    $A.enqueueAction(action);
-},
+        var action = component.get("c.getPgm");
+        console.log('action is-->>' + action);
+        action.setParams({
+            pgmId : component.get("v.recordId")
+        });
+        console.log('action is-->>' + action);
+        console.log("action is json " + JSON.stringify(action));
+        action.setCallback(this, function(a) {
+            if (a.getState() === "SUCCESS") {
+                component.set("v.program", a.getReturnValue());
+            } else if (a.getState() === "ERROR") {
+                $A.log("Errors", a.getError());
+            }
+        });
+        
+        $A.enqueueAction(action);
+    },
     
     onSelectChange : function(component, event, helper){
         

@@ -1,19 +1,39 @@
 ({
+    /*
     doInit : function(component, event, helper) {
         helper.loadProgram(component);
     },
-   
+   */
     
-      getMyObjects: function(cmp){
-        var action = cmp.get("c.getObjects");
-        action.setCallback(this, function(response){
-            var state = response.getState();
-            if (state === "SUCCESS") {
-                cmp.set("v.myObjects", response.getReturnValue());
+    doInit: function(component, event, helper) {        
+        helper.getPicklist(component, event);
+        helper.getOfferPicklist(component, event);
+        
+        var sPageURL = decodeURIComponent(window.location.search.substring(1)); //You get the whole decoded URL of the page.
+        var sURLVariables = sPageURL.split('&'); //Split by & so that you get the key value pairs separately in a list
+        var sParameterName;
+        var i;
+
+        for (i = 0; i < sURLVariables.length; i++) {
+            sParameterName = sURLVariables[i].split('='); //to split the key from the value.
+
+            if (sParameterName[0] === 'id') { 
+                sParameterName[1] === undefined ? 'Not found' : sParameterName[1];
             }
-        });
-        $A.enqueueAction(action);
+        }
+        console.log('Param name'+sParameterName[0]);
+        console.log('Param value'+sParameterName[1]);
+         var finalvalue = sParameterName[1];
+         console.log('Param value'+finalvalue);
+         component.set('v.parameters',finalvalue);    
+         
+        
+    },   
+    
+    getPays : function(component, event, helper) {
+        helper.getPayments(component, event, helper);
     },
+   
     toggleSection : function(component, event, helper) {      
         
         // dynamically get aura:id name from 'data-auraId' attribute

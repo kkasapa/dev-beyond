@@ -8,12 +8,13 @@
 * @version        1.0
 * @created        2019-10-27
 * @modified       2019-10-27
+*       <Resly Added filter in addDocument and addClientCreditor
 * @Layer          REST API 
 * @To Execute from DEV Console
 *     string strPgmId = 'a0L22000000Vkb1';
 *     BLPMicroServiceAPI.addClientAPI(strPgmId);
-	  BLPMicroServiceAPI.addClientCreditorAPI(strPgmId);
-	  BLPMicroServiceAPI.addDocument(strPgmId);	
+*	  BLPMicroServiceAPI.addClientCreditorAPI(strPgmId);
+*	  BLPMicroServiceAPI.addDocument(strPgmId);	
 *       
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 *   
@@ -37,6 +38,8 @@ public class BLPMicroServiceAPI {
         system.debug('STATUS==>'+response.getStatus()+'\n STATUS CODE==>'+response.getStatusCode()+'\n BODY==>'+response.getBody());
         if (response.getStatusCode() == 200) {
             Map<String, Object> results = (Map<String, Object>) JSON.deserializeUntyped(response.getBody());
+            pgmObj.BLP_Client_Id__c = (String)results.get('clientid');
+            pgmObj.BLP_Client_Last_Updated__c = System.now();
         }        
     }
     
@@ -119,7 +122,7 @@ public class BLPMicroServiceAPI {
             strattQry += strFldName.nu_dse__Source_Field__c+',';    
         }
         strattQry = strattQry.substring(0,strattQry.length() - 1);
-        strattQry += ' FROM Attachment WHERE ParentId =:strPgmId';
+        strattQry += ' FROM Attachment WHERE ParentId =:strPgmId and Name like Name like \'AUTHORIZATION-ONLINE-BLP%\'';
         
         list<sObject> lstOftls = database.query(strattQry);
         JSONGenerator gen = JSON.createGenerator(true);
@@ -185,26 +188,26 @@ public class BLPMicroServiceAPI {
         
         JSONGenerator gen = JSON.createGenerator(true);
         gen.writeStartObject();
-        	for(nu_dse__Field_mapping__c fldObj : lstOfActFlds){
-                if(fldObj.nu_dse__Target_Field__c == 'birthdate' && actObj.PersonBirthdate != null){
-                	gen.writeStringField('birthdate', actObj.PersonBirthdate.format());    
-                }else if(fldObj.nu_dse__Target_Field__c == 'phone' && actObj.PersonHomePhone != null){
-                	gen.writeStringField('phone', actObj.PersonHomePhone);
-                	gen.writeStringField('phone_type', 'H');    
-                }else if(fldObj.nu_dse__Target_Field__c == 'phone2' && actObj.PersonMobilePhone != null){
-                	gen.writeStringField('phone2', actObj.PersonMobilePhone);
-                	gen.writeStringField('phone2_type', 'C');    
-                }else if(fldObj.nu_dse__Target_Field__c == 'phone3' && actObj.PersonOtherPhone != null){
-                	gen.writeStringField('phone3', actObj.PersonOtherPhone);
-                	gen.writeStringField('phone3_type', 'O');    
-                }else if(fldObj.nu_dse__Target_Field__c == 'birthdate2' && actObj.nu_dse__Co_Date_of_Birth__c != null){
-                	gen.writeStringField('birthdate', actObj.nu_dse__Co_Date_of_Birth__c.format());    
-                }else{
-                	gen.writeStringField(fldObj.nu_dse__Target_Field__c, (actObj.get(fldObj.nu_dse__Source_Field__c) != null ? string.valueOf(actObj.get(fldObj.nu_dse__Source_Field__c)) : ''));        
-                }                
-            }
-            gen.writeStringField('blp_client_type', (pgmObj.BLP_Member_Type__c != null ? pgmObj.BLP_Member_Type__c : '')); 
-            gen.writeStringField('clientid', pgmObj.Name); 
+        gen.writeStringField('clientid', pgmObj.Name.split('-')[1]); 
+        gen.writeStringField('blp_client_type', pgmObj.BLP_Member_Type__c); 
+        for(nu_dse__Field_mapping__c fldObj : lstOfActFlds){
+            if(fldObj.nu_dse__Target_Field__c == 'birthdate' && actObj.PersonBirthdate != null){
+                gen.writeStringField('birthdate', actObj.PersonBirthdate.format());    
+            }else if(fldObj.nu_dse__Target_Field__c == 'phone' && actObj.PersonHomePhone != null){
+                gen.writeStringField('phone', actObj.PersonHomePhone);
+                gen.writeStringField('phone_type', 'H');    
+            }else if(fldObj.nu_dse__Target_Field__c == 'phone2' && actObj.PersonMobilePhone != null){
+                gen.writeStringField('phone2', actObj.PersonMobilePhone);
+                gen.writeStringField('phone2_type', 'C');    
+            }else if(fldObj.nu_dse__Target_Field__c == 'phone3' && actObj.PersonOtherPhone != null){
+                gen.writeStringField('phone3', actObj.PersonOtherPhone);
+                gen.writeStringField('phone3_type', 'O');    
+            }else if(fldObj.nu_dse__Target_Field__c == 'birthdate2' && actObj.nu_dse__Co_Date_of_Birth__c != null){
+                gen.writeStringField('birthdate', actObj.nu_dse__Co_Date_of_Birth__c.format());    
+            }else{
+                gen.writeStringField(fldObj.nu_dse__Target_Field__c, (actObj.get(fldObj.nu_dse__Source_Field__c) != null ? string.valueOf(actObj.get(fldObj.nu_dse__Source_Field__c)) : ''));        
+            }                
+        }
             
         	/*
             gen.writeStringField('phone4', ''); 
@@ -222,7 +225,8 @@ public class BLPMicroServiceAPI {
             */
         gen.writeEndObject();
         String strResponse = gen.getAsString();        
-        System.debug('***Request Body**'+strResponse.replaceAll('\n', ''));
+        //System.debug('***Request Body**'+strResponse.replaceAll('\n', ''));
+        System.debug('***Request Body**'+strResponse);
         return strResponse;    
     }
     

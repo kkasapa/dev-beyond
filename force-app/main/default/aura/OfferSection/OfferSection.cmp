@@ -1,20 +1,26 @@
-<aura:component implements="flexipage:availableForAllPageTypes,force:lightningQuickAction,force:hasRecordId" access="global" controller = "ProposalController">
-    <aura:attribute name="sObjectList" type="nu_dse__Payment__c[]" />
+<aura:component implements="lightning:isUrlAddressable,flexipage:availableForAllPageTypes,force:lightningQuickAction,force:hasRecordId" access="global" controller = "ProposalController">
+    <aura:attribute name="sObjectList" type="nu_dse__Program__c" />
     
     <aura:attribute name="myObjects" type="nu_dse__Payment__c[]"/>
     
     <aura:attribute name="recordId" type="String" />
     
+    <aura:attribute name="pgmMap" type="String"/>
+    <aura:attribute name="ofMap" type="String"/>
+    <aura:attribute name="ofFields" type="nu_dse__Offer__c" default="{ 'sobjectType' : 'nu_dse__Offer__c' }"/>
+    <aura:attribute name="payment" type="nu_dse__Payment__c" default="{ 'sobjectType' : 'nu_dse__Payment__c' }"/>
+    
     <aura:attribute name="pgmId" type="Id"  />
-      <aura:attribute name="program" type="nu_dse__Program__c"/>
-
-
+    
+    <aura:attribute name="program" type="nu_dse__Program__c"/>
+    
+    
     <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
-	 <h2>{!v.recordId}</h2>
-     <h2>{!v.program.Name}</h2>
-    <div class="slds-select_container">
-         <ui:inputSelect  aura:id="Tradeline" class="slds-select"  />
-      </div>
+    <aura:attribute name="parameters" type="String"/>
+     {!v.pageReference.state.id}
+    https://beyondfinance--devbeyond.my.salesforce.com/{!v.recordId}
+    
+   
     
     <!--section header-->
     <div class="demo-only" style="padding:0.5rem;background:#16325c">
@@ -44,40 +50,71 @@
         <table>
             <tr>
                 <td>
-                   
+                    
                     <div class="slds-section__content" id="offerId">  
                         <div class="slds-m-around_small slds-grid slds-gutters">
                             <div class="slds-grid slds-grid_vertical">
                                 <div class="slds-col">
                                     <span>
-                                        <lightning:select name="selectObject" aura:id="selectObject" label="Tradeline" 
-                                                          onchange="{!c.doSelectChange}">
-                                            <aura:iteration items="{!v.sObjectList}" var="obj" >
-                                                <option value="{!obj.value}">{!obj.label}</option>
+                                        <lightning:select aura:id="Picklist"   name="TradeLine" label="TradeLine" >
+                                            <option value="">--None--</option>
+                                            <aura:iteration items="{!v.pgmMap}" var="pg" indexVar="key">
+                                                
+                                                <option text="{!pg.value}" />
                                             </aura:iteration>
                                         </lightning:select>
                                     </span>
                                 </div>
                                 <div class="slds-col">
                                     <span>
-                                        <div class="slds-card slds-has-bottom-magnet">                    
-                                            <div class="slds-p-around_medium">Offer Amount</div>
-                                        </div>
+                                        <lightning:select aura:id="Picklist"   name="Filter by Offers" label="Filter by Offers" >
+                                            <option value="">--None--</option>
+                                            <aura:iteration items="{!v.ofMap}" var="pg" indexVar="key">
+                                                
+                                                <option text="{!pg.value}" />
+                                            </aura:iteration>
+                                        </lightning:select>
                                     </span>
                                 </div>
                                 
                                 <div class="slds-col">
-                                    <span> 
-                                        <div class="slds-card slds-has-top-magnet">
-                                            <div class="slds-p-around_medium"># of Payments</div>
-                                        </div>
+                                    <span>Offer Amount
+                                        <force:inputField   value="{!v.ofFields.nu_dse__Offer_Amount__c}" />
+                                        
                                     </span>
                                 </div>
+                                <div class="slds-col">
+                                    <span># of Payments
+                                        <force:inputField   value="{!v.ofFields.nu_dse__Number_of_Payments__c}" />
+                                        
+                                    </span>
+                                </div>
+                                <div class="slds-col">
+                                    <span>First Payment Date	
+                                        <force:inputField  value="{!v.ofFields.nu_dse__First_Payment_Date__c}" />
+                                        
+                                    </span>
+                                </div>
+                                
+                                <div class="slds-col">
+                                    <span>Payment Re Occurring Day
+                                        <force:inputField  value="{!v.ofFields.nu_dse__Payment_Re_Occuring_Day__c}" />
+                                        
+                                        
+                                    </span>
+                                </div>
+                                <div class="slds-col">
+                                    <span>  Payment Method                                     
+                                        <force:inputField value="{!v.payment.nu_dse__Transaction_Method__c}" />                    
+                                    </span>
+                                </div>
+                                
+                                
                             </div>
                         </div> 
                     </div>
-                     <div class="slds-section__content" id="offerId">
-                        <lightning:button label="Simulate" onclick="{!c.getMyObjects}"/> 
+                    <div class="slds-section__content" id="offerId">
+                        <lightning:button label="Simulate" onclick="{!c.getPays}"/> 
                     </div>
                     
                 </td>
@@ -85,67 +122,67 @@
                 
                 <td>
                     
-                   
+                    
+                    <table>
+                        <tr>
+                            <td>
+                                Name
+                            </td>
+                            &nbsp;
+                            
+                            <td>            
+                                Amount
+                            </td>
+                            &nbsp;
+                            <td>            
+                                Scheduled Date
+                            </td>
+                            &nbsp;
+                            <td>            
+                                Type
+                            </td>
+                            &nbsp;
+                            <td>            
+                                Transaction Status
+                            </td>
+                            
+                        </tr>
+                        
+                    </table>    
+                    
+                    <aura:iteration items="{!v.myObjects}" var="obj">
                         <table>
                             <tr>
                                 <td>
-                                    Name
-                                </td>
-                                &nbsp;
+                                    {!obj.Name}
+                                </td>            
                                 
-                                <td>            
-                                    Amount
+                                &nbsp;        
+                                
+                                <td>
+                                    {!obj.nu_dse__Amount__c}
+                                </td>            
+                                
+                                &nbsp;        
+                                
+                                <td>{!obj.nu_dse__Schedule_Date__c}
                                 </td>
-                                &nbsp;
-                                <td>            
-                                    Scheduled Date
+                                
+                                
+                                &nbsp; 
+                                
+                                <td>{!obj.nu_dse__Type__c}
                                 </td>
-                                &nbsp;
-                                <td>            
-                                    Type
-                                </td>
-                                &nbsp;
-                                <td>            
-                                    Transaction Status
-                                </td>
+                                
+                                &nbsp; 
+                                
+                                <td>{!obj.nu_dse__Transaction_Status__c}
+                                </td>  
                                 
                             </tr>
-                            
-                        </table>    
-                        
-                        <aura:iteration items="{!v.myObjects}" var="obj">
-                            <table>
-                                <tr>
-                                    <td>
-                                        {!obj.Name}
-                                    </td>            
-                                    
-                                    &nbsp;        
-                                    
-                                    <td>
-                                        {!obj.nu_dse__Amount__c}
-                                    </td>            
-                                    
-                                    &nbsp;        
-                                    
-                                    <td>{!obj.nu_dse__Schedule_Date__c}
-                                    </td>
-                                    
-                                    
-                                    &nbsp; 
-                                    
-                                    <td>{!obj.nu_dse__Type__c}
-                                    </td>
-                                    
-                                    &nbsp; 
-                                    
-                                    <td>{!obj.nu_dse__Transaction_Status__c}
-                                    </td>  
-                                    
-                                </tr>
-                            </table>  
-                        </aura:iteration>
-                   
+                        </table>  
+                    </aura:iteration>
+                    
                     
                 </td>
             </tr>
