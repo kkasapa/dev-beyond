@@ -50,97 +50,9 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
         } 
     }
 
-    public void getMappings(){
-        // Query the data mapping to create dataMappingAndFieldMappingMap
-        
-        String query = 'SELECT nu_dse__Data_Mapping__r.External_Id__c, ' + Utility.getQueryFields('nu_dse__Field_mapping__c') +  ' FROM nu_dse__Field_mapping__c ' +
-                            ' WHERE nu_dse__Data_Mapping__r.External_Id__c IN :dataMappingNameSet';
-        
-        for (nu_dse__Field_mapping__c fieldMapping : Database.query(query)) {
-
-            if (dataMappingAndFieldMappingMap.containsKey(fieldMapping.nu_dse__Data_Mapping__r.External_Id__c) == False) {
-
-                dataMappingAndFieldMappingMap.put(fieldMapping.nu_dse__Data_Mapping__r.External_Id__c, new List<nu_dse__Field_mapping__c>());   
-            }
-            dataMappingAndFieldMappingMap.get(fieldMapping.nu_dse__Data_Mapping__r.External_Id__c).add(fieldMapping);
-            
-            if (String.isNotBlank(fieldMapping.nu_dse__Source_Field__c)) {
-
-                paymentFieldsToQuerySet.add(fieldMapping.nu_dse__Source_Field__c);
-            }
-        }
-    }
-
-    public List<Deposit_Reminder_Configuration__mdt> getDepositRemidersCMD() {
-
-        List<Deposit_Reminder_Configuration__mdt> depositReminderConfigList = new List<Deposit_Reminder_Configuration__mdt>();
-
-        if (Test.isRunningTest() == true) {
-            depositReminderConfigList = new List<Deposit_Reminder_Configuration__mdt>{ 
-                                                                        new Deposit_Reminder_Configuration__mdt(
-                                                                            MasterLabel = 'Deposit Reminder One', 
-                                                                            DeveloperName = 'Deposit_Reminder_One', 
-                                                                            Padding_Days__c = 2, 
-                                                                            Sequence_number__c = 1)};
-
-        } else {
-            depositReminderConfigList = [SELECT Sequence_number__c, Padding_Days__c 
-                                                                        FROM Deposit_Reminder_Configuration__mdt
-                                                                        WHERE Padding_Days__c > 0
-                                                                        ORDER BY Padding_Days__c ASC];
-
-        }
-        return depositReminderConfigList;
-    }
-
-    public Program_Status_Configuration__mdt getProgramConfigurationsCMD() {
-
-        Program_Status_Configuration__mdt progStatusConfig = new Program_Status_Configuration__mdt();
-
-        if (Test.isRunningTest() == true) {
-            progStatusConfig = new Program_Status_Configuration__mdt(
-                                        MasterLabel = 'Deposit Reminder Exclusion', 
-                                        DeveloperName = 'Deposit_Reminders_Exclusion', 
-                                        Excluded_Statuses__c = 'Terminated, Graduated');
-
-        } else {
-            progStatusConfig = [SELECT Label, DeveloperName, Excluded_Statuses__c 
-                                        FROM Program_Status_Configuration__mdt 
-                                        WHERE DeveloperName = 'Deposit_Reminders_Exclusion' LIMIT 1];
-
-        }
-        return progStatusConfig;
-    }
-
-    public void getPaddingDayConfigurations() {
-
-        maxPaddingDay = 0;
-        List<Deposit_Reminder_Configuration__mdt> depositReminderConfigList = getDepositRemidersCMD();
-
-        for(Deposit_Reminder_Configuration__mdt depositReminderConfig : depositReminderConfigList) {
-            paddingDaysMap.put(Integer.valueOf(depositReminderConfig.Sequence_number__c), Integer.valueOf(depositReminderConfig.Padding_Days__c));
-            maxPaddingDay = Integer.valueOf(depositReminderConfig.Padding_Days__c);
-        }
-        
-        draftRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Draft').getRecordTypeId();
-        // query Program_Status_Configuration meta data for get excluded program Statuses
-        Program_Status_Configuration__mdt programStatusConfig = getProgramConfigurationsCMD();
-
-        if(programStatusConfig != null
-            && String.isNotBlank(programStatusConfig.Excluded_Statuses__c)) {
-            programStatusExclusionSet = new Set<String>(programStatusConfig.Excluded_Statuses__c.split(',', 0));
-        }
-
-        // Assign padding days between payment scheduled date and task activity date
-        if(paddingDaysMap.isEmpty() == true) {
-            throw new applicationException('Deposit Reminder Configuration metadata record does not have enough information');
-        }
-    }
     // Query the payments based on the condition and return to the excute method
     public Database.QueryLocator start(Database.BatchableContext BC) {
 
-        //need some index field filter
-        //filter on Sch
         String queryStr = 'SELECT Id FROM nu_dse__Payment__c '+
                            'WHERE RecordTypeId = :draftRecordTypeId AND ((Create_Payment_Reminder_Tasks__c = True '+
                            'AND Program_Status__c != :programStatusExclusionSet) OR nu_dse__Transaction_Status__c = \'Cancelled\')';
@@ -333,6 +245,93 @@ public with sharing class Batch_ProcessesInPayment implements Database.Batchable
     public void finish(Database.BatchableContext BC) {
 
     }
+    // Query the data mapping to create dataMappingAndFieldMappingMap
+    public void getMappings(){
+        
+        String query = 'SELECT nu_dse__Data_Mapping__r.External_Id__c, ' + Utility.getQueryFields('nu_dse__Field_mapping__c') +  ' FROM nu_dse__Field_mapping__c ' +
+                            ' WHERE nu_dse__Data_Mapping__r.External_Id__c IN :dataMappingNameSet';
+        
+        for (nu_dse__Field_mapping__c fieldMapping : Database.query(query)) {
+
+            if (dataMappingAndFieldMappingMap.containsKey(fieldMapping.nu_dse__Data_Mapping__r.External_Id__c) == False) {
+
+                dataMappingAndFieldMappingMap.put(fieldMapping.nu_dse__Data_Mapping__r.External_Id__c, new List<nu_dse__Field_mapping__c>());   
+            }
+            dataMappingAndFieldMappingMap.get(fieldMapping.nu_dse__Data_Mapping__r.External_Id__c).add(fieldMapping);
+            
+            if (String.isNotBlank(fieldMapping.nu_dse__Source_Field__c)) {
+
+                paymentFieldsToQuerySet.add(fieldMapping.nu_dse__Source_Field__c);
+            }
+        }
+    }
+    // Query the Deposit_Reminder_Configuration meta data 
+    public List<Deposit_Reminder_Configuration__mdt> getDepositRemidersCMD() {
+
+        List<Deposit_Reminder_Configuration__mdt> depositReminderConfigList = new List<Deposit_Reminder_Configuration__mdt>();
+
+        if (Test.isRunningTest() == true) {
+            depositReminderConfigList = new List<Deposit_Reminder_Configuration__mdt>{ 
+                                                                        new Deposit_Reminder_Configuration__mdt(
+                                                                            MasterLabel = 'Deposit Reminder One', 
+                                                                            DeveloperName = 'Deposit_Reminder_One', 
+                                                                            Padding_Days__c = 2, 
+                                                                            Sequence_number__c = 1)};
+
+        } else {
+            depositReminderConfigList = [SELECT Sequence_number__c, Padding_Days__c 
+                                                                        FROM Deposit_Reminder_Configuration__mdt
+                                                                        WHERE Padding_Days__c > 0
+                                                                        ORDER BY Padding_Days__c ASC];
+
+        }
+        return depositReminderConfigList;
+    }
+    // Query the Program_Status_Configuration meta data 
+    public Program_Status_Configuration__mdt getProgramConfigurationsCMD() {
+
+        Program_Status_Configuration__mdt progStatusConfig = new Program_Status_Configuration__mdt();
+
+        if (Test.isRunningTest() == true) {
+            progStatusConfig = new Program_Status_Configuration__mdt(
+                                        MasterLabel = 'Deposit Reminder Exclusion', 
+                                        DeveloperName = 'Deposit_Reminders_Exclusion', 
+                                        Excluded_Statuses__c = 'Terminated, Graduated');
+
+        } else {
+            progStatusConfig = [SELECT Label, DeveloperName, Excluded_Statuses__c 
+                                        FROM Program_Status_Configuration__mdt 
+                                        WHERE DeveloperName = 'Deposit_Reminders_Exclusion' LIMIT 1];
+
+        }
+        return progStatusConfig;
+    }
+    // Method to configure padding days for the reminder tasks
+    public void getPaddingDayConfigurations() {
+
+        maxPaddingDay = 0;
+        List<Deposit_Reminder_Configuration__mdt> depositReminderConfigList = getDepositRemidersCMD();
+
+        for(Deposit_Reminder_Configuration__mdt depositReminderConfig : depositReminderConfigList) {
+            paddingDaysMap.put(Integer.valueOf(depositReminderConfig.Sequence_number__c), Integer.valueOf(depositReminderConfig.Padding_Days__c));
+            maxPaddingDay = Integer.valueOf(depositReminderConfig.Padding_Days__c);
+        }
+        
+        draftRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Draft').getRecordTypeId();
+        // query Program_Status_Configuration meta data for get excluded program Statuses
+        Program_Status_Configuration__mdt programStatusConfig = getProgramConfigurationsCMD();
+
+        if(programStatusConfig != null
+            && String.isNotBlank(programStatusConfig.Excluded_Statuses__c)) {
+            programStatusExclusionSet = new Set<String>(programStatusConfig.Excluded_Statuses__c.split(',', 0));
+        }
+
+        // Assign padding days between payment scheduled date and task activity date
+        if(paddingDaysMap.isEmpty() == true) {
+            throw new applicationException('Deposit Reminder Configuration metadata record does not have enough information');
+        }
+    }
+
     // Method to create task based on field mapping records
     public Task populateValuesInInstance(Task taskRec, nu_dse__Payment__c paymentRec, List<nu_dse__Field_mapping__c> fieldMappingRecords, Integer paddingDays) {
 
