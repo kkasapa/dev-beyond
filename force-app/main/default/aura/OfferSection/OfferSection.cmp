@@ -17,10 +17,10 @@
     
     <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
     <aura:attribute name="parameters" type="String"/>
-     {!v.pageReference.state.id}
+    {!v.pageReference.state.id}
     https://beyondfinance--devbeyond.my.salesforce.com/{!v.recordId}
     
-   
+    
     
     <!--section header-->
     <div class="demo-only" style="padding:0.5rem;background:#16325c">
@@ -46,7 +46,7 @@
         </h3>
         <!-- Section -->
         
-        <!--Section body-->
+        <!--Offer Section Fields-->
         <table>
             <tr>
                 <td>
@@ -54,18 +54,21 @@
                     <div class="slds-section__content" id="offerId">  
                         <div class="slds-m-around_small slds-grid slds-gutters">
                             <div class="slds-grid slds-grid_vertical">
-                                <div class="slds-col">
-                                    <span>
-                                        <lightning:select aura:id="Picklist"   name="TradeLine" label="TradeLine" >
+                               
+                                     
+                                        <lightning:select aura:id="Picklist"   name="TradeLine" label="TradeLine">
+                                           
+                                           <span> 
                                             <option value="">--None--</option>
                                             <aura:iteration items="{!v.pgmMap}" var="pg" indexVar="key">
                                                 
                                                 <option text="{!pg.value}" />
                                             </aura:iteration>
+                                                 </span>
                                         </lightning:select>
-                                    </span>
-                                </div>
-                                <div class="slds-col">
+                                   
+                               
+                                
                                     <span>
                                         <lightning:select aura:id="Picklist"   name="Filter by Offers" label="Filter by Offers" >
                                             <option value="">--None--</option>
@@ -75,35 +78,35 @@
                                             </aura:iteration>
                                         </lightning:select>
                                     </span>
-                                </div>
-                                
+                                                               
                                 <div class="slds-col">
                                     <span>Offer Amount
                                         <force:inputField   value="{!v.ofFields.nu_dse__Offer_Amount__c}" />
                                         
                                     </span>
-                                </div>
-                                <div class="slds-col">
+                               <br></br>
+                               
                                     <span># of Payments
                                         <force:inputField   value="{!v.ofFields.nu_dse__Number_of_Payments__c}" />
                                         
                                     </span>
-                                </div>
-                                <div class="slds-col">
-                                    <span>First Payment Date	
-                                        <force:inputField  value="{!v.ofFields.nu_dse__First_Payment_Date__c}" />
+                              
+                               <br></br>
+                                    
+                                    <span>First Payment Date
+                                        <force:inputField   value="{!v.ofFields.nu_dse__First_Payment_Date__c}" />
                                         
                                     </span>
-                                </div>
-                                
-                                <div class="slds-col">
+                              
+                               <br></br>
+                                    
+                                   
                                     <span>Payment Re Occurring Day
                                         <force:inputField  value="{!v.ofFields.nu_dse__Payment_Re_Occuring_Day__c}" />
                                         
                                         
                                     </span>
-                                </div>
-                                <div class="slds-col">
+                               <br></br>
                                     <span>  Payment Method                                     
                                         <force:inputField value="{!v.payment.nu_dse__Transaction_Method__c}" />                    
                                     </span>
@@ -190,6 +193,11 @@
         <!--section body--> 
     </div>    
     
+   
+    
+    
+   
+   
     <!-- <c:SimulateButton/> -->
     
 </aura:component>

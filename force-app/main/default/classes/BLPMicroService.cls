@@ -8,7 +8,7 @@
 * @version        1.0
 * @created        2019-10-27
 * @modified       2019-10-27
-*       <Resly Added filter in addDocument and addClientCreditor
+*       <Resly> Added filter in addDocument and addClientCreditor
 * @Layer          REST API 
 * @To Execute from DEV Console
 *     string strPgmId = 'a0L22000000Vkb1';
@@ -19,14 +19,23 @@
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 *   
 */
-public class BLPMicroServiceAPI {
+public class BLPMicroService {
     
-    public static void addClientAPI(string strPgmId){
+    public string strEndpointURL;
+    public string strAddClient;
+    public string strusername;
+    public string strpassword;
+    
+    public BLPMicroService(){ 
+        BLPMicroService__c apiObj = BLPMicroService__c.getValues('BLPMicroServiceAPI'); 
+        strEndpointURL = apiObj.End_Point_URL__c;
+        strAddClient = apiObj.Add_Client_URL__c;
+        strusername = apiObj.UserName__c;
+        strpassword = apiObj.Password__c;
+    }
+    
+    public void addClient(string strPgmId){
         nu_dse__Program__c pgmObj = [SELECT Id,Name,BLP_Client_Id__c,nu_dse__Account__c,BLP_Member_Type__c FROM nu_dse__Program__c WHERE Id =:strPgmId];
-        BLPMicroService__c apiObj = getAPICreds();
-            
-        string strEndpointURL 	= apiObj.End_Point_URL__c;
-        string strAddClient 	= apiObj.Add_Client_URL__c;
         string strFullEPforAddClient = strEndpointURL+strAddClient;
         string strBody = getAddClientRequest(pgmObj);
 
@@ -44,12 +53,9 @@ public class BLPMicroServiceAPI {
         }        
     }
     
-    public static void addClientCreditorAPI(string strPgmId){        
+    public void addClientCreditor(string strPgmId){        
         nu_dse__Program__c pgmObj = [SELECT Id,Name,BLP_Client_Id__c FROM nu_dse__Program__c WHERE Id =:strPgmId];
-    	BLPMicroService__c apiObj = getAPICreds();    
-        string strEndpointURL 	= apiObj.End_Point_URL__c;
-        string strAddClient 	= apiObj.Add_Client_URL__c;
-        string strClientId 		= pgmObj.BLP_Client_Id__c;
+        string strClientId = pgmObj.BLP_Client_Id__c;
         string AddClientCreditor = strEndpointURL+strAddClient+'/'+strClientId+'/creditor';
         string strBody = getAddClientCreditorRequest(pgmObj.Id);
         
@@ -63,11 +69,8 @@ public class BLPMicroServiceAPI {
         }       
     }
     
-    public static void addDocument(string strPgmId){ 
+    public void addClientDocument(string strPgmId){ 
         nu_dse__Program__c pgmObj = [SELECT Id,Name,BLP_Client_Id__c FROM nu_dse__Program__c WHERE Id =:strPgmId];
-        BLPMicroService__c apiObj = getAPICreds();    
-        string strEndpointURL 	= apiObj.End_Point_URL__c;
-        string strAddClient 	= apiObj.Add_Client_URL__c;
         string strClientId 		= pgmObj.BLP_Client_Id__c;
         string AddDocument = strEndpointURL+strAddClient+'/'+strClientId+'/document';        
         string strBody = getAddDocumentRequest(pgmObj.Id);
@@ -83,40 +86,7 @@ public class BLPMicroServiceAPI {
         
     }
     
-    public static HttpRequest prepareHttpCallOut(string strURL, string strBody, string strMethod){
-    	BLPMicroService__c apiObj = getAPICreds();
-        string strFullEpURL = strURL;
-        string strusername = apiObj.UserName__c;
-        string strpassword = apiObj.Password__c;        
-        string unamepwd = strusername+':'+strpassword;
-        Blob beforeblob = Blob.valueOf(unamepwd);
-        string authentication = EncodingUtil.base64Encode(beforeblob);
-        
-        HttpRequest request = new HttpRequest();        
-            request.setEndpoint(strURL);
-            request.setMethod(strMethod);
-            request.setHeader('Authorization', 'Basic '+authentication);
-            //request.setHeader('Content-Type', 'application/json');
-            request.setHeader('Content-Type', 'text/plain');
-            request.setBody(strBody);        
-        return request;
-    }
-    
-    public static map<string,list<nu_dse__Field_mapping__c>> getFieldMapping(string strDataMapping){
-    	map<string,list<nu_dse__Field_mapping__c>> mapOfObjWithFilds = new map<string,list<nu_dse__Field_mapping__c>>(); 
-        for(nu_dse__Field_mapping__c fldObj : [SELECT Id, nu_dse__Target_Field__c,nu_dse__Data_Mapping__r.nu_dse__Source_sObject__c, nu_dse__Source_Field__c FROM nu_dse__Field_mapping__c WHERE nu_dse__Data_Mapping__r.Name =:strDataMapping and nu_dse__Data_Mapping__r.nu_dse__Source_sObject__c != null]){
-        	list<nu_dse__Field_mapping__c> lstOfFlds;
-            if(mapOfObjWithFilds.containsKey(fldObj.nu_dse__Data_Mapping__r.nu_dse__Source_sObject__c))
-                lstOfFlds =  mapOfObjWithFilds.get(fldObj.nu_dse__Data_Mapping__r.nu_dse__Source_sObject__c); 
-            else
-                lstOfFlds = new list<nu_dse__Field_mapping__c>(); 
-            lstOfFlds.add(fldObj);
-            mapOfObjWithFilds.put(fldObj.nu_dse__Data_Mapping__r.nu_dse__Source_sObject__c,lstOfFlds);    
-        }
-        return mapOfObjWithFilds;
-    }
-    
-    public static string getAddDocumentRequest(string strPgmId){
+    public string getAddDocumentRequest(string strPgmId){
         map<string,list<nu_dse__Field_mapping__c>> mapOfObjWithFilds = getFieldMapping('BLPAddDocument');
         list<nu_dse__Field_mapping__c> lstOfTLFlds = mapOfObjWithFilds.get('Attachment');
         string strattQry = 'SELECT ';
@@ -149,7 +119,7 @@ public class BLPMicroServiceAPI {
         return strResponse;    
     }
     
-    public static string getAddClientCreditorRequest(string strPgmId){
+    public string getAddClientCreditorRequest(string strPgmId){
         map<string,list<nu_dse__Field_mapping__c>> mapOfObjWithFilds = getFieldMapping('BLPAddClientCreditor');
         list<nu_dse__Field_mapping__c> lstOfTLFlds = mapOfObjWithFilds.get('nu_dse__TradeLine__c');
         string strTLQry = 'SELECT ';
@@ -175,7 +145,8 @@ public class BLPMicroServiceAPI {
         System.debug('***Request Body**'+strResponse.replaceAll('\n', ''));
         return strResponse;    
     }
-    public static string getAddClientRequest(nu_dse__Program__c pgmObj){ 
+    
+    public string getAddClientRequest(nu_dse__Program__c pgmObj){ 
         string actId = pgmObj.nu_dse__Account__c;
         map<string,list<nu_dse__Field_mapping__c>> mapOfObjWithFilds = getFieldMapping('BLPAddClient');
         list<nu_dse__Field_mapping__c> lstOfActFlds = mapOfObjWithFilds.get('Account');
@@ -190,9 +161,9 @@ public class BLPMicroServiceAPI {
         
         JSONGenerator gen = JSON.createGenerator(true);
         gen.writeStartObject();
-        gen.writeNumberField('clientid',15105105);
+//        gen.writeNumberField('clientid',15105105);
 //        gen.writeNumberField('clientid', Integer.valueOf(pgmObj.Name.split('-')[1]));       //API is expecting an integer, if string is passed it will not create new client, but update generic client.
-        //gen.writeStringField('clientid', pgmObj.Name.split('-')[1]);            			//API is expecting an integer, if string is passed it will not create new client, but update generic client.
+        gen.writeStringField('clientid', pgmObj.Name.split('-')[1]);            			//API is expecting an integer, if string is passed it will not create new client, but update generic client.
         gen.writeStringField('blp_client_type', pgmObj.BLP_Member_Type__c); 
         for(nu_dse__Field_mapping__c fldObj : lstOfActFlds){
             if(fldObj.nu_dse__Target_Field__c == 'birthdate' && actObj.PersonBirthdate != null){
@@ -216,8 +187,7 @@ public class BLPMicroServiceAPI {
             }else{
                 gen.writeStringField(fldObj.nu_dse__Target_Field__c, (actObj.get(fldObj.nu_dse__Source_Field__c) != null ? string.valueOf(actObj.get(fldObj.nu_dse__Source_Field__c)) : ''));        
             }                
-        }
-            
+        }            
         	/*
             gen.writeStringField('phone4', ''); 
             gen.writeStringField('phone4_type', 'W');
@@ -239,9 +209,34 @@ public class BLPMicroServiceAPI {
         //System.debug('***Request Body**'+strResponse);
         return strResponse;    
     }
-    
-    public static BLPMicroService__c getAPICreds(){
-    	BLPMicroService__c apiObj = BLPMicroService__c.getValues('BLPMicroServiceAPI'); 
-        return apiObj;
+
+    public map<string,list<nu_dse__Field_mapping__c>> getFieldMapping(string strDataMapping){
+    	map<string,list<nu_dse__Field_mapping__c>> mapOfObjWithFields = new map<string,list<nu_dse__Field_mapping__c>>(); 
+        for(nu_dse__Field_mapping__c fldObj : [SELECT Id, nu_dse__Target_Field__c,nu_dse__Data_Mapping__r.nu_dse__Source_sObject__c, nu_dse__Source_Field__c FROM nu_dse__Field_mapping__c WHERE nu_dse__Data_Mapping__r.Name =:strDataMapping and nu_dse__Data_Mapping__r.nu_dse__Source_sObject__c != null]){
+        	list<nu_dse__Field_mapping__c> lstOfFlds;
+            if(mapOfObjWithFields.containsKey(fldObj.nu_dse__Data_Mapping__r.nu_dse__Source_sObject__c))
+                lstOfFlds =  mapOfObjWithFields.get(fldObj.nu_dse__Data_Mapping__r.nu_dse__Source_sObject__c); 
+            else
+                lstOfFlds = new list<nu_dse__Field_mapping__c>(); 
+            lstOfFlds.add(fldObj);
+            mapOfObjWithFields.put(fldObj.nu_dse__Data_Mapping__r.nu_dse__Source_sObject__c,lstOfFlds);    
+        }
+        return mapOfObjWithFields;
     }
+    
+    public HttpRequest prepareHttpCallOut(string strURL, string strBody, string strMethod){    
+        string unamepwd = strusername+':'+strpassword;
+        Blob beforeblob = Blob.valueOf(unamepwd);
+        String authentication = EncodingUtil.base64Encode(beforeblob);
+        
+        HttpRequest request = new HttpRequest();        
+            request.setEndpoint(strURL);
+            request.setMethod(strMethod);
+            request.setHeader('Authorization', 'Basic '+authentication);
+            //request.setHeader('Content-Type', 'application/json');
+            request.setHeader('Content-Type', 'text/plain');
+            request.setBody(strBody);        
+        return request;
+    }
+    
 }
