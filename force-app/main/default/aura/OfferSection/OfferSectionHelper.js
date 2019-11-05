@@ -1,27 +1,29 @@
 ({
     
-    getPicklist: function(component, event) {
+    getPicklist: function(component, event, helper) {
         var action = component.get("c.getPgm");
         action.setParams({
-            pgmId : component.get("v.recordId")
+            pgmId : component.get("v.parameters")
         });
         action.setCallback(this, function(response) {
             var state = response.getState();
             if (state === "SUCCESS") {
                 var result = response.getReturnValue();
+                /*
                 var pgmMap = [];
                 for(var key in result){
                     pgmMap.push({key: key, value: result[key]});
                 }
-                component.set("v.pgmMap", pgmMap);
+                */
+                component.set("v.pgmMap", result);
             }
         });
         $A.enqueueAction(action);
     },
-    getOfferPicklist: function(component, event) {
+    getOfferPicklist: function(component, event, helper) {
         var action = component.get("c.getOffers");
         action.setParams({
-            pgmId : component.get("v.recordId")
+            pgmId : component.get("v.parameters")
         });
         action.setCallback(this, function(response) {
             var state = response.getState();
@@ -36,27 +38,46 @@
         });
         $A.enqueueAction(action);
     },
-   
-     getPayments: function(component, event) {
-         
-         
+    
+    getPaymentMethod: function(component, event, helper) {
+        
+        var action = component.get("c.getPickListValuesIntoList");
+        console.log('action igetPaymentMethod' + action);
+        
+        action.setParams({
+            objectType: component.get("v.sObjectName"),
+            selectedField: component.get("v.fieldName")
+        });
+        action.setCallback(this, function(response) {
+            var list = response.getReturnValue();
+            component.set("v.picklistValues", list);
+        })
+        $A.enqueueAction(action);
+    },
+    
+    getPayments: function(component, event, helper) {          
+        
         var action = component.get("c.getObjects");
-         action.setParams({
+        action.setParams({
             pgmId : component.get("v.parameters")
         });
         action.setCallback(this, function(response){
             var state = response.getState();
             if (state === "SUCCESS") {
                 component.set("v.myObjects", response.getReturnValue());
+                component.set("v.boolean", true);
             }
         });
         $A.enqueueAction(action);
-    },
+    }
+    /*
+    ,
+    
     loadProgram : function(component) {
         var action = component.get("c.getPgm");
         console.log('action is-->>' + action);
         action.setParams({
-            pgmId : component.get("v.recordId")
+            pgmId : component.get("v.parameters")
         });
         console.log('action is-->>' + action);
         console.log("action is json " + JSON.stringify(action));
@@ -109,6 +130,8 @@
         getFieldSet.setStorable();
         $A.enqueueAction(getFieldSet);
     }
+    
+   */
     
     
 })
