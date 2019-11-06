@@ -24,6 +24,8 @@ public class OfferHandler extends TriggerHandler {
         this.offerIds = trigger.newMap.keySet();
     }
 
+    Set<Id> cancelledOfferIds = new Set<Id>();
+
     public override void afterInsert()
     {
         //Run the savings calculator after offer create
@@ -48,14 +50,28 @@ public class OfferHandler extends TriggerHandler {
             {
                 OfferstoUpdate.add(newOffer.ID);  
             }
-           
+            // To collect the Cancelled offers Ids to delete the related payments 
+            collectCancelledOffers(newOffer, oldOfferMap.get(newOffer.Id));
         }
         // Updated by Vignesh on 31-10-2019 to fix Future method cannot be called from a future or batch method
         if(OfferstoUpdate.isEmpty() == false) {
             savingsCalc(OfferstoUpdate);
         }
+        // Delete Cancelled Offer related Payments
+        if(cancelledOfferIds.isEmpty() == false) {
+            List<nu_dse__Payment__c> paymentToDeleteList = [SELECT Id FROM nu_dse__Payment__c WHERE nu_dse__Offer__c IN :cancelledOfferIds];
+            delete paymentToDeleteList;
+        }
     }
-    
+    // Method to collect the Cancelled offers Ids to delete the related payments 
+    public void collectCancelledOffers(nu_dse__Offer__c newOffer, nu_dse__Offer__c oldOffer) {
+
+        if(newOffer.nu_dse__Status__c == '01-Offer Canceled by Negotiator'
+            && newOffer.nu_dse__Status__c != oldOffer.nu_dse__Status__c) {
+            cancelledOfferIds.add(newOffer.Id);
+        }
+    }
+
  	@future(callout=true)
     public static void savingsCalc(Set<ID> recordIds)
     {   

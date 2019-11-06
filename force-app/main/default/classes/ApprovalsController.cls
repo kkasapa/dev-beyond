@@ -313,8 +313,14 @@ public with sharing class ApprovalsController {
                 }
 
             }
+            String queryStr = '';
             // Added query to get target object records created date[SF-62]
-            String queryStr = 'SELECT Id, CreatedDate FROM '+ selectedValue + ' WHERE Id IN :targetObjectIdSet';
+            if(selectedValue != 'nu_dse__Offer__c') {
+                queryStr = 'SELECT Id, CreatedDate FROM '+ selectedValue + ' WHERE Id IN :targetObjectIdSet';
+            } else  {
+                queryStr = 'SELECT Id, CreatedDate, nu_dse__First_Payment_Date__c FROM '+ selectedValue + ' WHERE Id IN :targetObjectIdSet';
+            }
+
             Map<Id, SObject> selectedObjectMap = new Map<Id, SObject>(Database.query(queryStr));
             // Assign page showing approval record target object createdDate[SF-62]
             for(String approvalId : processInstApprovalsMap.keySet()) {
@@ -324,6 +330,12 @@ public with sharing class ApprovalsController {
                     
                     DateTime createdDate  = DateTime.valueOf((selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('CreatedDate')));
                     processInstApprovalsMap.get(approvalId).approval.CreatedDate = createdDate.format('MM-dd-YYYY');
+
+                    if(selectedValue == 'nu_dse__Offer__c' 
+                        && selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('nu_dse__First_Payment_Date__c') != null) {
+                        Date fistPaymentDate = Date.valueOf(selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('nu_dse__First_Payment_Date__c'));
+                        processInstApprovalsMap.get(approvalId).approval.fistPaymentDate = fistPaymentDate.format();
+                    }
                 }
             }
         }
@@ -401,6 +413,7 @@ public with sharing class ApprovalsController {
         public String targetObjectName {get; set;}
         // Changed CompletedDate variable as TargetObject createdDate[SF-62]
         public String createdDate {get; set;}
+        public String fistPaymentDate {get; set;}
         public Id workItemId {get; set;}
         public Id instanceId {get; set;}
         public String approvalType { get; set;}
