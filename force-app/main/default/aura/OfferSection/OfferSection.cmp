@@ -1,24 +1,27 @@
 <aura:component implements="lightning:isUrlAddressable,flexipage:availableForAllPageTypes,force:lightningQuickAction,force:hasRecordId" access="global" controller = "ProposalController">
     
-    
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />  
     <aura:attribute name="payment" type="nu_dse__Payment__c" default="{ 'sobjectType' : 'nu_dse__Payment__c' }"/>
     <aura:attribute name="fieldName" type="String" default= "nu_dse__Transaction_Method__c" access="global" />
     <aura:attribute name="ofFields" type="nu_dse__Offer__c" default="{ 'sobjectType' : 'nu_dse__Offer__c' }"/>
     <aura:attribute name="sObjectName" type="String" default= "nu_dse__Payment__c" access="global"/>
-    <aura:attribute name="boolean" type="boolean" default="false"/>
     <aura:attribute name="sObjectList" type="nu_dse__Program__c" />    
-    <aura:attribute name="myObjects" type="nu_dse__Payment__c[]"/> 
+    <aura:attribute name="myObjects" type="object"/> 
     <aura:attribute name="program" type="nu_dse__Program__c"/>
-    <aura:attribute name="picklistValues" type="String"/>
     
+    <aura:attribute name="boolean" type="boolean" default="false"/>   
+    
+    <aura:attribute name="pgmId" type="String"/>
     <aura:attribute name="parameters" type="String"/>
-    <aura:attribute name="recordId" type="String" />
-    <aura:attribute name="pgmMap" type="String"/>
-    <aura:attribute name="ofMap" type="String"/>    
-    <aura:attribute name="pgmId" type="Id"  />
+    <aura:attribute name="recordId" type="String"/>
+    <aura:attribute name="tradelinesList" type="String"/>
+    <aura:attribute name="ofMap" type="String"/>   
+    <aura:attribute name="picklistValues" access="public" type="String[]"/> 
+    <aura:attribute name="Creditor" type="String"/>
     
     
-    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />  
+    
+    
     
     <!--section header-->
     <div class="demo-only" style="padding:0.5rem;background:#16325c">
@@ -48,8 +51,8 @@
         <table >
             <tr>
                 
-                <td>
-                    <table>
+                <td >
+                    <table >
                         <tr>
                             <td>
                                 
@@ -59,14 +62,13 @@
                                             
                                             <div class="slds-col">  
                                                 <span>
-                                                    <lightning:select aura:id="Picklist"   name="TradeLine" label="TradeLine">
-                                                        
+                                                    <lightning:select aura:id="Trades"   name="TradeLine" label="TradeLines" >
                                                         <option value="">--None--</option>
-                                                        <aura:iteration items="{!v.pgmMap}" var="trad" indexVar="key">                                                
-                                                            <option text="{!trad.value}" />
+                                                        <aura:iteration items="{!v.tradelinesList}" var="tr" indexVar="key">
+                                                            
+                                                            <option text="{!tr.value}" />
                                                         </aura:iteration>
-                                                        
-                                                    </lightning:select> 
+                                                    </lightning:select>
                                                 </span>
                                             </div>
                                             
@@ -96,30 +98,29 @@
                                             
                                             <div class="slds-col">
                                                 <span>
-                                                    <lightning:input label="First Payment Date"  value="{!v.ofFields.nu_dse__First_Payment_Date__c}" />                                        
+                                                    <lightning:input type ="Date" label="First Payment Date"  value="{!v.ofFields.nu_dse__First_Payment_Date__c}" />                                        
                                                 </span>
                                             </div>
                                             
                                             <div class="slds-col">
                                                 <span>
-                                                    <lightning:input label="Payment Re Occurring Day"  value="{!v.ofFields.nu_dse__Payment_Re_Occuring_Day__c}" />
+                                                    <lightning:input type ="Date" label="Payment Re Occurring Day"  value="{!v.ofFields.nu_dse__Payment_Re_Occuring_Day__c}" />
                                                 </span>
                                             </div>
                                             
-                                            
-                                            
                                             <div class="slds-col"> 
-                                                <span>  
-                                                    <lightning:select aura:id="Picklist"   name=" Payment Method" label=" Payment Method">
+                                                <span>   
+                                                    <lightning:select aura:id="pMethod"   name=" Payment Method" label=" Payment Method">
                                                         
                                                         <option value="">--None--</option>
-                                                        <aura:iteration items="{!v.picklistValues}" var="item" >                                                            
-                                                            <option value="{!item.value}"> </option>
+                                                        <aura:iteration items="{!v.picklistValues}" var="item" >
+                                                            <option value="{!item}" selected="{!item==v.picklistValues}">{!item}</option>                                                       
                                                         </aura:iteration>
                                                         
-                                                    </lightning:select>  
+                                                    </lightning:select>   
                                                 </span>
                                             </div>  
+                                            
                                             
                                             <div class="slds-col"> 
                                                 <div class="slds-section__content" id="offerId">  
@@ -130,7 +131,7 @@
                                             </div>
                                             
                                         </div>
-                                    </div> 
+                                    </div>
                                 </div>
                                 
                                 
@@ -142,70 +143,75 @@
                 
                 <td>
                     <aura:if isTrue="{!v.boolean}">
-                        <div class="slds-section__content" id="offerId">
+                        <div class="slds-section__content" id="offerId" >
                             <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-border_left slds-border_right"  >
+                                
                                 <thead>
                                     <tr class="slds-text-title_caps">
                                         <th scope="col">
-                                            <div class="slds-truncate" title="Name">Name</div>                                
+                                            <div class="slds-truncate" title="Name">NAME</div>                                
                                         </th>
                                         
-                                        
                                         <th scope="col">
-                                            <div class="slds-truncate" title="Amount">Amount</div>            
+                                            <div class="slds-truncate" title="Type">TYPE</div>           
                                             
                                         </th>
                                         
                                         <th scope="col">
-                                            <div class="slds-truncate" title="Scheduled Date">Scheduled Date</div> 
-                                        </th>
-                                        
-                                        <th scope="col">
-                                            <div class="slds-truncate" title="Type">Type</div>           
+                                            <div class="slds-truncate" title="Transaction Status">STATUS</div>         
                                             
                                         </th>
                                         
                                         <th scope="col">
-                                            <div class="slds-truncate" title="Transaction Status">Status</div>         
+                                            <div class="slds-truncate" title="Amount">CREDITOR</div>            
                                             
                                         </th>
+                                        
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Scheduled Date">SCHEDULED DATE</div> 
+                                        </th>
+                                        
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Amount">AMOUNT</div>            
+                                            
+                                        </th>
+                                        
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Amount">TOTAL FEE</div>            
+                                            
+                                        </th>
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Amount">AMOUNT TO SAVINGS</div>            
+                                            
+                                        </th>
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Amount">BALANCE</div>            
+                                            
+                                        </th>
+                                        
+                                        
+                                        
+                                        
+                                        
                                         
                                     </tr>
                                 </thead>
                                 
                                 
                                 
-                                
-                                
                                 <tbody>
-                                    <aura:iteration items="{!v.myObjects}" var="obj">
+                                    <aura:iteration items="{!v.myObjects}" var="item">
                                         
-                                        
-                                        <tr>
-                                            <td data-label="Name">
-                                                
-                                                <div class="slds-truncate" title=""> {!obj.Name}</div>
-                                            </td>  
-                                            
-                                            <td data-label="Name">
-                                                
-                                                <div class="slds-truncate" title=""> {!obj.nu_dse__Amount__c}</div>
-                                            </td> 
-                                            
-                                            <td data-label="Name">
-                                                
-                                                <div class="slds-truncate" title=""> {!obj.nu_dse__Schedule_Date__c}</div>
-                                            </td> 
-                                            
-                                            <td data-label="Name">
-                                                
-                                                <div class="slds-truncate" title=""> {!obj.nu_dse__Payment_Type__c}</div>
-                                            </td> 
-                                            
-                                            <td data-label="Name">
-                                                
-                                                <div class="slds-truncate" title=""> {!obj.nu_dse__Transaction_Status__c}</div>
-                                            </td> 
+                                        <tr>                                            
+                                            <td> {!item.paymRecord.Name}</td>
+                                            <td> {!item.paymRecord.nu_dse__Payment_Type__c}</td>
+                                            <td> {!item.paymRecord.nu_dse__Transaction_Status__c}</td> 
+                                            <td> {!item.creditor}</td> 
+                                            <td> {!item.paymRecord.nu_dse__Schedule_Date__c}</td>
+                                            <td> {!item.paymRecord.nu_dse__Amount__c}</td>
+                                            <td> {!item.paymRecord.nu_dse__Processor_Fee__c}</td>
+                                            <td>500</td>
+                                            <td>100</td>
                                         </tr>
                                         
                                         

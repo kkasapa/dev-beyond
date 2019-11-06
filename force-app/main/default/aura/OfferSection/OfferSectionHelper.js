@@ -1,21 +1,20 @@
-({
-    
-    getPicklist: function(component, event, helper) {
-        var action = component.get("c.getPgm");
+({  
+    getTLines: function(component, event, helper) {
+        var action = component.get("c.getTradelines");
+        
         action.setParams({
-            pgmId : component.get("v.parameters")
-        });
+            pgmId : component.get("v.parameters")          
+        });        
+        
         action.setCallback(this, function(response) {
             var state = response.getState();
             if (state === "SUCCESS") {
-                var result = response.getReturnValue();
-                /*
-                var pgmMap = [];
+                var result = response.getReturnValue();                
+                var tList = [];
                 for(var key in result){
-                    pgmMap.push({key: key, value: result[key]});
+                    tList.push({key: key, value: result[key]});
                 }
-                */
-                component.set("v.pgmMap", result);
+                component.set("v.tradelinesList", tList);
             }
         });
         $A.enqueueAction(action);
@@ -25,6 +24,7 @@
         action.setParams({
             pgmId : component.get("v.parameters")
         });
+        
         action.setCallback(this, function(response) {
             var state = response.getState();
             if (state === "SUCCESS") {
@@ -39,99 +39,39 @@
         $A.enqueueAction(action);
     },
     
-    getPaymentMethod: function(component, event, helper) {
-        
-        var action = component.get("c.getPickListValuesIntoList");
+    getPaymentMethod: function(component, event, helper) {        
+        var action = component.get("c.getPaymentMethod");
         console.log('action igetPaymentMethod' + action);
         
         action.setParams({
-            objectType: component.get("v.sObjectName"),
-            selectedField: component.get("v.fieldName")
+            objectName : component.get("v.sObjectName"),
+            field_apiname : component.get("v.fieldName")
         });
+        
         action.setCallback(this, function(response) {
-            var list = response.getReturnValue();
-            component.set("v.picklistValues", list);
+            var state = response.getState();
+            if (state === "SUCCESS") {
+                var payList = response.getReturnValue();              
+                
+                component.set("v.picklistValues", payList);
+            }
         })
         $A.enqueueAction(action);
     },
     
-    getPayments: function(component, event, helper) {          
-        
-        var action = component.get("c.getObjects");
+    getPayments: function(component, event, helper) {
+        var action = component.get("c.getPaym");
         action.setParams({
             pgmId : component.get("v.parameters")
         });
+        
         action.setCallback(this, function(response){
             var state = response.getState();
-            if (state === "SUCCESS") {
+            if (state === "SUCCESS") {                
                 component.set("v.myObjects", response.getReturnValue());
                 component.set("v.boolean", true);
             }
         });
         $A.enqueueAction(action);
     }
-    /*
-    ,
-    
-    loadProgram : function(component) {
-        var action = component.get("c.getPgm");
-        console.log('action is-->>' + action);
-        action.setParams({
-            pgmId : component.get("v.parameters")
-        });
-        console.log('action is-->>' + action);
-        console.log("action is json " + JSON.stringify(action));
-        action.setCallback(this, function(a) {
-            if (a.getState() === "SUCCESS") {
-                component.set("v.program", a.getReturnValue());
-            } else if (a.getState() === "ERROR") {
-                $A.log("Errors", a.getError());
-            }
-        });
-        
-        $A.enqueueAction(action);
-    },
-    
-    onSelectChange : function(component, event, helper){
-        
-        var selectedObject = component.find('selectObject').get('v.value');
-        var getFieldSet = component.get('c.getFieldSet');
-        
-        component.set("v.theForm", []);
-        
-        getFieldSet.setParams({
-            "sObjectName" :  selectedObject 
-        });
-        getFieldSet.setCallback(this, function(response){
-            var state = response.getState();
-            if(component.isValid() && (state === 'SUCCESS' || state === 'DRAFT')){
-                var fieldsSetList = response.getReturnValue();
-                var listOptions = [];
-                listOptions.push({
-                    label : '--Select One--',
-                    value : ''
-                });
-                for(var i=0; i < fieldsSetList.length; i++){
-                    listOptions.push({
-                        label : fieldsSetList[i].split('####')[1],
-                        value : fieldsSetList[i].split('####')[0]
-                    });
-                }
-                component.set('v.fieldSetList', listOptions);
-            }else if(state==='INCOMPLETE'){
-                console.log('User is Offline System does not support drafts '
-                            + JSON.stringify(response.getError()));
-            }else if(state ==='ERROR'){
-                
-            }else{
-                
-            }
-        });
-        getFieldSet.setStorable();
-        $A.enqueueAction(getFieldSet);
-    }
-    
-   */
-    
-    
 })

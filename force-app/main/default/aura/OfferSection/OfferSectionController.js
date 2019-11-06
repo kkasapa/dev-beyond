@@ -1,5 +1,4 @@
-({
-        
+({        
     doInit: function(component, event, helper) {          
         var sPageURL = decodeURIComponent(window.location.search.substring(1)); //You get the whole decoded URL of the page.
         var sURLVariables = sPageURL.split('&'); //Split by & so that you get the key value pairs separately in a list
@@ -12,29 +11,21 @@
             if (sParameterName[0] === 'id') { 
                 sParameterName[1] === undefined ? 'Not found' : sParameterName[1];
             }
-        }
-        console.log('Param name'+sParameterName[0]);
-        console.log('Param value'+sParameterName[1]);
+        }        
         var finalvalue = sParameterName[1];
-        console.log('Param value'+finalvalue);
-        component.set('v.parameters',finalvalue);  
+        component.set("v.parameters", finalvalue);
         
-        helper.getPicklist(component,event,helper);
-        helper.getOfferPicklist(component,event,helper);
+        helper.getTLines(component, event, helper);
+        helper.getOfferPicklist(component, event, helper);
         helper.getPaymentMethod(component,event,helper);
         
     },   
     
     getPays : function(component, event, helper) {
         helper.getPayments(component, event, helper);
-         
-
     },
     
-    toggleSection : function(component, event, helper) {    
-        
-
-        
+    toggleSection : function(component, event, helper) { 
         // dynamically get aura:id name from 'data-auraId' attribute
         var sectionAuraId = event.target.getAttribute("data-auraId");
         // get section Div element using aura:id
@@ -49,21 +40,6 @@
             sectionDiv.setAttribute('class' , 'slds-section slds-is-open');
         }else{
             sectionDiv.setAttribute('class' , 'slds-section slds-is-close');
-        }
-        
-
-       
-    },
-    doSelectChange : function(component, event, helper) {
-        helper.onSelectChange(component, event, helper);
-    },
-    
-    
-    
-    
-    
-    
-    
-    
-    
+        }       
+    }
 })
