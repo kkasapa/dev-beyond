@@ -398,9 +398,9 @@
     </div>
 
    
-    <apex:form >
+    <apex:form id="approvalForm">
         
-        <apex:actionFunction name="filterApprovals" action="{!onFilterChange}" rerender="tableData" oncomplete="applyJQueryTable();  hideSpinner();">
+        <apex:actionFunction name="filterApprovals" action="{!onFilterChange}" rerender="tableData" oncomplete="applyJQueryTable('{!selectedRadio}');  hideSpinner();">
             <apex:param name="filterBy" value="" />
         </apex:actionFunction>
         <apex:actionFunction name="setCurrentApproval" action="{!setCurrentApproval}" rerender="reAssignModal" oncomplete="hideSpinner();">
@@ -408,7 +408,7 @@
         </apex:actionFunction>
         <apex:actionFunction name="reAssignApproval" action="{!reAssignApproval}" rerender="reAssignModal" oncomplete="redirectPage(event.target.id);hideSpinner();" />
         <apex:actionFunction name="cancelReAssignApproval" action="{!cancelReAssignApproval}" rerender="reAssignModal" oncomplete="hideSpinner();" />
-        <apex:actionFunction name="approval_refreshApprovals" action="{!renderApprovals}" rerender="tableData" oncomplete="applyJQueryTable(); hideSpinner();"/>
+        <apex:actionFunction name="approval_refreshApprovals" action="{!renderApprovals}" rerender="tableData" oncomplete="applyJQueryTable('{!selectedRadio}'); hideSpinner();"/>
         <apex:outputPanel id="page">
             <div class="slds" id="dataTableDiv">
                 <div class="slds-card nudebt-section-header-primary">
@@ -422,7 +422,7 @@
                         <div>
                             <br/>
                             <!-- Fixed Filter change apply for switch selectedRadio[SF-62]  --> 
-                            <apex:selectRadio value="{!selectedRadio}" styleClass="radio" onchange="onFilterChange()">
+                            <apex:selectRadio id="selectedObj" value="{!selectedRadio}" styleClass="radio" onchange="onFilterChange()">
                                 <apex:selectOption itemLabel="Prospect" itemValue="nu_dse__Prospect__c"/>
                                 <apex:selectOption itemLabel="Offer" itemValue="nu_dse__Offer__c"/>
                                 <!-- <apex:actionSupport event="onchange" action="{!renderApprovals}" reRender="tableData" onsubmit="showSpinner();" oncomplete="applyJQueryTable(); hideSpinner();"/> -->
@@ -454,6 +454,7 @@
                                             <th>Actions</th>
                                             <th>Approval</th>
                                             <th>First Payment Date</th>
+                                            <th>First Payment Date in ms(hidden)</th>
                                             <th>Submitted By</th>
                                             <th>Assigned To</th>
                                             <th>Submit Status</th>
@@ -470,6 +471,7 @@
                                             <!-- Added hidden Total mins Since Reassigned column in Table [SF-333]-->
                                             <th>Total mins Since Reassigned (hidden)</th>
                                             <th>Created Date</th>
+                                            <th>Created Date in Ms (hidden)</th>
                                             <!-- Removed status column in Approvals Table[SF-62]-->
                                         </tr>
                                     </thead>
@@ -522,9 +524,8 @@
                                                         <a href="{!'/' + approvalSet.recordId}" target="_blank">{!approvalSet.recordName}</a><!-- - <a href="{!'/' + approvalSet.tradelineid}" target="_blank">Tradeline</a> -->
                                                     </div>
                                                 </td>
-                                                <!-- <apex:outputPanel rendered="{!selectedRadio == 'nu_dse__Offer__c'}"> -->
-                                                    <td><center>{!approvalSet.approval.fistPaymentDate}</center></td>
-                                                <!-- </apex:outputPanel> -->
+                                                <td><center>{!approvalSet.approval.fistPaymentDate}</center></td>
+                                                <td><center>{!approvalSet.approval.fistPaymentDateInMs}</center></td>
                                                 <td>
                                                     <a href="{! '/' + approvalSet.approval.submittedBy}" target="_blank" >{!approvalSet.approval.submittedByName}</a>
                                                 </td>
@@ -562,6 +563,7 @@
                                                 <td><center>{!approvalSet.approval.reAssignedElapsedTotalMins}</center></td>
                                                 <!-- Updated CompletedDate as createdDate column in Approvals Table[SF-62]-->
                                                 <td><center>{!approvalSet.approval.createdDate}</center></td>
+                                                <td><center>{!approvalSet.approval.createdDateInMs}</center></td>
                                             </tr>
                                             <apex:variable var="count" value="{!count + 1}"/>
                                         </apex:repeat>
@@ -624,7 +626,7 @@
             </apex:outputPanel>
         </apex:outputPanel>
         <script>
-            var currentPage = {number:0, sortOrder:[8, "desc" ], length:25};      
+            var currentPage = {number:0, sortOrder:[10, "desc" ], length:25};      
             // Updated to slected filter name got from element[SF-62]
             function onFilterChange() {
                 showSpinner();
@@ -700,7 +702,7 @@
                 console.log('calling approval_refreshApprovals function.');
                 window.setTimeout(function() {
                     approval_refreshApprovals();
-                    applyJQueryTable();
+                    applyJQueryTable('nu_dse__Prospect__c');
                 }, 0);
             }
             
@@ -708,18 +710,20 @@
                 approval_getApprovals();
             })();
 
-            function applyJQueryTable() {
+            function applyJQueryTable(selectedObj) {
 
                 if(event != null && event.target.Id == 'refreshButton') {
                     reCreateJQueryTable();
                 }
                 $(document).ready( function () {
-                    createJQueryDataTable();
+                    createJQueryDataTable(selectedObj);
                 });
                 onResize();
             }
 
-            function createJQueryDataTable() {
+            function createJQueryDataTable(selectedObj) {
+
+                console.log('test::', selectedObj);
                 
                 var table = $('#approvalsTable').DataTable({
                     // Added default setting as default record count 25 & sort desc based on Time in Queue column[SF-339]
@@ -728,21 +732,26 @@
                     "order": [currentPage.sortOrder],
                     "scrollX": true, 
                     "columnDefs":[
-                        {"visible": false, "targets":8},
-                        { "orderData": [8], "targets": 7},
-                        {"visible": false, "targets":10},
-                        { "orderData": [10], "targets": 9}
+                        {"visible": false, "targets": 10},
+                        { "orderData": [10], "targets": 9},
+                        {"visible": false, "targets": 12},
+                        { "orderData": [12], "targets": 11},
+                        {"visible": false, "targets": 14},
+                        { "orderData": [14], "targets": 13},
+                        {"visible": false, "targets": 3},
+                        {"visible": (selectedObj == 'nu_dse__Prospect__c' ? false : true) , "targets": 2},
+                        {"orderData": [3], "targets": 2}
                     ]
                 });
             }
 
-            function reCreateJQueryTable() {
+            function reCreateJQueryTable(selectedObj) {
 
                 if (j$.fn.dataTable.isDataTable('#approvalsTable')) {
                             
                     j$('#approvalsTable').DataTable().clear().destroy();
                 }
-                createJQueryDataTable();
+                createJQueryDataTable(selectedObj);
             }
             
         </script>

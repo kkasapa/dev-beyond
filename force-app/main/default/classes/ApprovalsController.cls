@@ -258,10 +258,6 @@ public with sharing class ApprovalsController {
                             && String.isNotBlank(appRec.submittedBy) && subordinatesOfCurrentUser.contains(appRec.submittedBy)) {                
                     appRec.showActions = TRUE;
                 }
-                system.debug('appRec.asignedTo::'+appRec.asignedTo);
-                system.debug('appRec.submittedBy::'+appRec.submittedBy);
-                system.debug('subordinatesOfCurrentUser::'+subordinatesOfCurrentUser);
-                system.debug('appRec.showActions::'+appRec.showActions);
             }
         
             if (String.isNotBlank(targetObjId_ProcDefId)) {
@@ -330,11 +326,14 @@ public with sharing class ApprovalsController {
                     
                     DateTime createdDate  = DateTime.valueOf((selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('CreatedDate')));
                     processInstApprovalsMap.get(approvalId).approval.CreatedDate = createdDate.format('MM-dd-YYYY');
+                    processInstApprovalsMap.get(approvalId).approval.CreatedDateInMs = createdDate.getTime();
 
                     if(selectedValue == 'nu_dse__Offer__c' 
                         && selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('nu_dse__First_Payment_Date__c') != null) {
                         Date fistPaymentDate = Date.valueOf(selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('nu_dse__First_Payment_Date__c'));
-                        processInstApprovalsMap.get(approvalId).approval.fistPaymentDate = fistPaymentDate.format();
+                        DateTime firstPaymentDateTime = DateTime.newInstance(fistPaymentDate, Time.newInstance(0,0,0,0));
+                        processInstApprovalsMap.get(approvalId).approval.fistPaymentDate = firstPaymentDateTime.format('MM-dd-YYYY');
+                        processInstApprovalsMap.get(approvalId).approval.fistPaymentDateInMs = firstPaymentDateTime.getTime();
                     }
                 }
             }
@@ -413,7 +412,9 @@ public with sharing class ApprovalsController {
         public String targetObjectName {get; set;}
         // Changed CompletedDate variable as TargetObject createdDate[SF-62]
         public String createdDate {get; set;}
+        public Long CreatedDateInMs {get; set;}
         public String fistPaymentDate {get; set;}
+        public Long fistPaymentDateInMs {get; set;}
         public Id workItemId {get; set;}
         public Id instanceId {get; set;}
         public String approvalType { get; set;}
