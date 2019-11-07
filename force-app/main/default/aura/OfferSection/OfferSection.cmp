@@ -30,6 +30,7 @@
         </div>
     </div>
     <!--section header-->
+     <c:Search />
     
     <!-- Offer Section -->
     <div class="slds-section slds-is-open" aura:id="colorSection">

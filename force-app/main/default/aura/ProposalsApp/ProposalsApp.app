@@ -1,3 +1,4 @@
 <aura:application extends="force:slds" access="GLOBAL" >
-    <c:OfferSection />  
+   
+    <c:OfferSection /> 
 </aura:application>

@@ -25,6 +25,7 @@ public class LoanApplicationHandler extends TriggerHandler {
         for (Loan_Application__c newLoanApplication : (List<Loan_Application__c>)Trigger.New) {
             // Update Loan Record based on Application Status
             updateLoan(newLoanApplication, oldLoanApplicationMap.get(newLoanApplication.Id));
+            updateLoanEstimator(newLoanApplication, oldLoanApplicationMap.get(newLoanApplication.Id));
         }
     }
     
@@ -36,7 +37,7 @@ public class LoanApplicationHandler extends TriggerHandler {
     }
     
     // Future Call so that This will run when SF has the time
-    // @future(callout=true)
+     @future(callout=true)
     public static void futureFlowCall(string LoanApplicationId){
         Map<String, Object> params = new Map<String, Object>();
         params.put('LoanApplicationId', LoanApplicationId);
@@ -48,4 +49,17 @@ public class LoanApplicationHandler extends TriggerHandler {
         }
     }
     
+     // Calls Flow to Update Running Schedule
+    public void updateLoanEstimator(Loan_Application__c newLoanApplication, Loan_Application__c oldLoanApplication){
+        if (newLoanApplication.Estimated_Funded_Date__c != oldLoanApplication.Estimated_Funded_Date__c && Trigger.isUpdate){
+            Map<String, Object> params = new Map<String, Object>();
+        	params.put('LoanApplicationId', newLoanApplication.Id);
+        	try {
+            	Flow.Interview.Loan_Running_Schedule Loan_Running_Schedule = new Flow.Interview.Loan_Running_Schedule(params);
+            	Loan_Running_Schedule.start();
+        	} catch (Exception e){
+            	system.debug('Exception caught: ' + e.getMessage());
+        	}
+        }
+    }    
 }

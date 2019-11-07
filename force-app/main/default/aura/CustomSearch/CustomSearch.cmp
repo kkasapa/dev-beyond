@@ -1,0 +1,21 @@
+<aura:component controller="CustomSearchController" implements="forceCommunity:searchInterface,force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes" access="global" >
+    <aura:attribute name="searchText" type="String" default=""/>
+    <aura:attribute type="list" name="recordList"/>
+    <aura:attribute name="Label" type="String"/>
+    <aura:attribute name="required" type="Boolean" default="false"/>
+    
+    <lightning:card iconName="utility:search" title="Global Search">
+        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon slds-input-has-icon_left-right" role="none">
+            <lightning:input required="{!v.required}" aura:id="userinput" label="{!v.Label}" name="searchText" onchange="{! c.handleClick }" value="{!v.searchText}" class="leftspace"/> 
+            <span class="slds-icon_container slds-icon-utility-search slds-input__icon slds-input__icon_right iconheight">
+                <lightning:icon class="slds-icon slds-icon slds-icon_small slds-icon-text-default" />
+            </span> 
+        </div>
+        <aura:if isTrue="{!and(v.recordList.length == 0, v.searchText)}">
+            No result found.
+            <aura:set attribute="else">
+                <c:customSearchResultsList recordList="{!v.recordList}"/>
+            </aura:set>
+        </aura:if>
+    </lightning:card>
+</aura:component>
