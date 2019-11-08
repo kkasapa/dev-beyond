@@ -1,18 +1,32 @@
 public with sharing class ProposalController {
     
     /**
-	* Method to retreive the Payment records
+	* Method to retreive the Program records
 	*/
-    @AuraEnabled 
-    public static list<nu_dse__Payment__c> getPayments(Id pgmId){       
-        list<nu_dse__Payment__c> Payments = [SELECT Id,nu_dse__Processor_Fee__c,nu_dse__Transaction_Method__c,
-                                             name,nu_dse__Schedule_Date__c,nu_dse__Amount__c,nu_dse__Type__c,
-                                             nu_dse__Payment_Type__c,nu_dse__Transaction_Status__c,nu_dse__Offer__r.nu_dse__TradeLine__r.nu_dse__Tradeline_Name__c,
-                                             nu_dse__Offer__r.nu_dse__TradeLine__c,nu_dse__Offer__c
-                                             FROM nu_dse__Payment__c  
-                                             WHERE nu_dse__Program__c =:pgmId LIMIT 10];
-        return Payments;  
-    }   
+        
+    @AuraEnabled
+    public static ProgramWrapper getPgm(Id pgmId){
+        nu_dse__Program__c programRec = [SELECT Id,Name,Work_Phone__c,Home_Phone__c,nu_dse__Program_Length__c,Current_Draft_Amount__c,
+                                         nu_dse__Program_Status__c,nu_dse__Program_Sub_Status__c,
+                                         Cell_Phone__c,Email_Address__c,nu_dse__Account__c,nu_dse__Account__r.PersonMailingAddress
+                                         FROM nu_dse__Program__c  
+                                         WHERE id =:pgmId LIMIT 1];
+        ProgramWrapper pgmWrap = new ProgramWrapper();
+        
+        pgmWrap.paymRecord = programRec;
+        
+        Account acc = [SELECT id,Name,PersonMailingStreet,PersonMailingCity,PersonMailingState, nu_dse__SSN__c,PersonBirthdate,RecordTypeId FROM Account WHERE id =: programRec.nu_dse__Account__c];
+        string recordTypeName = Schema.SObjectType.Account.getRecordTypeInfosById().get(acc.RecordTypeId).getName();
+        
+        
+        pgmWrap.AccountName = acc.Name;
+        pgmWrap.Address = acc.PersonMailingStreet + ' ' + acc.PersonMailingCity + ' ' + acc.PersonMailingState;
+        pgmWrap.SSN = acc.nu_dse__SSN__c;
+        pgmWrap.DOB = String.ValueOf(acc.PersonBirthdate);
+        pgmWrap.ProcessorType=  recordTypeName;
+        system.debug('@@pgmWrap-->'+pgmWrap);
+        return pgmWrap;
+    }
     
     @AuraEnabled 
     public static List<PaymentWrapper> getPaym(Id pgmId){
@@ -40,8 +54,8 @@ public with sharing class ProposalController {
     }
     
     /**
-    * Method to retreive the Tradelines
-	*/     
+* Method to retreive the Tradelines
+*/     
     @AuraEnabled
     public static List<String> getTradelines(Id pgmId) {
         List<String> tradeLines = new List<String>();        
@@ -56,8 +70,8 @@ public with sharing class ProposalController {
     }
     
     /**
-	* Method to retreive the Offers
-	*/  
+* Method to retreive the Offers
+*/  
     @AuraEnabled
     public static List<String> getOffers(Id pgmId) {        
         List<String> offers = new List<String>();
@@ -72,8 +86,8 @@ public with sharing class ProposalController {
     }
     
     /**
-	* Method to retreive the PaymentMethods
-	*/  
+* Method to retreive the PaymentMethods
+*/  
     @AuraEnabled  
     public static List<String> getPaymentMethod(String objectName, String field_apiname){        
         List<String> pickListValuesList = new List<String>();        
@@ -93,6 +107,21 @@ public with sharing class ProposalController {
         public nu_dse__Payment__c paymRecord{get;set;}
         @AuraEnabled
         public String creditor{get;set;}       
+        
+    }
+    public class ProgramWrapper {
+        @AuraEnabled
+        public nu_dse__Program__c paymRecord{get;set;}
+         @AuraEnabled
+        public String AccountName{get;set;} 
+        @AuraEnabled
+        public String Address{get;set;} 
+        @AuraEnabled
+        public String SSN{get;set;} 
+        @AuraEnabled
+        public String DOB{get;set;} 
+        @AuraEnabled
+        public String ProcessorType{get;set;} 
         
     }
 }

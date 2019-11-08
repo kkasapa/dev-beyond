@@ -59,8 +59,7 @@ public class OfferHandler extends TriggerHandler {
         }
         // Delete Cancelled Offer related Payments
         if(cancelledOfferIds.isEmpty() == false) {
-            List<nu_dse__Payment__c> paymentToDeleteList = [SELECT Id FROM nu_dse__Payment__c WHERE nu_dse__Offer__c IN :cancelledOfferIds];
-            delete paymentToDeleteList;
+            deletePayments(cancelledOfferIds);        
         }
     }
     // Method to collect the Cancelled offers Ids to delete the related payments 
@@ -70,6 +69,11 @@ public class OfferHandler extends TriggerHandler {
             && newOffer.nu_dse__Status__c != oldOffer.nu_dse__Status__c) {
             cancelledOfferIds.add(newOffer.Id);
         }
+    }
+    
+    //delete all payments under cancelled offers
+    public void deletePayments(Set<Id> cancelledOfferIds) {
+        delete [SELECT Id FROM nu_dse__Payment__c WHERE nu_dse__Offer__c IN :cancelledOfferIds];
     }
 
  	@future(callout=true)

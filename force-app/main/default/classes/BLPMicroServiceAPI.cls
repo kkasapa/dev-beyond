@@ -79,8 +79,45 @@ public class BLPMicroServiceAPI {
         system.debug('EndpointURL==>'+AddDocument+'\n STATUS==>'+response.getStatus()+'\n STATUS CODE==>'+response.getStatusCode()+'\n BODY==>'+response.getBody());
         if (response.getStatusCode() == 200) {
             Map<String, Object> results = (Map<String, Object>) JSON.deserializeUntyped(response.getBody());
-        }       
+        }     
+    }
+    
+    public static void CancelClient(string strPgmId){ 
+        nu_dse__Program__c pgmObj = [SELECT Id,Name,BLP_Client_Id__c FROM nu_dse__Program__c WHERE Id =:strPgmId];
+        BLPMicroService__c apiObj = getAPICreds();    
+        string strEndpointURL 	= apiObj.End_Point_URL__c;
+        string strAddClient 	= apiObj.Add_Client_URL__c;
+        string strClientId 		= pgmObj.BLP_Client_Id__c;
+        string AddDocument = strEndpointURL+strAddClient+'/'+strClientId+'/cancel';        
+        string strBody = getCancelClientRequest(pgmObj.Id);
         
+        Http http = new Http();        
+        HttpRequest request = prepareHttpCallOut(AddDocument,strBody,'POST');
+        HttpResponse response = http.send(request);
+        
+        system.debug('EndpointURL==>'+AddDocument+'\n STATUS==>'+response.getStatus()+'\n STATUS CODE==>'+response.getStatusCode()+'\n BODY==>'+response.getBody());
+        if (response.getStatusCode() == 200) {
+            Map<String, Object> results = (Map<String, Object>) JSON.deserializeUntyped(response.getBody());
+        }     
+    }
+    
+    public static void Lawsuit(string strPgmId){ 
+        nu_dse__Program__c pgmObj = [SELECT Id,Name,BLP_Client_Id__c FROM nu_dse__Program__c WHERE Id =:strPgmId];
+        BLPMicroService__c apiObj = getAPICreds();    
+        string strEndpointURL 	= apiObj.End_Point_URL__c;
+        string strAddClient 	= apiObj.Add_Client_URL__c;
+        string strClientId 		= pgmObj.BLP_Client_Id__c;
+        string AddDocument = strEndpointURL+strAddClient+'/'+strClientId+'/cancel';        
+        string strBody = getLawsuitRequest(pgmObj.Id);
+        
+        Http http = new Http();        
+        HttpRequest request = prepareHttpCallOut(AddDocument,strBody,'POST');
+        HttpResponse response = http.send(request);
+        
+        system.debug('EndpointURL==>'+AddDocument+'\n STATUS==>'+response.getStatus()+'\n STATUS CODE==>'+response.getStatusCode()+'\n BODY==>'+response.getBody());
+        if (response.getStatusCode() == 200) {
+            Map<String, Object> results = (Map<String, Object>) JSON.deserializeUntyped(response.getBody());
+        }     
     }
     
     public static HttpRequest prepareHttpCallOut(string strURL, string strBody, string strMethod){
@@ -116,6 +153,13 @@ public class BLPMicroServiceAPI {
         return mapOfObjWithFilds;
     }
     
+    public static string getCancelClientRequest(string strPgmId){
+    	return null;    
+    }
+    
+    public static string getLawsuitRequest(string strPgmId){
+    	return null;    
+    }
     public static string getAddDocumentRequest(string strPgmId){
         map<string,list<nu_dse__Field_mapping__c>> mapOfObjWithFilds = getFieldMapping('BLPAddDocument');
         list<nu_dse__Field_mapping__c> lstOfTLFlds = mapOfObjWithFilds.get('Attachment');

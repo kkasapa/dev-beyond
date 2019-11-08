@@ -63,6 +63,7 @@ public with sharing class TestRecordCreator {
         
         Id recId = [select id from RecordType where sObjectType='Account' and developerName='Creditor' limit 1].id;
         Account creditor = createCreditorAccount(recId);
+        creditor.Preferred_Payment_Method__c = 'PHONE';
         insert creditor; 
         
         nu_dse__TradeLine__c trdLine = new nu_dse__TradeLine__c(
