@@ -35,7 +35,7 @@ public class TradelineHandler extends TriggerHandler {
             if(oldTLMap.get(TLID).nu_dse__Current_Stage__c != newTLMap.get(TLID).nu_dse__Current_Stage__c)
             {
                 //if the current stage is making payments, update the tradeline settlement order field
-                if(newTLMap.get(TLID).nu_dse__Current_Stage__c == 'Making payments')
+                if(newTLMap.get(TLID).nu_dse__Current_Stage__c == 'Making payments' || newTLMap.get(TLID).nu_dse__Current_Stage__c == 'Settled - Legal' || newTLMap.get(TLID).nu_dse__Current_Stage__c == 'Settled - Non Legal' )
                 {
                     List<nu_dse__TradeLine__c> Tradelines = [SELECT Id, Program_Settlement_Order__c FROM nu_dse__TradeLine__c WHERE nu_dse__Program__c = :newTLMap.get(TLID).nu_dse__Program__c ];
                     double biggestNo = 0; 

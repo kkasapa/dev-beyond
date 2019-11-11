@@ -1,9 +1,9 @@
 public with sharing class ProposalController {
     
     /**
-	* Method to retreive the Program records
-	*/
-        
+* Method to retreive the Program records
+*/
+    
     @AuraEnabled
     public static ProgramWrapper getPgm(Id pgmId){
         nu_dse__Program__c programRec = [SELECT Id,Name,Work_Phone__c,Home_Phone__c,nu_dse__Program_Length__c,Current_Draft_Amount__c,
@@ -15,15 +15,20 @@ public with sharing class ProposalController {
         
         pgmWrap.paymRecord = programRec;
         
-        Account acc = [SELECT id,Name,PersonMailingStreet,PersonMailingCity,PersonMailingState, nu_dse__SSN__c,PersonBirthdate,RecordTypeId FROM Account WHERE id =: programRec.nu_dse__Account__c];
+        Account acc = [SELECT id,Name,PersonMailingStreet,Phone,PersonOtherPostalCode,PersonEmail,PersonMailingCity,PersonMailingState, nu_dse__SSN__c,PersonBirthdate,RecordTypeId FROM Account WHERE id =: programRec.nu_dse__Account__c];
         string recordTypeName = Schema.SObjectType.Account.getRecordTypeInfosById().get(acc.RecordTypeId).getName();
         
         
         pgmWrap.AccountName = acc.Name;
-        pgmWrap.Address = acc.PersonMailingStreet + ' ' + acc.PersonMailingCity + ' ' + acc.PersonMailingState;
+        pgmWrap.Address = acc.PersonMailingStreet;
         pgmWrap.SSN = acc.nu_dse__SSN__c;
+        pgmWrap.Email = acc.PersonEmail;
         pgmWrap.DOB = String.ValueOf(acc.PersonBirthdate);
         pgmWrap.ProcessorType=  recordTypeName;
+        pgmWrap.City = acc.PersonMailingCity;
+        pgmWrap.ZipCode =  acc.PersonOtherPostalCode;
+        pgmWrap.State = acc.PersonMailingState;
+        pgmWrap.Phone = acc.Phone;
         system.debug('@@pgmWrap-->'+pgmWrap);
         return pgmWrap;
     }
@@ -112,7 +117,7 @@ public with sharing class ProposalController {
     public class ProgramWrapper {
         @AuraEnabled
         public nu_dse__Program__c paymRecord{get;set;}
-         @AuraEnabled
+        @AuraEnabled
         public String AccountName{get;set;} 
         @AuraEnabled
         public String Address{get;set;} 
@@ -120,6 +125,16 @@ public with sharing class ProposalController {
         public String SSN{get;set;} 
         @AuraEnabled
         public String DOB{get;set;} 
+        @AuraEnabled
+        public String State{get;set;} 
+        @AuraEnabled
+        public String City{get;set;} 
+        @AuraEnabled
+        public String ZipCode{get;set;} 
+        @AuraEnabled
+        public String Email{get;set;} 
+         @AuraEnabled
+        public String Phone{get;set;} 
         @AuraEnabled
         public String ProcessorType{get;set;} 
         

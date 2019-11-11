@@ -17,6 +17,10 @@ public class OfferHandler extends TriggerHandler {
     private Map<Id, nu_dse__Offer__c> newOfferMap;
     private Map<Id, nu_dse__Offer__c> oldOfferMap;
     private Set<ID> offerIds;
+    private Map<Id, nu_dse__Tradeline__c> newTradelineMap;
+    private Map<Id, nu_dse__Tradeline__c> oldTradelineMap;   
+    
+    List<nu_dse__Program__c> ProgramList = new List<nu_dse__Program__c>(); //List of Programs
 
     public OfferHandler() {
         this.newOfferMap = (Map<Id, nu_dse__Offer__c>) Trigger.newMap;
@@ -151,5 +155,15 @@ public class OfferHandler extends TriggerHandler {
             
         }
         update offersToUpdate;
+    }
+    
+    // Method to fillout TL Delinquent (DQ) Days on Offer Accepted Date.
+    public void DQDays(nu_dse__Offer__c newOffer, nu_dse__Offer__c oldOffer,nu_dse__Tradeline__c oldTradeline, nu_dse__Tradeline__c newTradeline) {
+        if(newOffer.nu_dse__Status__c == '05-Offer Accepted by Payment Team'
+            && newOffer.nu_dse__Status__c != oldOffer.nu_dse__Status__c
+          	&& oldTradeline.DQ_at_Offer_Created_Date__c == null) {
+              system.debug('This works');
+                newTradeline.DQ_at_Offer_Created_Date__c = oldTradeline.TL_Delinquent_DQ_Days__c; 
+        }
     }
 }

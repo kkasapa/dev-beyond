@@ -30,6 +30,28 @@ public class ProgramHandler extends TriggerHandler {
     Map<String, Id> comuTempNameIdMap; // map of communication Template Name and Its Id
     Set<Id> velocifyProspectIds = new Set<Id>(); // Set of Prosepct Ids send for Velocify
     List<BLP_Bus__e> BLPBUSEvents = new List<BLP_Bus__e>();
+    
+    
+    @future(callout=true)
+    public static void savingsCalc(ID programId, Decimal Debt, Double Payment)
+    {
+        
+    }
+    
+    public void runSavingsCalc(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram)
+    {
+        double minPayment = newProgram.nu_dse__Total_Debt_Included__c * 0.02;
+        //do required checks and call out. 
+        if(oldProgram == null)
+        {
+            savingsCalc(newProgram.ID, newProgram.nu_dse__Total_Debt_Included__c , minPayment);
+        }
+        if(newProgram.Program_Savings_Calculation__c == NULL || newProgram.nu_dse__Total_Debt_Included__c != oldProgramMap.get(newProgram.Id).nu_dse__Total_Debt_Included__c)
+        {
+        	savingsCalc(newProgram.ID, newProgram.nu_dse__Total_Debt_Included__c , minPayment);
+        }
+
+    }
 
     public override void afterInsert() {
 
@@ -40,6 +62,8 @@ public class ProgramHandler extends TriggerHandler {
             collectProspectList(newProgram); 
             // publishing Platform Event BLP Bus for triggering sync with BLP
             createBLP_BusList(newProgram, null);
+            // Run the Savings Calculator for New Programs
+            runSavingsCalc(newProgram, null);
         }
         upsert groupTaskList nu_dse__Unique_Identifier__c; // Upsert Group Task based on unique Identifier
 
@@ -81,6 +105,8 @@ public class ProgramHandler extends TriggerHandler {
             // Creating Loan Record based on Interested Status
             createLoan(newProgram, oldProgramMap.get(newProgram.Id));
             //updateLoanApplication(newProgram, oldProgramMap.get(newProgram.Id));
+            //Run the Savings Calc.
+            runSavingsCalc(newProgram, oldProgramMap.get(newProgram.Id));
 
         }
         if(terminatedProgramIds.isEmpty() == false) {

@@ -23,211 +23,98 @@
     
     
     
-    
-    <!--section header-->
-    <div class="demo-only" style="padding:0.5rem;background:#16325c">
-        <div class="slds-text-heading_medium">
-            <div class="slds-text-color_inverse">Simulation</div>
-        </div>
+   <div class="slds-size_4-of-4">
+    <div class="slds-box slds-box_x-small slds-text-align_left slds-m-around_x-small">Tradline 12345</div>
+  </div>
+    <div class="slds-grid slds-wrap">
+    <div class="slds-size_2-of-4">
+    <div class="slds-box slds-box_x-small slds-text-align_center slds-m-around_x-small">Search</div>
+  </div>
+    <div class="slds-size_1-of-4">
+    <div class="slds-box slds-box_x-small slds-text-align_center slds-m-around_x-small">Save Data</div>
+  </div>
+  <div class="slds-size_1-of-4">
+    <div class="slds-box slds-box_x-small slds-text-align_center slds-m-around_x-small">Next Tradeline>></div>
+  </div>
     </div>
-    <!--section header-->
-    <c:Search />
     
-    <!-- Program Section-->
-    <div>
-        <div class="slds-p-around--medium">
-            <div class="slds-card">
-                <div class="slds-card__header slds-grid">
-                    <header class="slds-media slds-media--center slds-has-flexi-truncate">
-                        <div class="slds-media__body">
-                            <h2 class="slds-text-heading--small">
-                                Program Information
-                            </h2>
-                        </div>
-                    </header>
+ <!--  <c:Search />-->
+    <table>
+        <tr>
+            <td>
+                <img src="{!$Resource.User_Image}" />
+                
+           <div class="slds-m-horizontal--large">  <ul>
+                    <li>{!v.prmObject.AccountName} </li>
+                    <li>SSN: {!v.prmObject.SSN}</li>
+                    
+                </ul>  
                 </div>
-                
-                
-                <div id="informationPanel">
-                    <div class="slds-card__body">
-                        <div class="slds-grid">
-                            <div class="slds-col slds-size--1-of-2 slds-m-around--medium">
-                                <div class="slds-panel slds-p-right--medium slds-p-top--medium slds-p-left--medium">
-                                    <h3 class="slds-text-heading--small slds-m-bottom--medium">
-                                        {!v.prmObject.paymRecord.Name}   : {!v.prmObject.AccountName} 
-                                    </h3>
-                                    <div class="slds-form-element slds-hint-parent slds-has-divider--bottom"><span >
-                                        Current Balance: </span>
-                                    </div>
-                                    <div class="slds-form-element">
-                                        <div class="slds-grid">
-                                            <div class="slds-col">
-                                                <span class="slds-form-element__label">Work Phone:</span>
-                                                <div class="slds-form-element__control">
-                                                    <span class="slds-form-element__static"><span ><span >{!v.prmObject.paymRecord.Work_Phone__c}</span></span>
-                                                    </span>
-                                                </div>
-                                                
-                                                <span class="slds-form-element__label">Cell Phone: </span>
-                                                <div class="slds-form-element__control">
-                                                    <span class="slds-form-element__static"><span ><span >{!v.prmObject.paymRecord.Cell_Phone__c}</span></span>
-                                                    </span>
-                                                </div>
-                                                
-                                                <span class="slds-form-element__label">Address:</span>
-                                                <div class="slds-form-element__control">
-                                                    <span class="slds-form-element__static"><span >
-                                                        {!v.prmObject.Address}</span>
-                                                    </span>
-                                                </div>
-                                                
-                                                <span class="slds-form-element__label">DOB:</span>
-                                                <div class="slds-form-element__control">
-                                                    <span class="slds-form-element__static">{!v.prmObject.DOB}
-                                                    </span>
-                                                </div><span id="j_id0:j_id137:j_id138:j_id141:j_id186">
-                                                <span class="slds-form-element__label">Program Length:</span>
-                                                <div class="slds-form-element__control">
-                                                    <span class="slds-form-element__static">
-                                                        {!v.prmObject.paymRecord.nu_dse__Program_Length__c}
-                                                    </span>
-                                                </div></span>
-                                                
-                                            </div>
-                                            <div class="slds-col">
-                                                
-                                                <span class="slds-form-element__label">Home Phone:</span>
-                                                <div class="slds-form-element__control">
-                                                    <span class="slds-form-element__static"><span ><span >{!v.prmObject.paymRecord.Home_Phone__c}</span></span>
-                                                    </span>
-                                                </div>
-                                                
-                                                <span class="slds-form-element__label">Email:</span>
-                                                <div class="slds-form-element__control">
-                                                    <span class="slds-form-element__static"><span >
-                                                        {!v.prmObject.paymRecord.Email_Address__c}</span>
-                                                    </span>
-                                                </div>
-                                                
-                                                <span class="slds-form-element__label">SSN:</span>
-                                                <div class="slds-form-element__control">
-                                                    <span class="slds-form-element__static"><span >
-                                                        {!v.prmObject.SSN}</span>
-                                                    </span>
-                                                </div>
-                                                
-                                                <span class="slds-form-element__label">Processor Type:</span>
-                                                <div class="slds-form-element__control">
-                                                    <span class="slds-form-element__static"><span >
-                                                        {!v.prmObject.ProcessorType} </span>
-                                                    </span>
-                                                </div><span>
-                                                <span class="slds-form-element__label">Initial Monthly Draft Amount:</span>
-                                                <div class="slds-form-element__control">
-                                                    <span class="slds-form-element__static">
-                                                        {!v.prmObject.paymRecord.Current_Draft_Amount__c}
-                                                    </span>
-                                                </div></span>
-                                                
-                                                
-                                                
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!--Status fields-->
-                        <div class="slds-grid">
-                            
-                            <div class="slds-col slds-size--1-of-2 slds-p-around--medium"><span >
-                                <span class="slds-form-element__label">Program Sub Status</span>
-                                <div class="slds-form-element__control">
-                                    <span class="slds-form-element__static">
-                                        {!v.prmObject.paymRecord.nu_dse__Program_Sub_Status__c}
-                                    </span>
-                                </div>
-                                </span>
-                            </div>
-                            
-                            <div class="slds-col slds-size--1-of-2 slds-p-around--medium">
-                                <span>
-                                    <span class="slds-form-element__label">Program Status</span>
-                                    <div class="slds-form-element__control">
-                                        <span class="slds-form-element__static">
-                                            {!v.prmObject.paymRecord.nu_dse__Program_Status__c}
-                                        </span>
-                                    </div></span>
-                            </div>
-                            
-                            
-                        </div>
-                        <!--Status fields--> 
-                        
-                    </div>
+                <br></br>
+                <div class="slds-m-horizontal--large">
+                <ul>
+                    <li>Email: {!v.prmObject.Email}</li>
+                    <li>Addreess: {!v.prmObject.Address}</li>
+                    <li>City: {!v.prmObject.City} &nbsp; State:{!v.prmObject.State }  &nbsp; Zip: {!v.prmObject.ZipCode} </li>
+                </ul> 
                 </div>
-                
-            </div> </div> </div>
-    
-    
-    <!-- Program Section-->
-    
-    <!-- Client Section -->
-    
-    <div class="slds-section slds-is-open" aura:id="colorSection1">
-        <!-- Section -->
-        <h3 class="slds-section__title">
-            <button aria-controls="clientId" class="slds-button slds-section__title-action">
-                <span onclick="{!c.toggleClientSection}" data-auraId="colorSection1">
-                    <lightning:icon iconName="utility:switch"
-                                    alternativeText="button icon"
-                                    size="x-small"
-                                    class="slds-section__title-action-icon slds-button__icon_left"/>
-                </span>
-                <span class="slds-truncate" title="Client">Client Information</span>
-            </button>
-        </h3>
-        <!-- Section -->
-        
-    
-    
-    <!-- Client Section -->
-    <!-- Client Section Body-->
-    
-    <div class="slds-section__content" id="clientId">  
-        <div class="slds-m-around_small slds-grid slds-gutters">
-            <div class="slds-grid slds-grid_vertical">
-                
-                <div class="slds-col">  
-                    <span>
-                        <lightning:select aura:id="Trades"   name="TradeLine" label="TradeLines" >
-                            <option value="">--None--</option>
-                            <aura:iteration items="{!v.tradelinesList}" var="tr" indexVar="key">
-                                
-                                <option text="{!tr.value}" />
-                            </aura:iteration>
-                        </lightning:select>
-                    </span>
+                <br></br>
+                <div class="slds-m-horizontal--large">
+                Phone:  {!v.prmObject.Cell_Phone__c}
+                 </div>  
+            </td>
+            <td>
+                <div class="slds-align_absolute-center" style="height:5rem">
+                <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-border_left slds-border_right"  >
+                    
+                    <tr>
+                        <th>
+                            Enrollment Date
+                        </th>
+                    </tr>
+                    <tr>
+                        <th>
+                            Total Active Debt 
+                        </th>
+                    </tr>
+                    <tr>
+                        <th>
+                            Available Funds This Month 
+                        </th>
+                    </tr>
+                    
+                    
+                </table>
                 </div>
-                
-                <div class="slds-col">
-                    <span>
-                        <lightning:select aura:id="Picklist"   name="Filter by Offers" label="Filter by Offers" >
-                            <option value="">--None--</option>
-                            <aura:iteration items="{!v.ofMap}" var="pg" indexVar="key">
-                                
-                                <option text="{!pg.value}" />
-                            </aura:iteration>
-                        </lightning:select>
-                    </span>
-                </div>
-                </div>
-            </div>
-        </div>
-        </div>        
-                <!-- Client Section Body-->
-                
+            </td>
+        </tr>
+    </table>
+    
+              <!--section header-->
+   
+    <!--section header--> 
+     <div class="slds-size_4-of-4">
+     <lightning:tabset variant="scoped">
+        <lightning:tab label="Program" id="one">
+           Program Details
+        </lightning:tab>
+        <lightning:tab label="Client Detail" id="two">
+            Client Details !
+        </lightning:tab>
+        <lightning:tab label="Hardship" id="three">
+            Hardship Details !
+        </lightning:tab>
+         <lightning:tab label="Budget" id="three">
+            Budget Details !
+        </lightning:tab>
+         <lightning:tab label="Attachments" id="three">
+            Attachments  !
+        </lightning:tab>
+         <lightning:tab label="Credit Reports" id="three">
+            Credit Reports !
+        </lightning:tab>
+    </lightning:tabset>
+    </div>
                 <!-- Offer Section -->
                 <div class="slds-section slds-is-open" aura:id="colorSection">
                     <!-- Section -->
