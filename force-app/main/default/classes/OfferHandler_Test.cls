@@ -11,10 +11,13 @@ public class OfferHandler_Test {
         
         List<nu_dse__Program__c> programList = new List<nu_dse__Program__c> {
             new nu_dse__Program__c(nu_dse__Account__c = acc.Id, nu_dse__In_Settlement__c = false, Salesperson_ID__c = UserInfo.getUserId(), 
+                                    nu_dse__Total_Debt_Included__c = 1500,
                                    nu_dse__Consecutive_NSF_Payments__c = 1, Last_Call_Recording__c = 'Test NSF Record'),
-            new nu_dse__Program__c(nu_dse__Account__c = acc.Id, nu_dse__In_Settlement__c = false, Salesperson_ID__c = UserInfo.getUserId(), 
+            new nu_dse__Program__c(nu_dse__Account__c = acc.Id, nu_dse__In_Settlement__c = false, Salesperson_ID__c = UserInfo.getUserId(),
+                                     nu_dse__Total_Debt_Included__c = 1500, 
                                    nu_dse__Consecutive_NSF_Payments__c = 2, Last_Call_Recording__c = 'Test NSF Record'),
             new nu_dse__Program__c(nu_dse__Account__c = acc.Id, nu_dse__In_Settlement__c = false, Salesperson_ID__c = UserInfo.getUserId(), 
+                                    nu_dse__Total_Debt_Included__c = 1500,
                                    nu_dse__Consecutive_NSF_Payments__c = 3, Last_Call_Recording__c = 'Test NSF Record')
         };
         insert programList; 
