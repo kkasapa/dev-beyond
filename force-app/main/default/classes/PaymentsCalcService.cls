@@ -115,7 +115,7 @@ public without sharing class PaymentsCalcService {
                         }
                     }
                     //calc on Tradeline and Offer
-                    calcPaidOutstandingForCreditor(payment);
+                    calcPaidOutstandingForCreditorPayments(payment);
                 }
 
                 if(updateProgram.Estimated_Month_2_Balance__c == null 
@@ -142,9 +142,13 @@ public without sharing class PaymentsCalcService {
                 programToUpdateMap.put(updateProgram.Id, updateProgram);
             }
         }
+        updateRecords(programToUpdateMap.values());
+        updateRecords(tradelineIdRecMap.values());
+        updateRecords(offerIdRecMap.values());
+        insert errLogs;
     } 
 
-    public static void calcPaidOutstandingForCreditor(nu_dse__Payment__c payment) {
+    public static void calcPaidOutstandingForCreditorPayments(nu_dse__Payment__c payment) {
         // To calculate Tradeline and Offer Creditor_Payments_Made, Creditor_Payments_Outstanding, Fees_Collected and Fees_Outstanding
         if(payment.RecordTypeId != draftRecordTypeId
             && ((payment.RecordTypeId == feeRecordTypeId 
@@ -198,24 +202,47 @@ public without sharing class PaymentsCalcService {
         }
     }
 
-    public static Id getSobjectRecordTypeId(String sObjectName, String recordTypeName) {
-    
-        if(String.isNotBlank(sObjectName) && String.isNotBlank(recordTypeName)) {
-        
-            Id sObjectRecordTypeId;
-                        
-            Schema.DescribeSObjectResult sobjectResult = Schema.getGlobalDescribe().get(sObjectName).getDescribe();
-            Map<String, Schema.RecordTypeInfo> sObjectRecordTypeMap = sobjectResult.getRecordTypeInfosByName();
-            
-            if(sObjectRecordTypeMap.containsKey(recordTypeName)) {
-            
-                sObjectRecordTypeId = sObjectRecordTypeMap.get(recordTypeName).getRecordTypeId();
-                
-                return sObjectRecordTypeId;
+    public static void calcPaidOutstandingForCreditor(Set<Id> tradelineIds) {
+
+        Set<Id> recordTypeIds = new Set<Id> {draftRecordTypeId, settlementRecordTypeId, feeRecordTypeId};
+
+        for (nu_dse__Payment__c payment: [SELECT Id, nu_dse__Total_Amount__c, nu_dse__Amount__c, nu_dse__Schedule_Date__c, 
+                                                nu_dse__Payment_Type__c, nu_dse__Transaction_Status__c, RecordTypeId, nu_dse__Offer__c, 
+                                                nu_dse__Offer__r.nu_dse__TradeLine__c FROM nu_dse__Payment__c 
+                                            WHERE nu_dse__Offer__r.nu_dse__TradeLine__c IN :tradelineIds 
+                                                AND RecordTypeId IN :recordTypeIds 
+                                                AND (nu_dse__Transaction_Status__c = 'Scheduled' 
+                                                    OR nu_dse__Transaction_Status__c = 'In Progress' 
+                                                    OR nu_dse__Transaction_Status__c = 'Completed' 
+                                                    OR nu_dse__Transaction_Status__c = 'Cleared') 
+                                            ORDER BY nu_dse__Schedule_Date__c ASC]) {
+            calcPaidOutstandingForCreditorPayments(payment);
+        }
+        updateRecords(tradelineIdRecMap.values());
+        updateRecords(offerIdRecMap.values());
+        insert errLogs;
+    }
+
+    //common method for handling DML and process the result as error logs
+    public static void updateRecords(List<Sobject> recordsToUpdateList) {
+        Integer count = 0;
+        if(recordsToUpdateList.isEmpty() == false) {
+            for (Database.SaveResult dmlResult: Database.update(recordsToUpdateList, false)) {
+                if (dmlResult.isSuccess() == false) {
+                    nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(
+                                                    nu_dse__Class_Method__c = 'Batch_ProgramEstimatedBalanceUpdate.excute',
+                                                    nu_dse__Error_Causing_Record_Id__c = String.valueOf(recordsToUpdateList[count].get('Id')),
+                                                    nu_dse__Stack_Trace__c = JSON.serialize(recordsToUpdateList[count]), 
+                                                    nu_dse__User_Context__c = UserInfo.getName());
+                    errLog.nu_dse__Message__c = '';
+                    for (Database.Error error: dmlResult.getErrors()) {
+                        errLog.nu_dse__Message__c += error.getMessage();
+                    }
+                    errLogs.add(errLog);
+                } 
+                count++;
             }
         }
-        
-        return null;
     }
 
     //returns the recordType Id based on developerName 
