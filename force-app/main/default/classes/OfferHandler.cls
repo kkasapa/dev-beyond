@@ -108,6 +108,7 @@ public class OfferHandler extends TriggerHandler {
                 Integer months;
                 Double totalPayment;
                 
+                System.debug('response Body '+body);
                 if (resp != 'OK')
                 {
                     newOffer.Savings_Calculation__c = 0;
