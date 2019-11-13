@@ -55,7 +55,7 @@ public without sharing class PaymentsCalcService {
                                                 OR nu_dse__Transaction_Status__c = 'In Progress' OR nu_dse__Transaction_Status__c = 'Completed' 
                                                 OR nu_dse__Transaction_Status__c = 'Cleared') 
                                             ORDER BY nu_dse__Schedule_Date__c ASC)
-                                        FROM nu_dse__Program__c WHERE Id IN :programIds AND nu_dse__Program_Status__c IN :programStatus]) {
+                                        FROM nu_dse__Program__c WHERE Id IN :programIds]) {
 
             if(program.nu_dse__Payments__r.isEmpty() == false) {
                 nu_dse__Program__c updateProgram = new nu_dse__Program__c(Id = program.Id);

@@ -44,11 +44,12 @@ public class ProgramHandler extends TriggerHandler {
         //do required checks and call out. 
         if(oldProgram == null)
         {
-            savingsCalc(newProgram.ID, newProgram.nu_dse__Total_Debt_Included__c , minPayment);
+            // Commented by Vignesh on 12-11-2019 to prevent Future method cannot be called from a future or batch method
+            // savingsCalc(newProgram.ID, newProgram.nu_dse__Total_Debt_Included__c , minPayment);
         }
         if(newProgram.Program_Savings_Calculation__c == NULL || newProgram.nu_dse__Total_Debt_Included__c != oldProgramMap.get(newProgram.Id).nu_dse__Total_Debt_Included__c)
         {
-        	savingsCalc(newProgram.ID, newProgram.nu_dse__Total_Debt_Included__c , minPayment);
+        	// savingsCalc(newProgram.ID, newProgram.nu_dse__Total_Debt_Included__c , minPayment);
         }
 
     }
