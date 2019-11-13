@@ -65,11 +65,27 @@ public with sharing class ProposalController {
     public static List<String> getTradelines(Id pgmId) {
         List<String> tradeLines = new List<String>();        
         
-        for(nu_dse__TradeLine__c tLine : [SELECT Id, Name 
+        for(nu_dse__TradeLine__c tLine : [SELECT Id, Name,nu_dse__Original_Creditor__c,nu_dse__Original_Debt__c
                                           FROM nu_dse__TradeLine__c 
                                           WHERE nu_dse__Program__c =:pgmId])
         {
             tradeLines.add(tLine.Name);
+        }       
+        return tradeLines;        
+    }
+    
+    /**
+* Method to retreive All Tradelines
+*/     
+    @AuraEnabled
+    public static List<nu_dse__TradeLine__c> getAllTradelines(Id pgmId) {
+        List<nu_dse__TradeLine__c> tradeLines = new List<nu_dse__TradeLine__c>();        
+        
+        for(nu_dse__TradeLine__c tLine : [SELECT Id, Name,Beyond_Manager_Name__c,nu_dse__Original_Debt__c
+                                          FROM nu_dse__TradeLine__c 
+                                          WHERE nu_dse__Program__c =:pgmId ORDER BY nu_dse__Original_Debt__c])
+        {
+            tradeLines.add(tLine);
         }       
         return tradeLines;        
     }
@@ -88,6 +104,19 @@ public with sharing class ProposalController {
             offers.add(offer.Name);
         }      
         return offers;
+    }
+    
+    
+    @AuraEnabled
+    public static nu_dse__Bank_Account__c bankDetails(Id pgmId){
+        
+        nu_dse__Bank_Account__c bankRecord = [SELECT id,nu_dse__Bank_Account_Number__c,nu_dse__Bank_Name__c,
+                                                      nu_dse__Routing_Number__c,nu_dse__Status__c,nu_dse__Account_Type__c,
+                                                      nu_dse__City__c,nu_dse__State__c,nu_dse__Zip__c
+                                              FROM nu_dse__Bank_Account__c
+                                              WHERE nu_dse__Program__c =: pgmId LIMIT 1];
+        system.debug('@@@bankRecord'+bankRecord);
+        return bankRecord;
     }
     
     /**

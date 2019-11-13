@@ -17,6 +17,24 @@
         $A.enqueueAction(action);
     },
     
+    getBankDetails: function(component, event, helper) {
+        var action = component.get("c.bankDetails");
+        
+        action.setParams({
+            pgmId : component.get("v.parameters")          
+        });        
+        
+        action.setCallback(this, function(response) {
+            var state = response.getState();
+            if (state === "SUCCESS") {
+                var result = response.getReturnValue();                
+               
+                component.set("v.bankrec", result);
+            }
+        });
+        $A.enqueueAction(action);
+    },
+    
     getTLines: function(component, event, helper) {
         var action = component.get("c.getTradelines");
         
@@ -88,6 +106,22 @@
             if (state === "SUCCESS") {                
                 component.set("v.myObjects", response.getReturnValue());
                 component.set("v.boolean", true);
+            }
+        });
+        $A.enqueueAction(action);
+    },
+    
+    getTradeObj: function(component, event, helper) {
+        var action = component.get("c.getAllTradelines");
+        action.setParams({
+            pgmId : component.get("v.parameters")
+        });
+        
+        action.setCallback(this, function(response){
+            var state = response.getState();
+            console.log('Tradelines Query' + response.getReturnValue());
+            if (state === "SUCCESS") {                
+                component.set("v.tradeObjects", response.getReturnValue());             
             }
         });
         $A.enqueueAction(action);

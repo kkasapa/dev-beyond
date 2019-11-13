@@ -1,0 +1,21 @@
+<apex:page controller="ApprovalProcessPage">
+    <apex:form >
+    
+    
+  
+    <apex:pageBlock >
+    
+    <apex:pageBlockSection >
+    <apex:inputField value="{!prospectRecord.Name}"/>
+     <apex:outputField value="{!prospectRecord.nu_dse__Prospect_Status__c}"/>
+        <apex:inputField value="{!prospectRecord.Rejection_Reason_Pick__c}" required="{!IF(prospectRecord.nu_dse__Prospect_Status__c =='Approval', true, false)}"/>
+     </apex:pageBlockSection>
+        <apex:pageBlockButtons location="bottom">
+            <apex:commandButton action="{!approveAStep}" value="Approve"/>
+            <apex:commandButton action="{!}"  value="Reject"/>
+            <apex:commandButton action="{!CancelRec}"  value="Cancel"/>
+       </apex:pageBlockButtons>
+      
+       </apex:pageBlock>
+    </apex:form>
+</apex:page>

@@ -26,25 +26,14 @@
 
 public without sharing class PaymentsCalcService {
 
-    public static Set<String> programStatus = new Set<String>{'New Client', 'Active'};
+    //public static Set<String> programStatus = new Set<String>{'New Client', 'Active'};
     public static Date futureEstimateDate = system.today().toStartOfMonth().addMonths(12).addDays(-1);
-
-    public static Map<Id, nu_dse__Program__c> programToUpdateMap = new Map<Id, nu_dse__Program__c>();
-    public static Map<Id, nu_dse__TradeLine__c> tradelineIdRecMap = new Map<Id, nu_dse__TradeLine__c>();
-    public static Map<Id, nu_dse__Offer__c> offerIdRecMap = new Map<Id, nu_dse__Offer__c>();
-    public static List<nu_dse__Error_Log__c> errLogs = new List<nu_dse__Error_Log__c>();
 
     public static Id draftRecordTypeId = getPaymentRecordTypeId('Draft'); // recordType Id for draft
     public static Id feeRecordTypeId = getPaymentRecordTypeId('Fee');  // recordType Id for fee
     public static Id settlementRecordTypeId = getPaymentRecordTypeId('Settlement');  // recordType Id for settlement
 
-
-    public PaymentsCalcService() {
-
-    }
-
     public static PaymentCalcWrapper calcProgramEstimatedBalance(Set<Id> programIds) {
-
 
         PaymentCalcWrapper paymentCalcWrap = new PaymentCalcWrapper();
         Set<Id> recordTypeIds = new Set<Id> {draftRecordTypeId, settlementRecordTypeId, feeRecordTypeId};
@@ -144,10 +133,6 @@ public without sharing class PaymentsCalcService {
                 paymentCalcWrap.programToUpdateMap.put(updateProgram.Id, updateProgram);
             }
         }
-        //updateRecords(programToUpdateMap.values());
-        //updateRecords(tradelineIdRecMap.values());
-        //updateRecords(offerIdRecMap.values());
-        //insert errLogs;
         return paymentCalcWrap;
     } 
 
@@ -224,14 +209,11 @@ public without sharing class PaymentsCalcService {
                                             ORDER BY nu_dse__Schedule_Date__c ASC]) {
             calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
         }
-        //updateRecords(tradelineIdRecMap.values());
-        //updateRecords(offerIdRecMap.values());
-        //insert errLogs;
         return paymentCalcWrap;
     }
 
     //common method for handling DML and process the result as error logs
-    public static void updateRecords(List<Sobject> recordsToUpdateList) {
+    /*public static void updateRecords(List<Sobject> recordsToUpdateList) {
         Integer count = 0;
         if(recordsToUpdateList.isEmpty() == false) {
             for (Database.SaveResult dmlResult: Database.update(recordsToUpdateList, false)) {
@@ -250,7 +232,7 @@ public without sharing class PaymentsCalcService {
                 count++;
             }
         }
-    }
+    }*/
 
     //returns the recordType Id based on developerName 
     public static Id getPaymentRecordTypeId(String recordTypeDeveloperName) {
