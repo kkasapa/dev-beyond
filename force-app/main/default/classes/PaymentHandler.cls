@@ -111,6 +111,19 @@ public class PaymentHandler extends TriggerHandler {
         insert errorLogList; // if any error logs were captured during execution it will be inserted for track of failure
     }
     
+    public void draftCompletedFlag(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment)
+    {
+        if(newPayment.nu_dse__Transaction_Status__c != oldPayment.nu_dse__Transaction_Status__c)
+        {
+            nu_dse__Program__c program = new nu_dse__Program__c(Id=newPayment.nu_dse__Program__c);
+            if(newPayment.nu_dse__Transaction_Status__c == 'Completed' && program.First_Deposit_Cleared__c != true && newPayment.RecordTypeName__c == 'Draft')
+            {	
+            	program.First_Deposit_Cleared__c = true;
+                programsToBeUpdatedMap.put(program.ID, program);
+            }
+        }
+    }
+    
     public override void afterUpdate() {
         
         for (nu_dse__Payment__c newPayment: (List<nu_dse__Payment__c>)Trigger.New) {
@@ -131,7 +144,9 @@ public class PaymentHandler extends TriggerHandler {
                 // this method creates Task instance for NSF payments and adds to a map that is to be upserted based Unique Identifier
                 instantiateNSFTasks(newPayment, oldPaymentMap.get(newPayment.Id));  
                 //Creates a NSF Taskes and assign to Salesperson
-                createSalespersonNSFNotifiTask(newPayment, oldPaymentMap.get(newPayment.Id));  
+                createSalespersonNSFNotifiTask(newPayment, oldPaymentMap.get(newPayment.Id));
+                //If a Draft was completed, set a flag on the program.
+               	draftCompletedFlag(newPayment, oldPaymentMap.get(newPayment.Id));
             }
         }   
         if(completedPaymentProgramIds.isEmpty() == false) {

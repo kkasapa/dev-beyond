@@ -1,6 +1,4 @@
 public class RejectionCommentsRequired {
-    
-    
     public Map <Id,nu_dse__Prospect__c> rejectionMesage(Map<Id,nu_dse__Prospect__c>newProspectMap, Map<Id,nu_dse__Prospect__c>oldProspectmap){
         Map <Id,nu_dse__Prospect__c>rejectedStatement = new Map <Id,nu_dse__Prospect__c>();
         Map<Id,String> LeadProcessStepMap = new Map<Id,String>(); 
@@ -38,28 +36,25 @@ public class RejectionCommentsRequired {
             } 
             
             for(nu_dse__Prospect__c prosRec: newProspectMap.values()){                
-                
-                if(prosRec.SecondLevelRejection__c == true){
-                    if(LeadProcessStepMap.get(LeadProcessMap.get(prosRec.id)) == null || 
-                       LeadProcessStepMap.get(LeadProcessMap.get(prosRec.id)).length() == 0   )
-                    {
-                        system.debug('@@@@In IF --> ');
-                        rejectedStatement.get(prosRec.id).addError(
-                            'Operation Cancelled: Please provide a rejection reason!');
-                        
-                    }
-                    if((LeadProcessStepMap.get(LeadProcessMap.get(prosRec.id)) != null && 
-                        LeadProcessStepMap.get(LeadProcessMap.get(prosRec.id)).length() > 0  )){
-                            system.debug('@@@@In Else --> ');
-                            prosRec.Rejection_Reason__c = LeadProcessStepMap.get(LeadProcessMap.get(prosRec.id));
+                try{
+                    if(prosRec.SecondLevelRejection__c == true){
+                        if(LeadProcessStepMap.get(LeadProcessMap.get(prosRec.id)) == null || 
+                           LeadProcessStepMap.get(LeadProcessMap.get(prosRec.id)).length() == 0   )
+                        {
+                            system.debug('@@@@In IF --> ');
+                            rejectedStatement.get(prosRec.id).addError(
+                                'Operation Cancelled: Please provide a rejection reason!');
+                            
                         }
+                        else if((LeadProcessStepMap.get(LeadProcessMap.get(prosRec.id)) != null && 
+                                 LeadProcessStepMap.get(LeadProcessMap.get(prosRec.id)).length() > 0  )){                            
+                                     prosRec.Rejection_Reason__c = LeadProcessStepMap.get(LeadProcessMap.get(prosRec.id));
+                                 }
+                    }
                 }
-                
-                
+                catch(Exception e){}                
             }
-        }
-        
-        return rejectedStatement;
-        
+        }        
+        return rejectedStatement;        
     }
 }

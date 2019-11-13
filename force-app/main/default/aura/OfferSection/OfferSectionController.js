@@ -19,6 +19,8 @@
         helper.getOfferPicklist(component, event, helper);
         helper.getPaymentMethod(component,event,helper);
         helper.getPgm(component,event,helper);
+        helper.getBankDetails(component,event,helper);
+        helper.getTradeObj(component,event,helper);
         
     },   
     

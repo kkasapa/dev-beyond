@@ -32,7 +32,7 @@ public class TradelineHandler extends TriggerHandler {
      	for( Id TLID : TLIds)
         {
             //check if the tradeline current stage changed.
-            if(oldTLMap.get(TLID).nu_dse__Current_Stage__c != newTLMap.get(TLID).nu_dse__Current_Stage__c)
+            if(oldTLMap.get(TLID).nu_dse__Current_Stage__c != newTLMap.get(TLID).nu_dse__Current_Stage__c && oldTLMap.get(TLID).nu_dse__Current_Stage__c != 'Making Payments' && oldTLMap.get(TLID).nu_dse__Current_Stage__c != 'Settled - Legal' &&  oldTLMap.get(TLID).nu_dse__Current_Stage__c != 'Settled - Non Legal' )
             {
                 //if the current stage is making payments, update the tradeline settlement order field
                 if(newTLMap.get(TLID).nu_dse__Current_Stage__c == 'Making payments' || newTLMap.get(TLID).nu_dse__Current_Stage__c == 'Settled - Legal' || newTLMap.get(TLID).nu_dse__Current_Stage__c == 'Settled - Non Legal' )

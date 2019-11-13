@@ -14,7 +14,7 @@
 trigger prospectTrigger_TF on nu_dse__Prospect__c (before insert, before update, after insert, after update) {
     
     new ProspectHandler().run();
-    
+    /*
     RejectionCommentsRequired rejectHandler = new RejectionCommentsRequired();
     
     if(Trigger.isBefore){
@@ -23,4 +23,5 @@ trigger prospectTrigger_TF on nu_dse__Prospect__c (before insert, before update,
             rejectHandler.rejectionMesage(trigger.newMap,trigger.oldMap);
         }
     }
+    */
 }

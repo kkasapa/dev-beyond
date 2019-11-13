@@ -26,25 +26,16 @@
 
 public without sharing class PaymentsCalcService {
 
-    public static Set<String> programStatus = new Set<String>{'New Client', 'Active'};
+    //public static Set<String> programStatus = new Set<String>{'New Client', 'Active'};
     public static Date futureEstimateDate = system.today().toStartOfMonth().addMonths(12).addDays(-1);
-
-    public static Map<Id, nu_dse__Program__c> programToUpdateMap = new Map<Id, nu_dse__Program__c>();
-    public static Map<Id, nu_dse__TradeLine__c> tradelineIdRecMap = new Map<Id, nu_dse__TradeLine__c>();
-    public static Map<Id, nu_dse__Offer__c> offerIdRecMap = new Map<Id, nu_dse__Offer__c>();
-    public static List<nu_dse__Error_Log__c> errLogs = new List<nu_dse__Error_Log__c>();
 
     public static Id draftRecordTypeId = getPaymentRecordTypeId('Draft'); // recordType Id for draft
     public static Id feeRecordTypeId = getPaymentRecordTypeId('Fee');  // recordType Id for fee
     public static Id settlementRecordTypeId = getPaymentRecordTypeId('Settlement');  // recordType Id for settlement
 
+    public static PaymentCalcWrapper calcProgramEstimatedBalance(Set<Id> programIds) {
 
-    public PaymentsCalcService() {
-
-    }
-
-    public static void calcProgramEstimatedBalance(Set<Id> programIds) {
-
+        PaymentCalcWrapper paymentCalcWrap = new PaymentCalcWrapper();
         Set<Id> recordTypeIds = new Set<Id> {draftRecordTypeId, settlementRecordTypeId, feeRecordTypeId};
 
         for(nu_dse__Program__c program : [SELECT Id, nu_dse__Trust_Account_Balance__c, 
@@ -60,8 +51,8 @@ public without sharing class PaymentsCalcService {
             if(program.nu_dse__Payments__r.isEmpty() == false) {
                 nu_dse__Program__c updateProgram = new nu_dse__Program__c(Id = program.Id);
 
-                if(programToUpdateMap.containskey(updateProgram.Id) == true) {
-                    updateProgram = programToUpdateMap.get(updateProgram.Id);
+                if(paymentCalcWrap.programToUpdateMap.containskey(updateProgram.Id) == true) {
+                    updateProgram = paymentCalcWrap.programToUpdateMap.get(updateProgram.Id);
                 }
 
                 Decimal programBal = 0;
@@ -115,7 +106,7 @@ public without sharing class PaymentsCalcService {
                         }
                     }
                     //calc on Tradeline and Offer
-                    calcPaidOutstandingForCreditorPayments(payment);
+                    calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
                 }
 
                 if(updateProgram.Estimated_Month_2_Balance__c == null 
@@ -139,16 +130,14 @@ public without sharing class PaymentsCalcService {
                     updateProgram.Estimated_Month_12_Balance__c = updateProgram.Estimated_Month_9_Balance__c;
                 }
                 updateProgram.Estimated_Balance_Calculations_Timestamp__c = System.now();
-                programToUpdateMap.put(updateProgram.Id, updateProgram);
+                paymentCalcWrap.programToUpdateMap.put(updateProgram.Id, updateProgram);
             }
         }
-        updateRecords(programToUpdateMap.values());
-        updateRecords(tradelineIdRecMap.values());
-        updateRecords(offerIdRecMap.values());
-        insert errLogs;
+        return paymentCalcWrap;
     } 
 
-    public static void calcPaidOutstandingForCreditorPayments(nu_dse__Payment__c payment) {
+    public static void calcPaidOutstandingForCreditorPayments(nu_dse__Payment__c payment, PaymentCalcWrapper paymentCalcWrap) {
+
         // To calculate Tradeline and Offer Creditor_Payments_Made, Creditor_Payments_Outstanding, Fees_Collected and Fees_Outstanding
         if(payment.RecordTypeId != draftRecordTypeId
             && ((payment.RecordTypeId == feeRecordTypeId 
@@ -165,12 +154,12 @@ public without sharing class PaymentsCalcService {
                 Creditor_Payments_Made__c = 0, Creditor_Payments_Outstanding__c = 0, 
                 Fees_Collected__c = 0, Fees_Outstanding__c = 0);
 
-            if(tradelineIdRecMap.containsKey(tradeLineInst.Id) == true) {
-                tradeLineInst = tradelineIdRecMap.get(tradeLineInst.Id);
+            if(paymentCalcWrap.tradelineIdRecMap.containsKey(tradeLineInst.Id) == true) {
+                tradeLineInst = paymentCalcWrap.tradelineIdRecMap.get(tradeLineInst.Id);
             }
 
-            if(offerIdRecMap.containsKey(offerInst.Id) == true) {
-                offerInst = offerIdRecMap.get(offerInst.Id);
+            if(paymentCalcWrap.offerIdRecMap.containsKey(offerInst.Id) == true) {
+                offerInst = paymentCalcWrap.offerIdRecMap.get(offerInst.Id);
             }
 
             if(payment.RecordTypeId == feeRecordTypeId) {
@@ -197,13 +186,15 @@ public without sharing class PaymentsCalcService {
             }
             tradeLineInst.Creditor_Fee_Payments_Calculated_on__c = System.now();
             offerInst.Creditor_Fee_Payments_Calculated_on__c = System.now();
-            tradelineIdRecMap.put(tradeLineInst.Id, tradeLineInst);
-            offerIdRecMap.put(offerInst.Id, offerInst);
+            
+            paymentCalcWrap.tradelineIdRecMap.put(tradeLineInst.Id, tradeLineInst);
+            paymentCalcWrap.offerIdRecMap.put(offerInst.Id, offerInst);
         }
     }
 
-    public static void calcPaidOutstandingForCreditor(Set<Id> tradelineIds) {
+    public static PaymentCalcWrapper calcPaidOutstandingForCreditor(Set<Id> tradelineIds) {
 
+        PaymentCalcWrapper paymentCalcWrap = new PaymentCalcWrapper();
         Set<Id> recordTypeIds = new Set<Id> {draftRecordTypeId, settlementRecordTypeId, feeRecordTypeId};
 
         for (nu_dse__Payment__c payment: [SELECT Id, nu_dse__Total_Amount__c, nu_dse__Amount__c, nu_dse__Schedule_Date__c, 
@@ -216,15 +207,13 @@ public without sharing class PaymentsCalcService {
                                                     OR nu_dse__Transaction_Status__c = 'Completed' 
                                                     OR nu_dse__Transaction_Status__c = 'Cleared') 
                                             ORDER BY nu_dse__Schedule_Date__c ASC]) {
-            calcPaidOutstandingForCreditorPayments(payment);
+            calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
         }
-        updateRecords(tradelineIdRecMap.values());
-        updateRecords(offerIdRecMap.values());
-        insert errLogs;
+        return paymentCalcWrap;
     }
 
     //common method for handling DML and process the result as error logs
-    public static void updateRecords(List<Sobject> recordsToUpdateList) {
+    /*public static void updateRecords(List<Sobject> recordsToUpdateList) {
         Integer count = 0;
         if(recordsToUpdateList.isEmpty() == false) {
             for (Database.SaveResult dmlResult: Database.update(recordsToUpdateList, false)) {
@@ -243,11 +232,18 @@ public without sharing class PaymentsCalcService {
                 count++;
             }
         }
-    }
+    }*/
 
     //returns the recordType Id based on developerName 
     public static Id getPaymentRecordTypeId(String recordTypeDeveloperName) {
        return Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get(recordTypeDeveloperName).getRecordTypeId();
+    }
+
+    public class PaymentCalcWrapper{
+        public Map<Id, nu_dse__Program__c> programToUpdateMap = new Map<Id, nu_dse__Program__c>();
+        public Map<Id, nu_dse__TradeLine__c> tradelineIdRecMap = new Map<Id, nu_dse__TradeLine__c>();
+        public Map<Id, nu_dse__Offer__c> offerIdRecMap = new Map<Id, nu_dse__Offer__c>();
+        public List<nu_dse__Error_Log__c> errLogs = new List<nu_dse__Error_Log__c>();
     }
 
 }

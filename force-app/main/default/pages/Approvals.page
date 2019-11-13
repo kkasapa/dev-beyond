@@ -487,6 +487,11 @@
                                                                 <a href="{!'/p/process/ProcessInstanceWorkitemWizardStageManager?id=' + approvalSet.workItemId + '&retURL=%2F' + approvalSet.recordId}" target="_blank" >Approve/Reject</a>
                                                             </span>
                                                         </apex:outputPanel>
+                                                        <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator' || ((selectedRadio == 'nu_dse__Prospect__c' && modifyAllProspect) || (selectedRadio == 'nu_dse__Offer__c' && modifyAllOffer))) && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a href="{!'/apex/ApprovalDecisionPage?id=' + approvalSet.workItemId + '&retURL=%2F' + approvalSet.recordId}" target="_blank" >New Approval</a>
+                                                            </span>
+                                                        </apex:outputPanel>
                                                         <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator' && ((selectedRadio != 'nu_dse__Prospect__c' || !(modifyAllProspect)) && (selectedRadio != 'nu_dse__Offer__c' || !(modifyAllOffer)))) && approvalSet.workItemId != null}">
                                                             <span class="approval-set--aprove-button">
                                                                 <a disabled="true" class="diabled-anchor">Approve/Reject</a>

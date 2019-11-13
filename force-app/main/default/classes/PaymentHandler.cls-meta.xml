@@ -3,7 +3,7 @@
     <apiVersion>45.0</apiVersion>
     <packageVersions>
         <majorNumber>1</majorNumber>
-        <minorNumber>381</minorNumber>
+        <minorNumber>401</minorNumber>
         <namespace>nu_dse</namespace>
     </packageVersions>
     <status>Active</status>
