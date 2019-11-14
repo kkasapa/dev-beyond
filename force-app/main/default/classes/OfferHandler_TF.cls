@@ -28,7 +28,7 @@ public class OfferHandler_TF extends TriggerHandler {
     public override void afterInsert()
     {
         //Run the savings calculator after offer create
-        savingsCalc(offerIds);
+        //savingsCalc(offerIds);
     }
        
     public override void beforeInsert(){
@@ -138,7 +138,7 @@ public class OfferHandler_TF extends TriggerHandler {
         }
         
         //do savings calculation
-       	savingsCalc(offerSavingsCalc);
+       	// savingsCalc(offerSavingsCalc);
         
         if(programIdSet.isEmpty() == false) {
         
@@ -329,7 +329,7 @@ public class OfferHandler_TF extends TriggerHandler {
             return -1;
         }
     }
-    
+    /*
     @future(callout=true)
     public static void savingsCalc(Set<ID> recordIds)
     {   
@@ -404,5 +404,5 @@ public class OfferHandler_TF extends TriggerHandler {
             
         }
         update offersToUpdate;
-    }
+    }*/
 }

@@ -79,7 +79,7 @@
                     <table>
                         <tr>
                             <td>
-                                <img src="{!$Resource.User_Image}" />
+                                <img src="{!$Resource.User_Icon}" />
                                 
                                 <div class="slds-m-horizontal--large">  <ul>
                                     <li>{!v.prmObject.AccountName} </li>

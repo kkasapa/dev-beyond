@@ -24,9 +24,12 @@ public class TradelineHandler extends TriggerHandler {
         this.TLIds = trigger.newMap.keySet();
     }
     
+    Static Set<Id> savignCalculatedTradelineIds = new Set<Id>();
     Set<Id> savignCalcTradelineIds = new Set<Id>();
+    Set<Id> savingCalcUpdateProgramIds = new Set<Id>();
     // List<nu_dse__Offer__c> offersToUpdate = new List<nu_dse__Offer__c>();
     List<nu_dse__TradeLine__c> TradelinesToUpdate = new List<nu_dse__TradeLine__c>();
+    Map<Id, nu_dse__Program__c> programsToUpdate = new Map<Id,nu_dse__Program__c>();
     
     public override void afterInsert() {
     
@@ -48,12 +51,18 @@ public class TradelineHandler extends TriggerHandler {
         for (nu_dse__TradeLine__c newTradeline : (List<nu_dse__TradeLine__c>) trigger.new) {
 
             collectSavingCalcTradelines(newTradeline, oldTLMap.get(newTradeline.Id));
+            //on updates on saving calc field, rolling up to Program.
+            collectsavingCalcUpdates(newTradeline, oldTLMap.get(newTradeline.Id));
         }
 
         if(savignCalcTradelineIds.isEmpty() == false) {
 
             savingsCalc(savignCalcTradelineIds);
         }
+
+        if (savingCalcUpdateProgramIds.isEmpty() == false) {
+            aggregateSavingsToProgram();
+        } 
 
         for( Id TLID : TLIds)
         {
@@ -90,16 +99,54 @@ public class TradelineHandler extends TriggerHandler {
         }
         // update offersToUpdate;
         update TradelinesToUpdate;
+        update programsToUpdate.values();
     }
 
     public void collectSavingCalcTradelines(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
 
         if(Trigger.isInsert
-            || (newTradeline.nu_dse__Current_Balance__c != oldTradeline.nu_dse__Current_Balance__c
-                || ((newTradeline.nu_dse__Current_Balance__c == null || newTradeline.nu_dse__Current_Balance__c == 0)
-                    && newTradeline.nu_dse__Original_Debt__c != oldTradeline.nu_dse__Original_Debt__c))) {
+            || (savignCalculatedTradelineIds.contains(newTradeline.Id) == false
+                && (newTradeline.nu_dse__Current_Balance__c != oldTradeline.nu_dse__Current_Balance__c
+                    || ((newTradeline.nu_dse__Current_Balance__c == null || newTradeline.nu_dse__Current_Balance__c == 0)
+                        && newTradeline.nu_dse__Original_Debt__c != oldTradeline.nu_dse__Original_Debt__c)))) {
 
             savignCalcTradelineIds.add(newTradeline.Id);
+            savignCalculatedTradelineIds.add(newTradeline.Id);
+        }
+    }
+
+    public void collectsavingCalcUpdates(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
+
+        if(newTradeline.nu_dse__Program__c != null && (Trigger.isInsert
+            || (newTradeline.Months_to_Payoff__c != oldTradeline.Months_to_Payoff__c
+                ||newTradeline.Payoff_Amount__c != oldTradeline.Months_to_Payoff__c
+                || newTradeline.Savings_Calculation__c != oldTradeline.Savings_Calculation__c ))) {
+
+            savingCalcUpdateProgramIds.add(newTradeline.nu_dse__Program__c);
+        }
+    }
+
+    public void aggregateSavingsToProgram() {
+
+        for (AggregateResult result: [SELECT sum(Months_to_Payoff__c) payOffMonthSum, 
+                                        sum(Payoff_Amount__c) payOffAmountSum, 
+                                    	sum(Savings_Calculation__c) savingCalcSum , 
+                                        nu_dse__Program__c 
+                                        FROM nu_dse__Tradeline__c 
+                                        WHERE nu_dse__Program__c IN :savingCalcUpdateProgramIds 
+                                        GROUP BY nu_dse__Program__c]) {
+           
+            Id programId = Id.valueOf(String.valueOf(result.get('nu_dse__Program__c')));
+            nu_dse__Program__c program = new nu_dse__Program__c(Id = programId);                    
+            if (programsToUpdate.containsKey(programId) == true) {
+                program = programsToUpdate.get(programId);
+            } 
+
+            program.Total_Payoff_Amount__c = Integer.valueOf(result.get('payOffAmountSum'));
+            program.Total_Months_to_Payoff__c = Integer.valueOf(result.get('payOffMonthSum'));
+            program.Total_Savings_Calculation__c = Integer.valueOf(result.get('savingCalcSum'));
+            program.Last_Saving_Calculation_Timestamp__c = System.now();
+            programsToUpdate.put(programId, program);
         }
     }
 

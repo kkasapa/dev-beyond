@@ -58,7 +58,7 @@ public class PaymentHandler extends TriggerHandler {
 
         }
         if(paymentSPIds.isEmpty() == false || SPIdsForTask.isEmpty() == false) {
-            updateManagerEmail();
+            updateSalespersonAndManagerEmail();
         }
     }
     
@@ -76,7 +76,7 @@ public class PaymentHandler extends TriggerHandler {
             }
         }
         if(paymentSPIds.isEmpty() == false || SPIdsForTask.isEmpty() == false) {
-            updateManagerEmail();
+            updateSalespersonAndManagerEmail();
         }
     }
 
@@ -203,7 +203,9 @@ public class PaymentHandler extends TriggerHandler {
         
         //<Resly 05/20> - Remove unnecessary criteria
         if(newPayment.nu_dse__Transaction_Status__c == 'Completed' 
-            && newPayment.nu_dse__Payment_Sequence_Number__c == 1 
+            && (newPayment.nu_dse__Payment_Sequence_Number__c == 1 
+                || newPayment.nu_dse__Payment_Sequence_Number__c == 2
+                || newPayment.nu_dse__Payment_Sequence_Number__c == 3)
             && newPayment.RecordTypeId == draftRecordTypeId 
             && newPayment.Salesperson_ID_Formula__c != null
             && (Trigger.isInsert 
@@ -229,9 +231,10 @@ public class PaymentHandler extends TriggerHandler {
     /* conversion of "Send Salesperson Cleared Payment Notifiication" process
       * with completedPaymentSPIds query user's Beyond_Manager_Email__c and mapping it as userId => Beyond Manager Email 
     */   
-    public void updateManagerEmail() {
+    public void updateSalespersonAndManagerEmail() {
         
-        for(User user : [SELECT Id, Beyond_Manager_Email__c, IsActive FROM User WHERE Id IN :paymentSPIds OR Id IN :SPIdsForTask]) {
+        for(User user : [SELECT Id, Beyond_Manager_Email__c, IsActive, Email FROM User 
+                        WHERE (Id IN :paymentSPIds OR Id IN :SPIdsForTask) AND IsActive = true]) {
             userMailMap.put(user.Id, user);
             system.debug('usermailMap::'+userMailMap);
         }
@@ -239,6 +242,7 @@ public class PaymentHandler extends TriggerHandler {
             for(nu_dse__Payment__c newPayment : filteredPayments) {
                 if(userMailMap.containskey(newPayment.Salesperson_ID_Formula__c)) {
                     newPayment.Manager_Email__c = userMailMap.get(newPayment.Salesperson_ID_Formula__c).Beyond_Manager_Email__c;
+                    newPayment.Salesperson_Email__c = userMailMap.get(newPayment.Salesperson_ID_Formula__c).Email;
                 }
             }
         }

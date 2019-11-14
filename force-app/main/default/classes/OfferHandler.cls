@@ -16,33 +16,27 @@ public class OfferHandler extends TriggerHandler {
     
     private Map<Id, nu_dse__Offer__c> newOfferMap;
     private Map<Id, nu_dse__Offer__c> oldOfferMap;
-    private Set<ID> offerIds;
-    private Map<Id, nu_dse__Tradeline__c> newTradelineMap;
-    private Map<Id, nu_dse__Tradeline__c> oldTradelineMap;     
-    
-    List<nu_dse__Program__c> ProgramList = new List<nu_dse__Program__c>(); //List of Programs
 
     public OfferHandler() {
         this.newOfferMap = (Map<Id, nu_dse__Offer__c>) Trigger.newMap;
         this.oldOfferMap = (Map<Id, nu_dse__Offer__c>) Trigger.oldMap;
-        this.offerIds = trigger.newMap.keySet();
     }
 
     Set<Id> cancelledOfferIds = new Set<Id>();
 
-    public override void afterInsert()
-    {
-        //Run the savings calculator after offer create
-        savingsCalc(offerIds);
+    public override void afterInsert() {
 
         for (nu_dse__Offer__c newOffer : (List<nu_dse__Offer__c>)Trigger.New){
         	addLoanAppLookup(newOffer, null);
         }
+        //Run the savings calculator after offer create
+        // savingsCalc moved to tradeline level
+        // savingsCalc(offerIds);
     }
         
     public override void afterUpdate() {
-        Set<ID> OfferstoUpdate = new Set<ID>();
-        /*run savings calculator ONLY if enrolled balance is changed.
+        /*Set<ID> OfferstoUpdate = new Set<ID>();
+        run savings calculator ONLY if enrolled balance is changed.
         for( Id offerId : offerIds)
         {
             if(newOfferMap.get(offerId).Update_Savings_Calc__c)
@@ -52,23 +46,26 @@ public class OfferHandler extends TriggerHandler {
                 savingsCalc(toUpdate);    
             }
         }*/
-        for (nu_dse__Offer__c newOffer: (List<nu_dse__Offer__c>)Trigger.New) 
-        {
-        	if(newOffer.Update_Savings_Calc__c == true && oldOfferMap.get(newOffer.Id).Update_Savings_Calc__c == false)
-            {
-                OfferstoUpdate.add(newOffer.ID);  
-            }
+        for (nu_dse__Offer__c newOffer: (List<nu_dse__Offer__c>)Trigger.New) {
+
             // To collect the Cancelled offers Ids to delete the related payments 
             collectCancelledOffers(newOffer, oldOfferMap.get(newOffer.Id));
-        }
-        // Updated by Vignesh on 31-10-2019 to fix Future method cannot be called from a future or batch method
-        if(OfferstoUpdate.isEmpty() == false) {
-            savingsCalc(OfferstoUpdate);
+            // savingsCalc moved to tradeline level
+        	/*if(newOffer.Update_Savings_Calc__c == true && oldOfferMap.get(newOffer.Id).Update_Savings_Calc__c == false)
+            {
+                OfferstoUpdate.add(newOffer.ID);  
+            }*/
         }
         // Delete Cancelled Offer related Payments
         if(cancelledOfferIds.isEmpty() == false) {
             deletePayments(cancelledOfferIds);        
         }
+
+        /* Updated by Vignesh on 31-10-2019 to fix Future method cannot be called from a future or batch method
+        // savingsCalc moved to tradeline level
+        if(OfferstoUpdate.isEmpty() == false) {
+            savingsCalc(OfferstoUpdate);
+        }*/
     }
     // Method to collect the Cancelled offers Ids to delete the related payments 
     public void collectCancelledOffers(nu_dse__Offer__c newOffer, nu_dse__Offer__c oldOffer) {
@@ -83,7 +80,9 @@ public class OfferHandler extends TriggerHandler {
     public void deletePayments(Set<Id> cancelledOfferIds) {
         delete [SELECT Id FROM nu_dse__Payment__c WHERE nu_dse__Offer__c IN :cancelledOfferIds];
     }
-
+    
+    // savingsCalc moved to tradeline level
+    /*
  	@future(callout=true)
     public static void savingsCalc(Set<ID> recordIds)
     {   
@@ -160,7 +159,7 @@ public class OfferHandler extends TriggerHandler {
             
         }
         update offersToUpdate;
-    }   
+    } */  
     
     public static void addLoanAppLookup(nu_dse__Offer__c newOffer, nu_dse__Offer__c oldOffer){
         nu_dse__Program__c program = new nu_dse__Program__c();
