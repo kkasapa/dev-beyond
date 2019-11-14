@@ -18,7 +18,7 @@ public class OfferHandler extends TriggerHandler {
     private Map<Id, nu_dse__Offer__c> oldOfferMap;
     private Set<ID> offerIds;
     private Map<Id, nu_dse__Tradeline__c> newTradelineMap;
-    private Map<Id, nu_dse__Tradeline__c> oldTradelineMap;   
+    private Map<Id, nu_dse__Tradeline__c> oldTradelineMap;     
     
     List<nu_dse__Program__c> ProgramList = new List<nu_dse__Program__c>(); //List of Programs
 
@@ -34,6 +34,10 @@ public class OfferHandler extends TriggerHandler {
     {
         //Run the savings calculator after offer create
         savingsCalc(offerIds);
+
+        for (nu_dse__Offer__c newOffer : (List<nu_dse__Offer__c>)Trigger.New){
+        	addLoanAppLookup(newOffer, null);
+        }
     }
         
     public override void afterUpdate() {
@@ -50,7 +54,7 @@ public class OfferHandler extends TriggerHandler {
         }*/
         for (nu_dse__Offer__c newOffer: (List<nu_dse__Offer__c>)Trigger.New) 
         {
-        	if(newOffer.Update_Savings_Calc__c)
+        	if(newOffer.Update_Savings_Calc__c == true && oldOfferMap.get(newOffer.Id).Update_Savings_Calc__c == false)
             {
                 OfferstoUpdate.add(newOffer.ID);  
             }
@@ -108,6 +112,7 @@ public class OfferHandler extends TriggerHandler {
                 Integer months;
                 Double totalPayment;
                 
+                System.debug('response Body '+body);
                 if (resp != 'OK')
                 {
                     newOffer.Savings_Calculation__c = 0;
@@ -155,15 +160,16 @@ public class OfferHandler extends TriggerHandler {
             
         }
         update offersToUpdate;
-    }
+    }   
     
-    // Method to fillout TL Delinquent (DQ) Days on Offer Accepted Date.
-    public void DQDays(nu_dse__Offer__c newOffer, nu_dse__Offer__c oldOffer,nu_dse__Tradeline__c oldTradeline, nu_dse__Tradeline__c newTradeline) {
-        if(newOffer.nu_dse__Status__c == '05-Offer Accepted by Payment Team'
-            && newOffer.nu_dse__Status__c != oldOffer.nu_dse__Status__c
-          	&& oldTradeline.DQ_at_Offer_Created_Date__c == null) {
-              system.debug('This works');
-                newTradeline.DQ_at_Offer_Created_Date__c = oldTradeline.TL_Delinquent_DQ_Days__c; 
+    public static void addLoanAppLookup(nu_dse__Offer__c newOffer, nu_dse__Offer__c oldOffer){
+        nu_dse__Program__c program = new nu_dse__Program__c();
+        system.debug('This works 1');
+        if(program.Loan_Application__c != null && newOffer.Loan_Application__c == null){
+            system.debug('This works 2');
+            newOffer.Loan_Application__c = program.Loan_Application_Status__c;
+            update newOffer;
         }
     }
+    
 }

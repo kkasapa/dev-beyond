@@ -6,7 +6,7 @@ public class PaymentHandler_Test {
         
         List<RecordType> accRecTypeList = [SELECT Id FROM RecordType WHERE sObjectType = 'Account' AND isPersonType = true and DeveloperName = 'Client' LIMIT 1];
         
-        Account acc = new Account(firstName = 'Test', lastname = 'IDR', Phone = '6784567890', Preferred_Payment_Method__c='PHONE', personemail = 'test@idr.com', 
+        Account acc = new Account(firstName = 'Test', lastname = 'IDR', Phone = '6784567890', personemail = 'test@idr.com', 
                                   recordTypeId = accRecTypeList[0].id);
         insert acc; 
         

@@ -5,7 +5,7 @@ public class OfferHandler_Test {
     public static void testDataSetup(){
         List<RecordType> accRecTypeList = [SELECT Id FROM RecordType WHERE sObjectType = 'Account' AND isPersonType = true and DeveloperName = 'Client' LIMIT 1];
         
-        Account acc = new Account(firstName = 'Test', lastname = 'IDR', Phone = '6784567890', personemail = 'test@idr.com', Preferred_Payment_Method__c = 'PHONE',
+        Account acc = new Account(firstName = 'Test', lastname = 'IDR', Phone = '6784567890', personemail = 'test@idr.com',
                                   recordTypeId = accRecTypeList[0].id);
         insert acc; 
         
@@ -72,6 +72,7 @@ public class OfferHandler_Test {
     
     static testMethod void validateSavingsCalc()
     {
+        Test.startTest();
         nu_dse__TradeLine__c testtl = new nu_dse__TradeLine__c();
         testtl.nu_dse__Original_Debt__c = 10000;
         testtl.Verified_Balance2__c = 9000;
@@ -88,6 +89,7 @@ public class OfferHandler_Test {
         testtl.Verified_Balance2__c = 20000;
         testtl.nu_dse__Original_Debt__c = 20000;
         update testtl;
+        Test.stopTest();
 
     }
 

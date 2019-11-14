@@ -243,7 +243,6 @@ public without sharing class PaymentsCalcService {
         public Map<Id, nu_dse__Program__c> programToUpdateMap = new Map<Id, nu_dse__Program__c>();
         public Map<Id, nu_dse__TradeLine__c> tradelineIdRecMap = new Map<Id, nu_dse__TradeLine__c>();
         public Map<Id, nu_dse__Offer__c> offerIdRecMap = new Map<Id, nu_dse__Offer__c>();
-        public List<nu_dse__Error_Log__c> errLogs = new List<nu_dse__Error_Log__c>();
     }
 
 }

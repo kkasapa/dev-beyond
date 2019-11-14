@@ -25,8 +25,23 @@ public class TradelineHandler extends TriggerHandler {
     }
     
     Set<Id> savignCalcTradelineIds = new Set<Id>();
-    List<nu_dse__Offer__c> offersToUpdate = new List<nu_dse__Offer__c>();
+    // List<nu_dse__Offer__c> offersToUpdate = new List<nu_dse__Offer__c>();
     List<nu_dse__TradeLine__c> TradelinesToUpdate = new List<nu_dse__TradeLine__c>();
+    
+    public override void afterInsert() {
+    
+        for (nu_dse__TradeLine__c newTradeline : (List<nu_dse__TradeLine__c>) trigger.new) {
+            
+            if(newTradeline.nu_dse__Program__c != null) {
+                collectSavingCalcTradelines(newTradeline, null);
+            }
+            
+            if(savignCalcTradelineIds.isEmpty() == false) {
+
+                savingsCalc(savignCalcTradelineIds);
+            }
+        }
+    }
     
     public override void afterUpdate() {
 
@@ -40,7 +55,7 @@ public class TradelineHandler extends TriggerHandler {
             savingsCalc(savignCalcTradelineIds);
         }
 
-     	for( Id TLID : TLIds)
+        for( Id TLID : TLIds)
         {
             //check if the tradeline current stage changed.
             if(oldTLMap.get(TLID).nu_dse__Current_Stage__c != newTLMap.get(TLID).nu_dse__Current_Stage__c && oldTLMap.get(TLID).nu_dse__Current_Stage__c != 'Making Payments' && oldTLMap.get(TLID).nu_dse__Current_Stage__c != 'Settled - Legal' &&  oldTLMap.get(TLID).nu_dse__Current_Stage__c != 'Settled - Non Legal' )
@@ -61,6 +76,7 @@ public class TradelineHandler extends TriggerHandler {
                     TradelinesToUpdate.add(updTL);
                 }
             }
+            /*  Moved Saving calc update to tradeline level           
             //update the savings calculation on the offer if tradeline balance changes. 
             if(oldTLMap.get(TLID).nu_dse__Current_Balance__c != newTLMap.get(TLID).nu_dse__Current_Balance__c || oldTLMap.get(TLID).nu_dse__Original_Debt__c != newTLMap.get(TLID).nu_dse__Original_Debt__c)
             {
@@ -70,9 +86,9 @@ public class TradelineHandler extends TriggerHandler {
                     offer.Update_Savings_Calc__c = true;
                     offersToUpdate.add(offer);
                 }
-            }
+            }*/
         }
-        update offersToUpdate;
+        // update offersToUpdate;
         update TradelinesToUpdate;
     }
 
@@ -101,14 +117,14 @@ public class TradelineHandler extends TriggerHandler {
             rate = settings.InterestRate__c;
         }
         if(endpoint == null) {
-			endpoint = 'https://beyondfinance.com/api/v1/savings';
+            endpoint = 'https://beyondfinance.com/api/v1/savings';
             rate = 16.4;           
         }
         
         //extract relevant info, run savings calc, and store value for each offer that triggered.
         for (nu_dse__TradeLine__c newTradeline : [SELECT Id, Name, nu_dse__Current_Balance__c, nu_dse__Original_Debt__c 
                                                   FROM nu_dse__TradeLine__c WHERE Id IN :tradlineRecordIds]) {
-          	
+            
             double debt = 0, payment = 0; 
 
             if((newTradeline.nu_dse__Current_Balance__c == 0
@@ -170,7 +186,7 @@ public class TradelineHandler extends TriggerHandler {
 
                         if(parser.getText() == 'total-payments') {
 
-                        	parser.nextToken();
+                            parser.nextToken();
                             tradelineToUpdate.Payoff_Amount__c = parser.getDoubleValue();
                         }
 
@@ -179,12 +195,15 @@ public class TradelineHandler extends TriggerHandler {
                                 tradelineToUpdate.Savings_Calculation__c = parser.getDoubleValue();
                         }
                     }
-                }
+                    tradelineToUpdate.Savings_Calc_Error__c = '';
+                    tradelineToUpdate.Saving_Calculation_Timestamp__c = system.now();
+                } 
                 tradelineToUpdateList.add(tradelineToUpdate);
 
-            }catch(CalloutException e){
+            } catch(CalloutException e){
 
-                tradelineToUpdate.Savings_Calculation__c = 0;
+                tradelineToUpdate.Savings_Calc_Error__c = e.getTypeName()+ ' ' +e.getMessage();
+                tradelineToUpdate.Saving_Calculation_Timestamp__c = system.now();
                 tradelineToUpdateList.add(tradelineToUpdate);
             }
             
