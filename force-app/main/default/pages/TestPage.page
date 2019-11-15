@@ -1,0 +1,4 @@
+<apex:page StandardController="nu_dse__Prospect__c">
+  <apex:relatedList list="ProcessSteps" ></apex:relatedList>
+
+</apex:page>
