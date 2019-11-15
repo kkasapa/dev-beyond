@@ -234,6 +234,86 @@ public without sharing class PaymentsCalcService {
         }
     }*/
 
+    public static SObject savingsCalculatorExternalService(SavingCalcInputWrapper savingCalcInputWrap) {
+
+            Map<String, String> savingsCalcTradelineMappings = new Map<String,String> {
+                                                                    'total-months' => 'Months_to_Payoff__c',
+                                                                    'total-payments' => 'Payoff_Amount__c',
+                                                                    'total-savings' => 'Savings_Calculation__c',
+                                                                    'error' => 'Savings_Calc_Error__c',
+                                                                    'timestamp' => 'Saving_Calculation_Timestamp__c'};
+            Map<String, String> savingsCalcProgramMappings = new Map<String,String> {
+                                                                    'total-months' => 'Savings_Months_to_Payoff_Original__c',
+                                                                    'total-payments' => 'Savings_Payoff_Amount_Original__c',
+                                                                    'total-savings' => 'Savings_Calculated_Savings_Original__c',
+                                                                    'error' => 'Savings_Calculation_Error_Original',
+                                                                    'timestamp' => 'Savings_Calculation_Timestamp_Original__c'};
+            JSONGenerator requestBodyJson = JSON.createGenerator(true);
+            requestBodyJson.writeStartObject();
+            requestBodyJson.writeFieldName('data');
+            requestBodyJson.writeStartObject();
+            requestBodyJson.writeStringField('type', 'savings');
+            requestBodyJson.writeFieldName('attributes');
+            requestBodyJson.writeStartObject();
+            requestBodyJson.writeNumberField('current_balance', savingCalcInputWrap.debtAmount);
+            requestBodyJson.writeNumberField('minimum_payment', savingCalcInputWrap.minimumPayment);
+            requestBodyJson.writeNumberField('annual_interest_rate',savingCalcInputWrap.interestRate);
+            requestBodyJson.writeEndObject();
+            requestBodyJson.writeEndObject();
+            requestBodyJson.writeEndObject();
+
+            HttpRequest request = new HttpRequest();
+            request.setEndpoint(savingCalcInputWrap.endpoint);
+            request.setMethod('POST');
+            request.setTimeout(2000);
+            request.setHeader('Content-Type','application/vnd.api+json');
+            // body = '{"data":{"type":"savings","attributes":{"current_balance":'+ debt +',"minimum_payment":'+ payment +',"annual_interest_rate":"'+ rate +'"}}}';
+            request.setBody(requestBodyJson.getAsString());
+            system.debug('requestBody-->'+request.getBody());
+
+            SObject sObjInstance = Schema.getGlobalDescribe().get(savingCalcInputWrap.sObjectType).newSObject();
+            try{
+
+                HTTP http = new http();
+                HTTPResponse response = http.send(request);
+                String resp = response.getStatus();
+                String body = response.getBody();
+                system.debug('responseStatus-->'+response.getStatus());
+                system.debug('responseBody-->'+response.getBody());
+                if(resp == 'OK') {
+
+                    JSONParser parser = JSON.createParser(body);
+                    
+                    while (parser.nextToken() != null) {
+
+                        if(parser.getText() == 'total-months') {
+
+                            parser.nextToken();
+                            sObjInstance.put(savingsCalcTradelineMappings.get('total-months'), parser.getIntegerValue());
+                        }
+
+                        if(parser.getText() == 'total-payments') {
+
+                            parser.nextToken();
+                            sObjInstance.put(savingsCalcTradelineMappings.get('total-payments'), parser.getDoubleValue());
+                        }
+
+                        if(parser.getText() == 'total-savings') {
+                            parser.nextToken();
+                            sObjInstance.put(savingsCalcTradelineMappings.get('total-savings'), parser.getDoubleValue());
+                        }
+                    }
+                    sObjInstance.put(savingsCalcTradelineMappings.get('error'), '');
+                    sObjInstance.put(savingsCalcTradelineMappings.get('timestamp'), system.now());
+                } 
+
+            } catch(CalloutException e){
+                sObjInstance.put(savingsCalcTradelineMappings.get('error'), e.getTypeName()+ ' ' +e.getMessage());
+                sObjInstance.put(savingsCalcTradelineMappings.get('timestamp'), system.now());
+            }            
+        return sObjInstance;
+    }
+
     //returns the recordType Id based on developerName 
     public static Id getPaymentRecordTypeId(String recordTypeDeveloperName) {
        return Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get(recordTypeDeveloperName).getRecordTypeId();
@@ -243,7 +323,22 @@ public without sharing class PaymentsCalcService {
         public Map<Id, nu_dse__Program__c> programToUpdateMap = new Map<Id, nu_dse__Program__c>();
         public Map<Id, nu_dse__TradeLine__c> tradelineIdRecMap = new Map<Id, nu_dse__TradeLine__c>();
         public Map<Id, nu_dse__Offer__c> offerIdRecMap = new Map<Id, nu_dse__Offer__c>();
-        public List<nu_dse__Error_Log__c> errLogs = new List<nu_dse__Error_Log__c>();
+    }
+
+    public class SavingCalcInputWrapper{
+        String endpoint;
+        Double debtAmount;
+        Double minimumPayment;
+        Decimal interestRate;
+        String sObjectType;
+
+        public SavingCalcInputWrapper(String endpoint, Double debtAmount, Double minimumPayment, Decimal interestRate, String sObjectType) {
+            this.endpoint = endpoint;
+            this.debtAmount = debtAmount;
+            this.minimumPayment = minimumPayment;
+            this.interestRate = interestRate;
+            this.sObjectType = sObjectType;
+        }
     }
 
 }
