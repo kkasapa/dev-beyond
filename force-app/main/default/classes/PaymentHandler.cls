@@ -116,7 +116,7 @@ public class PaymentHandler extends TriggerHandler {
         if(newPayment.nu_dse__Transaction_Status__c != oldPayment.nu_dse__Transaction_Status__c)
         {
             nu_dse__Program__c program = new nu_dse__Program__c(Id=newPayment.nu_dse__Program__c);
-            if(newPayment.nu_dse__Transaction_Status__c == 'Completed' && program.First_Deposit_Cleared__c != true && newPayment.RecordTypeName__c == 'Draft')
+            if((newPayment.nu_dse__Transaction_Status__c == 'Completed' || newPayment.nu_dse__Transaction_Status__c == 'Cleared' )&& program.First_Deposit_Cleared__c != true && newPayment.RecordTypeName__c == 'Draft')
             {	
             	program.First_Deposit_Cleared__c = true;
                 programsToBeUpdatedMap.put(program.ID, program);

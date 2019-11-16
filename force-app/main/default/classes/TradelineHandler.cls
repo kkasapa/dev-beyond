@@ -41,7 +41,7 @@ public class TradelineHandler extends TriggerHandler {
             
             if(savignCalcTradelineIds.isEmpty() == false) {
 
-                savingsCalc(savignCalcTradelineIds);
+                calculateSavings(savignCalcTradelineIds);
             }
         }
     }
@@ -57,7 +57,7 @@ public class TradelineHandler extends TriggerHandler {
 
         if(savignCalcTradelineIds.isEmpty() == false) {
 
-            savingsCalc(savignCalcTradelineIds);
+            calculateSavings(savignCalcTradelineIds);
         }
 
         if (savingCalcUpdateProgramIds.isEmpty() == false) {
@@ -117,13 +117,13 @@ public class TradelineHandler extends TriggerHandler {
 
     public void collectsavingCalcUpdates(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
 
-        if(newTradeline.nu_dse__Program__c != null && (Trigger.isInsert
+        /*if(newTradeline.nu_dse__Program__c != null && (Trigger.isInsert
             || (newTradeline.Months_to_Payoff__c != oldTradeline.Months_to_Payoff__c
                 ||newTradeline.Payoff_Amount__c != oldTradeline.Months_to_Payoff__c
                 || newTradeline.Savings_Calculation__c != oldTradeline.Savings_Calculation__c ))) {
 
             savingCalcUpdateProgramIds.add(newTradeline.nu_dse__Program__c);
-        }
+        }*/
     }
 
     public void aggregateSavingsToProgram() {
@@ -142,22 +142,79 @@ public class TradelineHandler extends TriggerHandler {
                 program = programsToUpdate.get(programId);
             } 
 
-            program.Total_Payoff_Amount__c = Integer.valueOf(result.get('payOffAmountSum'));
-            program.Total_Months_to_Payoff__c = Integer.valueOf(result.get('payOffMonthSum'));
-            program.Total_Savings_Calculation__c = Integer.valueOf(result.get('savingCalcSum'));
-            program.Last_Saving_Calculation_Timestamp__c = System.now();
+            program.Savings_Payoff_Amount_TL__c = Integer.valueOf(result.get('payOffAmountSum'));
+            program.Savings_Months_to_Payoff_TL__c = Integer.valueOf(result.get('payOffMonthSum'));
+            program.Savings_Calculated_Savings_TL__c = Integer.valueOf(result.get('savingCalcSum'));
+            program.Savings_Calculation_Timestamp_TL__c = System.now();
             programsToUpdate.put(programId, program);
         }
     }
 
     @future(callout=true)
+    public static void calculateSavings(Set<Id> tradelineIds) {
+
+        Savings_Calculator_Microservice__c savingCalcSettings = Savings_Calculator_Microservice__c.getInstance(UserInfo.getUserId());
+        String endpoint;
+        Double interestRate;
+        Decimal minimumPaymentPercent;
+        
+        List<nu_dse__TradeLine__c> tradelineToUpdateList = new List<nu_dse__TradeLine__c>(); 
+
+        if (savingCalcSettings != null) {
+            if (String.isNotBlank(savingCalcSettings.Endpoint__c) ) {
+                endpoint = savingCalcSettings.Endpoint__c;
+            } else {
+                 endpoint = 'https://beyondfinance.com/api/v1/savings';
+            }
+            if (savingCalcSettings.InterestRate__c != null && savingCalcSettings.InterestRate__c > 0) {
+                interestRate = savingCalcSettings.InterestRate__c;
+            } else {
+                interestRate = 16.4;  
+            }
+            if (savingCalcSettings.Minimum_Payment__c != null && savingCalcSettings.Minimum_Payment__c > 0) {
+                minimumPaymentPercent = savingCalcSettings.Minimum_Payment__c/100;
+            } else {
+                minimumPaymentPercent = 0.02;
+            }
+        }
+
+        for (nu_dse__TradeLine__c newTradeline : [SELECT Id, Name, nu_dse__Current_Balance__c, nu_dse__Original_Debt__c 
+                                                  FROM nu_dse__TradeLine__c WHERE Id IN :tradelineIds]) {
+            
+            Double debt = 0, minimumPayment = 0; 
+
+            if((newTradeline.nu_dse__Current_Balance__c == 0
+                || newTradeline.nu_dse__Current_Balance__c == null)
+                && newTradeline.nu_dse__Original_Debt__c != null) {
+
+                debt = newTradeline.nu_dse__Original_Debt__c;
+
+            } else if(newTradeline.nu_dse__Current_Balance__c != null) {
+
+                debt = newTradeline.nu_dse__Current_Balance__c;
+            }
+            
+            minimumPayment = minimumPaymentPercent * debt;
+            nu_dse__TradeLine__c tradelineToUpdate = (nu_dse__Tradeline__c)PaymentsCalcService.savingsCalculatorExternalService(
+                                                                new PaymentsCalcService.SavingCalcInputWrapper(
+                                                                    endpoint, debt, 
+                                                                    minimumPayment, interestRate, 
+                                                                    'nu_dse__Tradeline__c'));
+            tradelineToUpdate.Id = newTradeline.Id;
+            tradelineToUpdateList.add(tradelineToUpdate);
+        }
+
+        update tradelineToUpdateList;
+    }
+
+    /*@future(callout=true)
     public static void savingsCalc(Set<Id> tradlineRecordIds) {   
 
         List<nu_dse__TradeLine__c> tradelineToUpdateList = new List<nu_dse__TradeLine__c>(); 
         Savings_Calculator_Microservice__c settings = Savings_Calculator_Microservice__c.getInstance(UserInfo.getUserId());
 
-        string endpoint;
-        double rate;
+        String endpoint;
+        Double rate;
 
         if(settings != null) {
             endpoint = settings.Endpoint__c;
@@ -256,5 +313,5 @@ public class TradelineHandler extends TriggerHandler {
             
         }
         update tradelineToUpdateList;
-    }
+    }*/
 }

@@ -103,7 +103,23 @@ public without sharing class PaymentsCalcService {
 
                             updateProgram.Estimated_Month_12_Balance__c = programBal;
 
-                        }
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(18).addDays(-1)) {
+
+                            updateProgram.Estimated_Month_18_Balance__c = programBal;
+
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(24).addDays(-1)) {
+
+                            updateProgram.Estimated_Month_24_Balance__c = programBal;
+
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(30).addDays(-1)) {
+
+                            updateProgram.Estimated_Month_30_Balance__c = programBal;
+
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(36).addDays(-1)) {
+
+                            updateProgram.Estimated_Month_36_Balance__c = programBal;
+
+                        } 
                     }
                     //calc on Tradeline and Offer
                     calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
@@ -128,6 +144,22 @@ public without sharing class PaymentsCalcService {
                 if(updateProgram.Estimated_Month_12_Balance__c == null 
                     && updateProgram.Estimated_Month_9_Balance__c != null) {
                     updateProgram.Estimated_Month_12_Balance__c = updateProgram.Estimated_Month_9_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_18_Balance__c == null 
+                    && updateProgram.Estimated_Month_12_Balance__c != null) {
+                    updateProgram.Estimated_Month_18_Balance__c = updateProgram.Estimated_Month_12_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_24_Balance__c == null 
+                    && updateProgram.Estimated_Month_18_Balance__c != null) {
+                    updateProgram.Estimated_Month_24_Balance__c = updateProgram.Estimated_Month_18_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_30_Balance__c == null 
+                    && updateProgram.Estimated_Month_24_Balance__c != null) {
+                    updateProgram.Estimated_Month_30_Balance__c = updateProgram.Estimated_Month_24_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_36_Balance__c == null 
+                    && updateProgram.Estimated_Month_30_Balance__c != null) {
+                    updateProgram.Estimated_Month_36_Balance__c = updateProgram.Estimated_Month_30_Balance__c;
                 }
                 updateProgram.Estimated_Balance_Calculations_Timestamp__c = System.now();
                 paymentCalcWrap.programToUpdateMap.put(updateProgram.Id, updateProgram);
@@ -234,6 +266,128 @@ public without sharing class PaymentsCalcService {
         }
     }*/
 
+    public static SObject savingsCalculatorExternalService(SavingCalcInputWrapper savingCalcInputWrap) {
+
+            Map<String, String> savingsCalcTradelineMappings = new Map<String,String> {
+                                                                    'total-months' => 'Months_to_Payoff__c',
+                                                                    'total-payments' => 'Payoff_Amount__c',
+                                                                    'total-savings' => 'Savings_Calculation__c',
+                                                                    'error' => 'Savings_Calc_Error__c',
+                                                                    'timestamp' => 'Saving_Calculation_Timestamp__c'};
+            Map<String, String> savingsCalcProgramMappings = new Map<String,String> {
+                                                                    'total-months' => 'Savings_Months_to_Payoff_Original__c',
+                                                                    'total-payments' => 'Savings_Payoff_Amount_Original__c',
+                                                                    'total-savings' => 'Savings_Calculated_Savings_Original__c',
+                                                                    'error' => 'Savings_Calculation_Error_Original__c',
+                                                                    'timestamp' => 'Savings_Calculation_Timestamp_Original__c'};
+            JSONGenerator requestBodyJson = JSON.createGenerator(true);
+            requestBodyJson.writeStartObject();
+            requestBodyJson.writeFieldName('data');
+            requestBodyJson.writeStartObject();
+            requestBodyJson.writeStringField('type', 'savings');
+            requestBodyJson.writeFieldName('attributes');
+            requestBodyJson.writeStartObject();
+            requestBodyJson.writeNumberField('current_balance', savingCalcInputWrap.debtAmount);
+            requestBodyJson.writeNumberField('minimum_payment', savingCalcInputWrap.minimumPayment);
+            requestBodyJson.writeNumberField('annual_interest_rate',savingCalcInputWrap.interestRate);
+            requestBodyJson.writeEndObject();
+            requestBodyJson.writeEndObject();
+            requestBodyJson.writeEndObject();
+
+            HttpRequest request = new HttpRequest();
+            request.setEndpoint(savingCalcInputWrap.endpoint);
+            request.setMethod('POST');
+            request.setTimeout(2000);
+            request.setHeader('Content-Type','application/vnd.api+json');
+            // body = '{"data":{"type":"savings","attributes":{"current_balance":'+ debt +',"minimum_payment":'+ payment +',"annual_interest_rate":"'+ rate +'"}}}';
+            request.setBody(requestBodyJson.getAsString());
+            system.debug('requestBody-->'+request.getBody());
+
+            SObject sObjInstance = Schema.getGlobalDescribe().get(savingCalcInputWrap.sObjectType).newSObject();
+            try{
+
+                HTTP http = new http();
+                HTTPResponse response = http.send(request);
+                String resp = response.getStatus();
+                String body = response.getBody();
+                system.debug('responseStatus-->'+response.getStatus());
+                system.debug('responseBody-->'+response.getBody());
+                if(resp == 'OK') {
+
+                    JSONParser parser = JSON.createParser(body);
+                    
+                    while (parser.nextToken() != null) {
+
+                        if(parser.getText() == 'total-months') {
+
+                            parser.nextToken();
+                            if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                                sObjInstance.put(savingsCalcProgramMappings.get('total-months'), parser.getIntegerValue());
+                            } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                                sObjInstance.put(savingsCalcTradelineMappings.get('total-months'), parser.getIntegerValue());
+                            }
+                        }
+
+                        if(parser.getText() == 'total-payments') {
+
+                            parser.nextToken();
+                            if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                                sObjInstance.put(savingsCalcProgramMappings.get('total-payments'), parser.getIntegerValue());
+                            } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                                sObjInstance.put(savingsCalcTradelineMappings.get('total-payments'), parser.getIntegerValue());
+                            }
+                        }
+
+                        if(parser.getText() == 'total-savings') {
+                            parser.nextToken();
+                            if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                                sObjInstance.put(savingsCalcProgramMappings.get('total-savings'), parser.getIntegerValue());
+                            } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                                sObjInstance.put(savingsCalcTradelineMappings.get('total-savings'), parser.getIntegerValue());
+                            }
+                        }
+                    }
+                    if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                        sObjInstance.put(savingsCalcProgramMappings.get('error'), '');
+                        sObjInstance.put(savingsCalcProgramMappings.get('timestamp'), system.now());
+                    } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                        sObjInstance.put(savingsCalcTradelineMappings.get('error'), '');
+                        sObjInstance.put(savingsCalcTradelineMappings.get('timestamp'), system.now());
+                    }
+                } else {
+                    if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                        sObjInstance.put(savingsCalcProgramMappings.get('error'), body);
+                        sObjInstance.put(savingsCalcProgramMappings.get('timestamp'), system.now());
+                        sObjInstance.put(savingsCalcProgramMappings.get('total-savings'), 0);
+                        sObjInstance.put(savingsCalcProgramMappings.get('total-payments'), 0);
+                        sObjInstance.put(savingsCalcProgramMappings.get('total-months'), 0);
+                    } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                        sObjInstance.put(savingsCalcTradelineMappings.get('error'), body);
+                        sObjInstance.put(savingsCalcTradelineMappings.get('timestamp'), system.now());
+                        sObjInstance.put(savingsCalcTradelineMappings.get('total-savings'), 0);
+                        sObjInstance.put(savingsCalcTradelineMappings.get('total-payments'), 0);
+                        sObjInstance.put(savingsCalcTradelineMappings.get('total-months'), 0);
+                    }
+                }
+
+            } catch(CalloutException e){
+                if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                    sObjInstance.put(savingsCalcProgramMappings.get('error'), e.getTypeName()+ ' ' +e.getMessage());
+                    sObjInstance.put(savingsCalcProgramMappings.get('timestamp'), system.now());
+                    sObjInstance.put(savingsCalcProgramMappings.get('total-savings'), 0);
+                    sObjInstance.put(savingsCalcProgramMappings.get('total-payments'), 0);
+                    sObjInstance.put(savingsCalcProgramMappings.get('total-months'), 0);
+                } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                    sObjInstance.put(savingsCalcTradelineMappings.get('error'), e.getTypeName()+ ' ' +e.getMessage());
+                    sObjInstance.put(savingsCalcTradelineMappings.get('timestamp'), system.now());
+                    sObjInstance.put(savingsCalcTradelineMappings.get('total-savings'), 0);
+                    sObjInstance.put(savingsCalcTradelineMappings.get('total-payments'), 0);
+                    sObjInstance.put(savingsCalcTradelineMappings.get('total-months'), 0);
+                }
+            }            
+        return sObjInstance;
+    }
+
     //returns the recordType Id based on developerName 
     public static Id getPaymentRecordTypeId(String recordTypeDeveloperName) {
        return Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get(recordTypeDeveloperName).getRecordTypeId();
@@ -243,6 +397,22 @@ public without sharing class PaymentsCalcService {
         public Map<Id, nu_dse__Program__c> programToUpdateMap = new Map<Id, nu_dse__Program__c>();
         public Map<Id, nu_dse__TradeLine__c> tradelineIdRecMap = new Map<Id, nu_dse__TradeLine__c>();
         public Map<Id, nu_dse__Offer__c> offerIdRecMap = new Map<Id, nu_dse__Offer__c>();
+    }
+
+    public class SavingCalcInputWrapper{
+        String endpoint;
+        Double debtAmount;
+        Double minimumPayment;
+        Decimal interestRate;
+        String sObjectType;
+
+        public SavingCalcInputWrapper(String endpoint, Double debtAmount, Double minimumPayment, Decimal interestRate, String sObjectType) {
+            this.endpoint = endpoint;
+            this.debtAmount = debtAmount;
+            this.minimumPayment = minimumPayment;
+            this.interestRate = interestRate;
+            this.sObjectType = sObjectType;
+        }
     }
 
 }
