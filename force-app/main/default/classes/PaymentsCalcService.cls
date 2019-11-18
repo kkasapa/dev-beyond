@@ -269,9 +269,9 @@ public without sharing class PaymentsCalcService {
     public static SObject savingsCalculatorExternalService(SavingCalcInputWrapper savingCalcInputWrap) {
 
             Map<String, String> savingsCalcTradelineMappings = new Map<String,String> {
-                                                                    'total-months' => 'Months_to_Payoff__c',
-                                                                    'total-payments' => 'Payoff_Amount__c',
-                                                                    'total-savings' => 'Savings_Calculation__c',
+                                                                    'total-months' => 'Savings_Months_to_Payoff__c',
+                                                                    'total-payments' => 'Savings_Payoff_Amount__c',
+                                                                    'total-savings' => 'Savings_Calculated_Savings__c',
                                                                     'error' => 'Savings_Calc_Error__c',
                                                                     'timestamp' => 'Saving_Calculation_Timestamp__c'};
             Map<String, String> savingsCalcProgramMappings = new Map<String,String> {
