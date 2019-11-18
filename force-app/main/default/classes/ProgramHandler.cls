@@ -29,6 +29,7 @@ public class ProgramHandler extends TriggerHandler {
     Map<String, Id> queueMap; // map of Queue Name and Its Id
     Map<String, Id> comuTempNameIdMap; // map of communication Template Name and Its Id
     Set<Id> velocifyProspectIds = new Set<Id>(); // Set of Prosepct Ids send for Velocify
+    Set<Id> savingsCalcProgramIds = new Set<Id>();// programIds for saving calculation 
     List<BLP_Bus__e> BLPBUSEvents = new List<BLP_Bus__e>();
 
     public override void afterInsert() {
@@ -84,6 +85,9 @@ public class ProgramHandler extends TriggerHandler {
             //updateLoanApplication(newProgram, oldProgramMap.get(newProgram.Id));
             //Check if first payment has cleared 
             checkPayment(newProgram, oldProgramMap.get(newProgram.Id));
+            //savings calculation based on Original_Enrolled_Program_Debt__c
+            collectProgramsForSavingsCalc(newProgram, oldProgramMap.get(newProgram.Id));
+
         }
         if(terminatedProgramIds.isEmpty() == false) {
             // Update Scheduled Payments as cancelled for Terminated Programs
@@ -92,6 +96,10 @@ public class ProgramHandler extends TriggerHandler {
 
         if (BLPBUSEvents.isEmpty() == false) {
             EventBus.publish(BLPBUSEvents);
+        }
+
+        if (savingsCalcProgramIds.isEmpty() == false) {
+            calculateSavings(savingsCalcProgramIds);
         }
 
         upsert groupTaskList nu_dse__Unique_Identifier__c; // Upsert Group Task based on unique Identifier
@@ -348,6 +356,14 @@ public class ProgramHandler extends TriggerHandler {
             }
         } 
     }
+
+    public void collectProgramsForSavingsCalc(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram) {
+        if(newProgram.Original_Enrolled_Program_Debt__c != null 
+            && Trigger.isInsert 
+                ||(newProgram.Original_Enrolled_Program_Debt__c != oldProgram.Original_Enrolled_Program_Debt__c)) {
+            savingsCalcProgramIds.add(newProgram.Id);
+        }
+    }
     
     @future(callout=true)
     public static void futureFlowCall(string ProgramId){
@@ -359,6 +375,56 @@ public class ProgramHandler extends TriggerHandler {
         } catch (Exception e){
             system.debug('Exception caught: ' + e.getMessage());
         }
+    }
+
+    @future(callout=true)
+    public static void calculateSavings(Set<Id> programIds) {
+
+        Savings_Calculator_Microservice__c savingCalcSettings = Savings_Calculator_Microservice__c.getInstance(UserInfo.getUserId());
+        String endpoint;
+        Double interestRate;
+        Decimal minimumPaymentPercent;
+        
+        List<nu_dse__Program__c> programsToUpdateList = new List<nu_dse__Program__c>(); 
+
+        if (savingCalcSettings != null) {
+            if (String.isNotBlank(savingCalcSettings.Endpoint__c) ) {
+                endpoint = savingCalcSettings.Endpoint__c;
+            } else {
+                 endpoint = 'https://beyondfinance.com/api/v1/savings';
+            }
+            if (savingCalcSettings.InterestRate__c != null && savingCalcSettings.InterestRate__c > 0) {
+                interestRate = savingCalcSettings.InterestRate__c;
+            } else {
+                interestRate = 16.4;  
+            }
+            if (savingCalcSettings.Minimum_Payment__c != null && savingCalcSettings.Minimum_Payment__c > 0) {
+                minimumPaymentPercent = savingCalcSettings.Minimum_Payment__c/100;
+            } else {
+                minimumPaymentPercent = 0.02;
+            }
+        }
+
+        for (nu_dse__Program__c newProgram : [SELECT Id, Name, Original_Enrolled_Program_Debt__c
+                                                  FROM nu_dse__Program__c WHERE Id IN :programIds]) {
+            
+            Double debt = 0, minimumPayment = 0; 
+
+             if(newProgram.Original_Enrolled_Program_Debt__c != null && newProgram.Original_Enrolled_Program_Debt__c > 0) {
+                debt = newProgram.Original_Enrolled_Program_Debt__c;
+            }
+            
+            minimumPayment = minimumPaymentPercent * debt;
+            nu_dse__Program__c programToUpdate = (nu_dse__Program__c)PaymentsCalcService.savingsCalculatorExternalService(
+                                                                new PaymentsCalcService.SavingCalcInputWrapper(
+                                                                    endpoint, debt, 
+                                                                    minimumPayment, interestRate, 
+                                                                    'nu_dse__Program__c'));
+            programToUpdate.Id = newProgram.Id;
+            programsToUpdateList.add(programToUpdate);
+        }
+
+        update programsToUpdateList;
     }
 
 }

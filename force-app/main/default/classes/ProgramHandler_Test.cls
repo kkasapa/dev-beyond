@@ -127,6 +127,7 @@ public class ProgramHandler_Test {
         List<Account> acc = [SELECT Id FROM Account];
         List<nu_dse__Program__c> programList = [SELECT Id FROM nu_dse__Program__c];
         
+        Test.setMock(HttpCalloutMock.class,new TradelineTrigger_Test());
         nu_dse__TradeLine__c tradeLine = TestRecordCreator.createTradeLine(acc[0].id, programList[0].Id);
         insert tradeLine;
         nu_dse__Offer__c offer = TestRecordCreator.createoffer(programList[0].Id, tradeLine.Id, 100, 10, 25, 10);
@@ -300,6 +301,43 @@ public class ProgramHandler_Test {
         
         update testProgram;
     }
+
+    Public static testmethod void testSavingsCalculationAPI(){
+        
+        Test.startTest();
+
+            nu_dse__Program__c program = [SELECT Id, Name FROM nu_dse__Program__c LIMIT 1];
+            program.Original_Enrolled_Program_Debt__c = 1500;
+            Test.setMock(HttpCalloutMock.class,new TradelineTrigger_Test());
+            update program;
+
+        Test.stopTest();
+
+        nu_dse__Program__c updatedProgram = [SELECT Savings_Calculated_Savings_Original__c, Savings_Months_to_Payoff_Original__c,
+                                                Savings_Payoff_Amount_Original__c
+                                            FROM nu_dse__Program__c LIMIT 1];
+
+        system.assertEquals(18, updatedProgram.Savings_Months_to_Payoff_Original__c);   
+        system.assertEquals(1071.0, updatedProgram.Savings_Payoff_Amount_Original__c);  
+        system.assertEquals(271.0, updatedProgram.Savings_Calculated_Savings_Original__c); 
+    }   
+
+    Public static testmethod void testFailSavingsCalculationAPI(){
+        
+        Test.startTest();
+
+            nu_dse__Program__c program = [SELECT Id, Name FROM nu_dse__Program__c LIMIT 1];
+            program.Original_Enrolled_Program_Debt__c = 0;
+            Test.setMock(HttpCalloutMock.class,new TradelineTrigger_Test());
+            update program;
+
+        Test.stopTest();
+
+        nu_dse__Program__c updatedProgram = [SELECT Savings_Calculation_Error_Original__c
+                                            FROM nu_dse__Program__c LIMIT 1];
+
+        system.assertEquals('Balance must be greater than 0', updatedProgram.Savings_Calculation_Error_Original__c);   
+    }   
     
     // Create New Lender Application Data for Interested Program Enrolled Clients
     // Uses Loan Interest Status = "Interested" to Run

@@ -7,7 +7,6 @@ public with sharing class Batch_OfferAuthReminder_Test {
         Id accRecordTypeId = Schema.SObjectType.Account.getRecordTypeInfosByName().get('Client').getRecordTypeId();
         
         Account clientAccount = TestRecordCreator.createAccount('clientAcc', accRecordTypeId);
-        clientAccount.Preferred_Payment_Method__c = 'PHONE';
         insert clientAccount;
         
         nu_dse__Processor__c processor = TestRecordCreator.createProcessor('CFT');

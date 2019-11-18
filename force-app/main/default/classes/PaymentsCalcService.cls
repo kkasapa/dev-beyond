@@ -103,7 +103,23 @@ public without sharing class PaymentsCalcService {
 
                             updateProgram.Estimated_Month_12_Balance__c = programBal;
 
-                        }
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(18).addDays(-1)) {
+
+                            updateProgram.Estimated_Month_18_Balance__c = programBal;
+
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(24).addDays(-1)) {
+
+                            updateProgram.Estimated_Month_24_Balance__c = programBal;
+
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(30).addDays(-1)) {
+
+                            updateProgram.Estimated_Month_30_Balance__c = programBal;
+
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(36).addDays(-1)) {
+
+                            updateProgram.Estimated_Month_36_Balance__c = programBal;
+
+                        } 
                     }
                     //calc on Tradeline and Offer
                     calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
@@ -128,6 +144,22 @@ public without sharing class PaymentsCalcService {
                 if(updateProgram.Estimated_Month_12_Balance__c == null 
                     && updateProgram.Estimated_Month_9_Balance__c != null) {
                     updateProgram.Estimated_Month_12_Balance__c = updateProgram.Estimated_Month_9_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_18_Balance__c == null 
+                    && updateProgram.Estimated_Month_12_Balance__c != null) {
+                    updateProgram.Estimated_Month_18_Balance__c = updateProgram.Estimated_Month_12_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_24_Balance__c == null 
+                    && updateProgram.Estimated_Month_18_Balance__c != null) {
+                    updateProgram.Estimated_Month_24_Balance__c = updateProgram.Estimated_Month_18_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_30_Balance__c == null 
+                    && updateProgram.Estimated_Month_24_Balance__c != null) {
+                    updateProgram.Estimated_Month_30_Balance__c = updateProgram.Estimated_Month_24_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_36_Balance__c == null 
+                    && updateProgram.Estimated_Month_30_Balance__c != null) {
+                    updateProgram.Estimated_Month_36_Balance__c = updateProgram.Estimated_Month_30_Balance__c;
                 }
                 updateProgram.Estimated_Balance_Calculations_Timestamp__c = System.now();
                 paymentCalcWrap.programToUpdateMap.put(updateProgram.Id, updateProgram);
@@ -237,16 +269,16 @@ public without sharing class PaymentsCalcService {
     public static SObject savingsCalculatorExternalService(SavingCalcInputWrapper savingCalcInputWrap) {
 
             Map<String, String> savingsCalcTradelineMappings = new Map<String,String> {
-                                                                    'total-months' => 'Months_to_Payoff__c',
-                                                                    'total-payments' => 'Payoff_Amount__c',
-                                                                    'total-savings' => 'Savings_Calculation__c',
+                                                                    'total-months' => 'Savings_Months_to_Payoff__c',
+                                                                    'total-payments' => 'Savings_Payoff_Amount__c',
+                                                                    'total-savings' => 'Savings_Calculated_Savings__c',
                                                                     'error' => 'Savings_Calc_Error__c',
                                                                     'timestamp' => 'Saving_Calculation_Timestamp__c'};
             Map<String, String> savingsCalcProgramMappings = new Map<String,String> {
                                                                     'total-months' => 'Savings_Months_to_Payoff_Original__c',
                                                                     'total-payments' => 'Savings_Payoff_Amount_Original__c',
                                                                     'total-savings' => 'Savings_Calculated_Savings_Original__c',
-                                                                    'error' => 'Savings_Calculation_Error_Original',
+                                                                    'error' => 'Savings_Calculation_Error_Original__c',
                                                                     'timestamp' => 'Savings_Calculation_Timestamp_Original__c'};
             JSONGenerator requestBodyJson = JSON.createGenerator(true);
             requestBodyJson.writeStartObject();
@@ -289,27 +321,69 @@ public without sharing class PaymentsCalcService {
                         if(parser.getText() == 'total-months') {
 
                             parser.nextToken();
-                            sObjInstance.put(savingsCalcTradelineMappings.get('total-months'), parser.getIntegerValue());
+                            if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                                sObjInstance.put(savingsCalcProgramMappings.get('total-months'), parser.getIntegerValue());
+                            } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                                sObjInstance.put(savingsCalcTradelineMappings.get('total-months'), parser.getIntegerValue());
+                            }
                         }
 
                         if(parser.getText() == 'total-payments') {
 
                             parser.nextToken();
-                            sObjInstance.put(savingsCalcTradelineMappings.get('total-payments'), parser.getDoubleValue());
+                            if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                                sObjInstance.put(savingsCalcProgramMappings.get('total-payments'), parser.getIntegerValue());
+                            } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                                sObjInstance.put(savingsCalcTradelineMappings.get('total-payments'), parser.getIntegerValue());
+                            }
                         }
 
                         if(parser.getText() == 'total-savings') {
                             parser.nextToken();
-                            sObjInstance.put(savingsCalcTradelineMappings.get('total-savings'), parser.getDoubleValue());
+                            if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                                sObjInstance.put(savingsCalcProgramMappings.get('total-savings'), parser.getIntegerValue());
+                            } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                                sObjInstance.put(savingsCalcTradelineMappings.get('total-savings'), parser.getIntegerValue());
+                            }
                         }
                     }
-                    sObjInstance.put(savingsCalcTradelineMappings.get('error'), '');
-                    sObjInstance.put(savingsCalcTradelineMappings.get('timestamp'), system.now());
-                } 
+                    if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                        sObjInstance.put(savingsCalcProgramMappings.get('error'), '');
+                        sObjInstance.put(savingsCalcProgramMappings.get('timestamp'), system.now());
+                    } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                        sObjInstance.put(savingsCalcTradelineMappings.get('error'), '');
+                        sObjInstance.put(savingsCalcTradelineMappings.get('timestamp'), system.now());
+                    }
+                } else {
+                    if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                        sObjInstance.put(savingsCalcProgramMappings.get('error'), body);
+                        sObjInstance.put(savingsCalcProgramMappings.get('timestamp'), system.now());
+                        sObjInstance.put(savingsCalcProgramMappings.get('total-savings'), 0);
+                        sObjInstance.put(savingsCalcProgramMappings.get('total-payments'), 0);
+                        sObjInstance.put(savingsCalcProgramMappings.get('total-months'), 0);
+                    } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                        sObjInstance.put(savingsCalcTradelineMappings.get('error'), body);
+                        sObjInstance.put(savingsCalcTradelineMappings.get('timestamp'), system.now());
+                        sObjInstance.put(savingsCalcTradelineMappings.get('total-savings'), 0);
+                        sObjInstance.put(savingsCalcTradelineMappings.get('total-payments'), 0);
+                        sObjInstance.put(savingsCalcTradelineMappings.get('total-months'), 0);
+                    }
+                }
 
             } catch(CalloutException e){
-                sObjInstance.put(savingsCalcTradelineMappings.get('error'), e.getTypeName()+ ' ' +e.getMessage());
-                sObjInstance.put(savingsCalcTradelineMappings.get('timestamp'), system.now());
+                if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                    sObjInstance.put(savingsCalcProgramMappings.get('error'), e.getTypeName()+ ' ' +e.getMessage());
+                    sObjInstance.put(savingsCalcProgramMappings.get('timestamp'), system.now());
+                    sObjInstance.put(savingsCalcProgramMappings.get('total-savings'), 0);
+                    sObjInstance.put(savingsCalcProgramMappings.get('total-payments'), 0);
+                    sObjInstance.put(savingsCalcProgramMappings.get('total-months'), 0);
+                } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                    sObjInstance.put(savingsCalcTradelineMappings.get('error'), e.getTypeName()+ ' ' +e.getMessage());
+                    sObjInstance.put(savingsCalcTradelineMappings.get('timestamp'), system.now());
+                    sObjInstance.put(savingsCalcTradelineMappings.get('total-savings'), 0);
+                    sObjInstance.put(savingsCalcTradelineMappings.get('total-payments'), 0);
+                    sObjInstance.put(savingsCalcTradelineMappings.get('total-months'), 0);
+                }
             }            
         return sObjInstance;
     }

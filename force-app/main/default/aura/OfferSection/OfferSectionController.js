@@ -22,7 +22,92 @@
         helper.getBankDetails(component,event,helper);
         helper.getTradeObj(component,event,helper);
         
+        var pageSize = component.get("v.pageSize");
+        
+        var action = component.get("c.getAllTradelines");
+        
+        action.setCallback(this, function(response)
+                           
+                           {
+                               
+                               var state = response.getState();
+                               
+                               if (component.isValid() && state === "SUCCESS")
+                                   
+                               {
+                                   
+                                   component.set('v.tradeList', response.getReturnValue());
+                                   
+                                   component.set("v.totalSize", component.get("v.tradeList").length);
+                                   
+                                   component.set("v.start",0);
+                                   
+                                   component.set("v.end",pageSize-1);
+                                   
+                                   var paginationList = [];
+                                   
+                                   for(var i=0; i< pageSize; i++)
+                                       
+                                   {
+                                       
+                                       paginationList.push(response.getReturnValue()[i]);
+                                       
+                                   }
+                                   
+                                   component.set('v.paginationList', paginationList);
+                                   
+                                   //console.log(paginationList);
+                                   
+                               }
+                               
+                           });
+        
+        $A.enqueueAction(action);
+        
     },   
+    next : function(component, event, helper)
+    
+    {
+        
+        var oppList = component.get("v.tradeList");
+        
+        var end = component.get("v.end");
+        
+        var start = component.get("v.start");
+        
+        var pageSize = component.get("v.pageSize");
+        
+        var paginationList = [];
+        
+        var counter = 0;
+        
+        for(var i=end+1; i<end+pageSize+1; i++)
+            
+        {
+            
+            if(oppList.length > end)
+                
+            {
+                
+                paginationList.push(oppList[i]);
+                
+                counter ++ ;
+                
+            }
+            
+        }
+        
+        start = start + counter;
+        
+        end = end + counter;
+        
+        component.set("v.start",start);
+        
+        component.set("v.end",end);
+        
+        component.set('v.paginationList', paginationList);
+        
+    },
     
     getPays : function(component, event, helper) {
         helper.getPayments(component, event, helper);

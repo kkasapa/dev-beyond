@@ -31,13 +31,14 @@ public class LoanApplicationHandler extends TriggerHandler {
     
     // Calls Flow to Update Loan Application Record once Loan is Status = "04-Preapproved"
     public void updateLoan(Loan_Application__c newLoanApplication, Loan_Application__c oldLoanApplication){
-        if (newLoanApplication.Application_Status__c == '04-Preapproved' && newLoanApplication.Application_Status__c != oldLoanApplication.Application_Status__c && Trigger.isUpdate){
+        if ((newLoanApplication.Application_Status__c == '04-Preapproved' && newLoanApplication.Application_Status__c != oldLoanApplication.Application_Status__c && Trigger.isUpdate)
+           || (newLoanApplication.Application_Status__c == '04-Preapproved' && newLoanApplication.Re_Calculate_Loan_Operations_Details__c == true)){
             futureFlowCall(newLoanApplication.Id);
         }
     }
     
     // Future Call so that This will run when SF has the time
-     @future(callout=true)
+    // @future(callout=true)
     public static void futureFlowCall(string LoanApplicationId){
         Map<String, Object> params = new Map<String, Object>();
         params.put('LoanApplicationId', LoanApplicationId);

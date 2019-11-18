@@ -64,7 +64,10 @@ public class TradelineHandler extends TriggerHandler {
             aggregateSavingsToProgram();
         } 
 
-        for( Id TLID : TLIds)
+        update TradelinesToUpdate;
+        update programsToUpdate.values();
+
+        /*for( Id TLID : TLIds)
         {
             //check if the tradeline current stage changed.
             if(oldTLMap.get(TLID).nu_dse__Current_Stage__c != newTLMap.get(TLID).nu_dse__Current_Stage__c && oldTLMap.get(TLID).nu_dse__Current_Stage__c != 'Making Payments' && oldTLMap.get(TLID).nu_dse__Current_Stage__c != 'Settled - Legal' &&  oldTLMap.get(TLID).nu_dse__Current_Stage__c != 'Settled - Non Legal' )
@@ -96,15 +99,14 @@ public class TradelineHandler extends TriggerHandler {
                     offersToUpdate.add(offer);
                 }
             }*/
-        }
+        //}
         // update offersToUpdate;
-        update TradelinesToUpdate;
-        update programsToUpdate.values();
     }
 
     public void collectSavingCalcTradelines(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
 
-        if(Trigger.isInsert
+        if((Trigger.isInsert && (newTradeline.nu_dse__Current_Balance__c  != null || newTradeline.nu_dse__Original_Debt__c != null
+                || newTradeline.nu_dse__Current_Balance__c  != 0 || newTradeline.nu_dse__Original_Debt__c != 0 ))
             || (savignCalculatedTradelineIds.contains(newTradeline.Id) == false
                 && (newTradeline.nu_dse__Current_Balance__c != oldTradeline.nu_dse__Current_Balance__c
                     || ((newTradeline.nu_dse__Current_Balance__c == null || newTradeline.nu_dse__Current_Balance__c == 0)
@@ -118,9 +120,9 @@ public class TradelineHandler extends TriggerHandler {
     public void collectsavingCalcUpdates(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
 
         if(newTradeline.nu_dse__Program__c != null && (Trigger.isInsert
-            || (newTradeline.Months_to_Payoff__c != oldTradeline.Months_to_Payoff__c
-                ||newTradeline.Payoff_Amount__c != oldTradeline.Months_to_Payoff__c
-                || newTradeline.Savings_Calculation__c != oldTradeline.Savings_Calculation__c ))) {
+            || (newTradeline.Savings_Months_to_Payoff__c != oldTradeline.Savings_Months_to_Payoff__c
+                ||newTradeline.Savings_Payoff_Amount__c != oldTradeline.Savings_Payoff_Amount__c
+                || newTradeline.Savings_Calculated_Savings__c != oldTradeline.Savings_Calculated_Savings__c ))) {
 
             savingCalcUpdateProgramIds.add(newTradeline.nu_dse__Program__c);
         }
@@ -128,9 +130,9 @@ public class TradelineHandler extends TriggerHandler {
 
     public void aggregateSavingsToProgram() {
 
-        for (AggregateResult result: [SELECT sum(Months_to_Payoff__c) payOffMonthSum, 
-                                        sum(Payoff_Amount__c) payOffAmountSum, 
-                                    	sum(Savings_Calculation__c) savingCalcSum , 
+        for (AggregateResult result: [SELECT sum(Savings_Months_to_Payoff__c) payOffMonthSum, 
+                                        sum(Savings_Payoff_Amount__c) payOffAmountSum, 
+                                    	sum(Savings_Calculated_Savings__c) savingCalcSum , 
                                         nu_dse__Program__c 
                                         FROM nu_dse__Tradeline__c 
                                         WHERE nu_dse__Program__c IN :savingCalcUpdateProgramIds 

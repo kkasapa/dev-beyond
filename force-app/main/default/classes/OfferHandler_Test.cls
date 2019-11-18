@@ -83,7 +83,7 @@ public class OfferHandler_Test {
         nu_dse__Offer__c testo = new nu_dse__Offer__c();
         testo.nu_dse__TradeLine__c = testtl.Id;
         System.debug(testtl.ID);
-        testo.Savings_Calculation__c = 0;
+        // testo.Savings_Calculation__c = 0;
         testo.Update_Savings_Calc__c = false;
         insert testo;
         testtl.Verified_Balance2__c = 20000;
