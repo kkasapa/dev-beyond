@@ -122,7 +122,8 @@ public class TradelineHandler extends TriggerHandler {
         if(newTradeline.nu_dse__Program__c != null && (Trigger.isInsert
             || (newTradeline.Savings_Months_to_Payoff__c != oldTradeline.Savings_Months_to_Payoff__c
                 ||newTradeline.Savings_Payoff_Amount__c != oldTradeline.Savings_Payoff_Amount__c
-                || newTradeline.Savings_Calculated_Savings__c != oldTradeline.Savings_Calculated_Savings__c ))) {
+                || newTradeline.Savings_Calculated_Savings__c != oldTradeline.Savings_Calculated_Savings__c
+                || newTradeline.nu_dse__Include_In_The_Program__c != oldTradeline.nu_dse__Include_In_The_Program__c ))) {
 
             savingCalcUpdateProgramIds.add(newTradeline.nu_dse__Program__c);
         }
@@ -136,6 +137,7 @@ public class TradelineHandler extends TriggerHandler {
                                         nu_dse__Program__c 
                                         FROM nu_dse__Tradeline__c 
                                         WHERE nu_dse__Program__c IN :savingCalcUpdateProgramIds 
+                                        AND nu_dse__Include_In_The_Program__c = true
                                         GROUP BY nu_dse__Program__c]) {
            
             Id programId = Id.valueOf(String.valueOf(result.get('nu_dse__Program__c')));

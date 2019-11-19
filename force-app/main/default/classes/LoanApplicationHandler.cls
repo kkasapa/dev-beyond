@@ -38,7 +38,7 @@ public class LoanApplicationHandler extends TriggerHandler {
     }
     
     // Future Call so that This will run when SF has the time
-    // @future(callout=true)
+    @future(callout=true)
     public static void futureFlowCall(string LoanApplicationId){
         Map<String, Object> params = new Map<String, Object>();
         params.put('LoanApplicationId', LoanApplicationId);

@@ -303,7 +303,7 @@ public class ProgramHandler_Test {
         
         insert testProgram;
     
-        testProgram.Loan_Interest_Status__c = 'Interested';
+        testProgram.Loan_Interest_Status__c = 'Interested - Skybridge';
         testProgram.Eligible_for_Skybridge__c = true;
         
         update testProgram;
