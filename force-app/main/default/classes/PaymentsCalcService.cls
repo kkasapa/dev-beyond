@@ -33,7 +33,7 @@ public without sharing class PaymentsCalcService {
     public static Id feeRecordTypeId = getPaymentRecordTypeId('Fee');  // recordType Id for fee
     public static Id settlementRecordTypeId = getPaymentRecordTypeId('Settlement');  // recordType Id for settlement
 
-    public static PaymentCalcWrapper calcProgramEstimatedBalance(Set<Id> programIds) {
+    /*public static PaymentCalcWrapper calcProgramEstimatedBalance(Set<Id> programIds) {
 
         PaymentCalcWrapper paymentCalcWrap = new PaymentCalcWrapper();
         Set<Id> recordTypeIds = new Set<Id> {draftRecordTypeId, settlementRecordTypeId, feeRecordTypeId};
@@ -65,7 +65,6 @@ public without sharing class PaymentsCalcService {
                 for(nu_dse__Payment__c payment : program.nu_dse__Payments__r) {
                     // To calculate Program estimated balance
                     if(payment.nu_dse__Schedule_Date__c >= system.today()
-                        && payment.nu_dse__Schedule_Date__c < futureEstimateDate
                         && (payment.nu_dse__Transaction_Status__c == 'Scheduled' 
                             || payment.nu_dse__Transaction_Status__c == 'In Progress')) {
                         
@@ -119,7 +118,10 @@ public without sharing class PaymentsCalcService {
 
                             updateProgram.Estimated_Month_36_Balance__c = programBal;
 
-                        } 
+                        } else {
+
+                            updateProgram.Estimated_Balance_at_End_of_the_Program__c = programBal;
+                        }
                     }
                     //calc on Tradeline and Offer
                     calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
@@ -161,6 +163,11 @@ public without sharing class PaymentsCalcService {
                     && updateProgram.Estimated_Month_30_Balance__c != null) {
                     updateProgram.Estimated_Month_36_Balance__c = updateProgram.Estimated_Month_30_Balance__c;
                 }
+                if(updateProgram.Estimated_Balance_at_End_of_the_Program__c == null 
+                    && updateProgram.Estimated_Month_36_Balance__c != null) {
+                    updateProgram.Estimated_Balance_at_End_of_the_Program__c = updateProgram.Estimated_Month_36_Balance__c;
+                }
+
                 updateProgram.Estimated_Balance_Calculations_Timestamp__c = System.now();
                 paymentCalcWrap.programToUpdateMap.put(updateProgram.Id, updateProgram);
             }
@@ -242,7 +249,7 @@ public without sharing class PaymentsCalcService {
             calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
         }
         return paymentCalcWrap;
-    }
+    }*/
 
     //common method for handling DML and process the result as error logs
     /*public static void updateRecords(List<Sobject> recordsToUpdateList) {

@@ -105,7 +105,8 @@ public class TradelineHandler extends TriggerHandler {
 
     public void collectSavingCalcTradelines(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
 
-        if((Trigger.isInsert && (newTradeline.nu_dse__Current_Balance__c  != null || newTradeline.nu_dse__Original_Debt__c != null))
+        if((Trigger.isInsert && (newTradeline.nu_dse__Current_Balance__c  != null || newTradeline.nu_dse__Original_Debt__c != null
+                || newTradeline.nu_dse__Current_Balance__c  != 0 || newTradeline.nu_dse__Original_Debt__c != 0 ))
             || (savignCalculatedTradelineIds.contains(newTradeline.Id) == false
                 && (newTradeline.nu_dse__Current_Balance__c != oldTradeline.nu_dse__Current_Balance__c
                     || ((newTradeline.nu_dse__Current_Balance__c == null || newTradeline.nu_dse__Current_Balance__c == 0)
