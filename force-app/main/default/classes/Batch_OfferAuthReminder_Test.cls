@@ -17,6 +17,7 @@ public with sharing class Batch_OfferAuthReminder_Test {
         program.nu_dse__Total_Debt_Included__c = 100;
         insert program;
         
+        Test.setMock(HttpCalloutMock.class,new TradelineTrigger_Test());
         nu_dse__TradeLine__c tradeLine = TestRecordCreator.createTradeLine(clientAccount.id, program.Id);
         insert tradeLine;
         
@@ -27,7 +28,7 @@ public with sharing class Batch_OfferAuthReminder_Test {
 
         List<nu_dse__Communication_Template__c> commTempList = new List<nu_dse__Communication_Template__c>{
             new nu_dse__Communication_Template__c(Name = 'Get Offer Auth SMS'),
-            new nu_dse__Communication_Template__c(Name = 'Get Offer Auth EMAIL')
+            new nu_dse__Communication_Template__c(Name = 'Get Offer Auth Email')
         };
         insert commTempList;
     }
@@ -49,6 +50,7 @@ public with sharing class Batch_OfferAuthReminder_Test {
         
         List<nu_dse__Offer__c> offerList = [SELECT Id FROM nu_dse__Offer__c LIMIT 1];
         offerList[0].Client_Authorization_Received__c = true;
+        offerList[0].Offer_Pre_Approved_Date__c = system.today().addDays(-5);
         update offerList[0];
 
         List<Task> taskList = new List<Task>();
@@ -56,10 +58,12 @@ public with sharing class Batch_OfferAuthReminder_Test {
             Task taskInst = new Task();
             taskInst.WhatId = offerList[0].Id;
             if(math.mod(i, 2) == 0){
-                taskInst.Subject = 'Offer Auth SMS DAY '+i;
+                taskInst.Subject = 'Offer Auth SMS Day '+i;
+                taskInst.Unique_Identifier__c = 'Offer Auth SMS Day '+i;
             }
             else{
-                taskInst.Subject = 'Offer Auth EMAIL DAY '+i;
+                taskInst.Subject = 'Offer Auth Email Day '+i;
+                taskInst.Unique_Identifier__c = 'Offer Auth Email Day '+i;
             }
             taskList.add(taskInst);
         }

@@ -42,7 +42,14 @@ public class ProgramHandler extends TriggerHandler {
             // publishing Platform Event BLP Bus for triggering sync with BLP
             createBLP_BusList(newProgram, null);
             // Run the Savings Calculator for New Programs
+            //savings calculation based on Original_Enrolled_Program_Debt__c
+            collectProgramsForSavingsCalc(newProgram, null);
         }
+
+        if (savingsCalcProgramIds.isEmpty() == false) {
+            calculateSavings(savingsCalcProgramIds);
+        }
+
         upsert groupTaskList nu_dse__Unique_Identifier__c; // Upsert Group Task based on unique Identifier
 
         if(velocifyProspectIds.isEmpty() == false) {
@@ -358,7 +365,8 @@ public class ProgramHandler extends TriggerHandler {
     }
 
     public void collectProgramsForSavingsCalc(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram) {
-        if(newProgram.Original_Enrolled_Program_Debt__c != null 
+        if(newProgram.Original_Enrolled_Program_Debt__c != null
+            && newProgram.Original_Enrolled_Program_Debt__c > 0 
             && Trigger.isInsert 
                 ||(newProgram.Original_Enrolled_Program_Debt__c != oldProgram.Original_Enrolled_Program_Debt__c)) {
             savingsCalcProgramIds.add(newProgram.Id);
