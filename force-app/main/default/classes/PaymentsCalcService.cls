@@ -27,13 +27,13 @@
 public without sharing class PaymentsCalcService {
 
     //public static Set<String> programStatus = new Set<String>{'New Client', 'Active'};
-    public static Date futureEstimateDate = system.today().toStartOfMonth().addMonths(12).addDays(-1);
+    public static Date futureEstimateDate = system.today().toStartOfMonth().addMonths(36).addDays(-1);
 
     public static Id draftRecordTypeId = getPaymentRecordTypeId('Draft'); // recordType Id for draft
     public static Id feeRecordTypeId = getPaymentRecordTypeId('Fee');  // recordType Id for fee
     public static Id settlementRecordTypeId = getPaymentRecordTypeId('Settlement');  // recordType Id for settlement
 
-    /*public static PaymentCalcWrapper calcProgramEstimatedBalance(Set<Id> programIds) {
+    public static PaymentCalcWrapper calcProgramEstimatedBalance(Set<Id> programIds) {
 
         PaymentCalcWrapper paymentCalcWrap = new PaymentCalcWrapper();
         Set<Id> recordTypeIds = new Set<Id> {draftRecordTypeId, settlementRecordTypeId, feeRecordTypeId};
@@ -56,15 +56,20 @@ public without sharing class PaymentsCalcService {
                 }
 
                 Decimal programBal = 0;
+                Decimal programLowestAmount;
+                Date programLowestDate;
                 
                 if(program.nu_dse__Trust_Account_Balance__c != null) {
                     programBal = program.nu_dse__Trust_Account_Balance__c;
+                    programLowestAmount = program.nu_dse__Trust_Account_Balance__c;
+                    programLowestDate = system.today();
                 }
                 updateProgram.Estimated_Current_Month_Balance__c = programBal;
 
                 for(nu_dse__Payment__c payment : program.nu_dse__Payments__r) {
                     // To calculate Program estimated balance
                     if(payment.nu_dse__Schedule_Date__c >= system.today()
+                        && payment.nu_dse__Schedule_Date__c <= futureEstimateDate
                         && (payment.nu_dse__Transaction_Status__c == 'Scheduled' 
                             || payment.nu_dse__Transaction_Status__c == 'In Progress')) {
                         
@@ -76,6 +81,12 @@ public without sharing class PaymentsCalcService {
                                         && payment.nu_dse__Payment_Type__c == 'Withdrawal')) {
 
                             programBal -= payment.nu_dse__Total_Amount__c;
+                        }
+
+                        if(programLowestAmount == null || programLowestAmount > programBal) {
+
+                            programLowestAmount = programBal;
+                            programLowestDate = payment.nu_dse__Schedule_Date__c;
                         }
                         
                         if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(1).addDays(-1)) {
@@ -118,10 +129,7 @@ public without sharing class PaymentsCalcService {
 
                             updateProgram.Estimated_Month_36_Balance__c = programBal;
 
-                        } else {
-
-                            updateProgram.Estimated_Balance_at_End_of_the_Program__c = programBal;
-                        }
+                        } 
                     }
                     //calc on Tradeline and Offer
                     calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
@@ -168,6 +176,8 @@ public without sharing class PaymentsCalcService {
                     updateProgram.Estimated_Balance_at_End_of_the_Program__c = updateProgram.Estimated_Month_36_Balance__c;
                 }
 
+                updateProgram.Estimated_lowest_balance_amount__c = programLowestAmount;
+                updateProgram.Estimated_lowest_balance_date__c = programLowestDate;
                 updateProgram.Estimated_Balance_Calculations_Timestamp__c = System.now();
                 paymentCalcWrap.programToUpdateMap.put(updateProgram.Id, updateProgram);
             }
@@ -249,7 +259,7 @@ public without sharing class PaymentsCalcService {
             calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
         }
         return paymentCalcWrap;
-    }*/
+    }
 
     //common method for handling DML and process the result as error logs
     /*public static void updateRecords(List<Sobject> recordsToUpdateList) {
@@ -400,11 +410,11 @@ public without sharing class PaymentsCalcService {
        return Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get(recordTypeDeveloperName).getRecordTypeId();
     }
 
-    /*public class PaymentCalcWrapper{
+    public class PaymentCalcWrapper{
         public Map<Id, nu_dse__Program__c> programToUpdateMap = new Map<Id, nu_dse__Program__c>();
         public Map<Id, nu_dse__TradeLine__c> tradelineIdRecMap = new Map<Id, nu_dse__TradeLine__c>();
         public Map<Id, nu_dse__Offer__c> offerIdRecMap = new Map<Id, nu_dse__Offer__c>();
-    }*/
+    }
 
     public class SavingCalcInputWrapper{
         String endpoint;

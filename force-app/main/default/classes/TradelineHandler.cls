@@ -27,6 +27,7 @@ public class TradelineHandler extends TriggerHandler {
     Static Set<Id> savignCalculatedTradelineIds = new Set<Id>();
     Set<Id> savignCalcTradelineIds = new Set<Id>();
     Set<Id> savingCalcUpdateProgramIds = new Set<Id>();
+    Map<Id, List<nu_dse__TradeLine__c>> programIdTradelineMap = new Map<Id, List<nu_dse__TradeLine__c>>();
     // List<nu_dse__Offer__c> offersToUpdate = new List<nu_dse__Offer__c>();
     List<nu_dse__TradeLine__c> TradelinesToUpdate = new List<nu_dse__TradeLine__c>();
     Map<Id, nu_dse__Program__c> programsToUpdate = new Map<Id,nu_dse__Program__c>();
@@ -46,6 +47,32 @@ public class TradelineHandler extends TriggerHandler {
         }
     }
     
+    public override void beforeInsert() {
+
+        for (nu_dse__TradeLine__c newTradeline : (List<nu_dse__TradeLine__c>) trigger.new) {
+
+            collectProgramIdsforSettlementOrder(newTradeline, null);
+        }
+
+        if(programIdTradelineMap.isEmpty() == false) {
+
+            updateTradelineSettlementOrder();
+        }
+    }
+
+    public override void beforeUpdate() {
+
+        for (nu_dse__TradeLine__c newTradeline : (List<nu_dse__TradeLine__c>) trigger.new) {
+
+            collectProgramIdsforSettlementOrder(newTradeline, oldTLMap.get(newTradeline.Id));
+        }
+
+        if(programIdTradelineMap.isEmpty() == false) {
+
+            updateTradelineSettlementOrder();
+        }
+    }
+
     public override void afterUpdate() {
 
         for (nu_dse__TradeLine__c newTradeline : (List<nu_dse__TradeLine__c>) trigger.new) {
@@ -103,6 +130,23 @@ public class TradelineHandler extends TriggerHandler {
         // update offersToUpdate;
     }
 
+    public void collectProgramIdsforSettlementOrder(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
+
+        if(newTradeline.nu_dse__Program__c != null
+            && (newTradeline.nu_dse__Current_Stage__c == 'Settled - Legal' 
+                || newTradeline.nu_dse__Current_Stage__c == 'Settled - Non Legal'
+                || newTradeline.nu_dse__Current_Stage__c == 'Making payments')
+            && (Trigger.isInsert 
+                || (newTradeline.nu_dse__Current_Stage__c != oldTradeline.nu_dse__Current_Stage__c))) {
+            
+            if(programIdTradelineMap.containsKey(newTradeline.nu_dse__Program__c) == false) {
+                programIdTradelineMap.put(newTradeline.nu_dse__Program__c, new List<nu_dse__TradeLine__c> {newTradeline});
+            } else {
+                programIdTradelineMap.get(newTradeline.nu_dse__Program__c).add(newTradeline);
+            }
+        }
+    }
+
     public void collectSavingCalcTradelines(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
 
         if((Trigger.isInsert && (newTradeline.nu_dse__Current_Balance__c  != null || newTradeline.nu_dse__Original_Debt__c != null
@@ -126,6 +170,37 @@ public class TradelineHandler extends TriggerHandler {
                 || newTradeline.nu_dse__Include_In_The_Program__c != oldTradeline.nu_dse__Include_In_The_Program__c ))) {
 
             savingCalcUpdateProgramIds.add(newTradeline.nu_dse__Program__c);
+        }
+    }
+
+    public void updateTradelineSettlementOrder() {
+
+        for(AggregateResult result: [SELECT count(Id) setteledTradelinesCount, nu_dse__Program__c
+                                     FROM nu_dse__Tradeline__c
+                                     WHERE nu_dse__Program__c IN :programIdTradelineMap.keyset()
+                                        AND (nu_dse__Current_Stage__c = 'Settled - Legal' OR nu_dse__Current_Stage__c = 'Settled - Non Legal'
+                                            OR nu_dse__Current_Stage__c = 'Making payments')
+                                     GROUP BY nu_dse__Program__c]) {
+
+            Id programId = Id.valueOf(String.valueOf(result.get('nu_dse__Program__c')));
+            Integer setteledTradelinesCount = Integer.valueOf(result.get('setteledTradelinesCount'));
+
+            for (nu_dse__TradeLine__c newTradeLine : programIdTradelineMap.get(programId)) {
+
+                setteledTradelinesCount++;
+                newTradeLine.Program_Settlement_Order__c = setteledTradelinesCount;
+            }
+            programIdTradelineMap.remove(programId);
+        }
+
+        for(Id programId : programIdTradelineMap.keyset()) {
+
+            Integer setteledTradelinesCount = 1;
+            for(nu_dse__TradeLine__c newTradeLine : programIdTradelineMap.get(programId)){
+
+                newTradeLine.Program_Settlement_Order__c = setteledTradelinesCount;
+                setteledTradelinesCount++;
+            }
         }
     }
 
