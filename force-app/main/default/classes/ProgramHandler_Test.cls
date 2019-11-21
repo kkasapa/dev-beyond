@@ -303,7 +303,7 @@ public class ProgramHandler_Test {
         
         insert testProgram;
     
-        testProgram.Loan_Interest_Status__c = 'Interested - Skybridge';
+        testProgram.Loan_Interest_Status__c = 'Interested';
         testProgram.Eligible_for_Skybridge__c = true;
         
         update testProgram;
@@ -341,7 +341,6 @@ public class ProgramHandler_Test {
 
             nu_dse__Program__c program = [SELECT Id, Name FROM nu_dse__Program__c LIMIT 1];
             program.Original_Enrolled_Program_Debt__c = 1500;
-            Test.setMock(HttpCalloutMock.class,new TradelineTrigger_Test());
             update program;
         Test.stopTest();
 
@@ -357,10 +356,12 @@ public class ProgramHandler_Test {
     Public static testmethod void savingsCalculationAPIFail_Test(){
         
         Test.startTest();
+            Savings_Calculator_Microservice__c savingCalcSettings = [SELECT Id FROM Savings_Calculator_Microservice__c WHERE InterestRate__c = 16.4 LIMIT 1];
+            savingCalcSettings.InterestRate__c = 0;
+            update savingCalcSettings;
 
             nu_dse__Program__c program = [SELECT Id, Name FROM nu_dse__Program__c LIMIT 1];
-            program.Original_Enrolled_Program_Debt__c = -500;
-            Test.setMock(HttpCalloutMock.class,new TradelineTrigger_Test());
+            program.Original_Enrolled_Program_Debt__c = 100;
             update program;
 
         Test.stopTest();
@@ -382,8 +383,7 @@ public class ProgramHandler_Test {
             update savingCalcSettings;
 
             nu_dse__Program__c program = [SELECT Id, Name FROM nu_dse__Program__c LIMIT 1];
-            program.Original_Enrolled_Program_Debt__c = 0;
-            Test.setMock(HttpCalloutMock.class,new TradelineTrigger_Test());
+            program.Original_Enrolled_Program_Debt__c = 500;
             update program;
 
         Test.stopTest();
@@ -398,7 +398,7 @@ public class ProgramHandler_Test {
     // Create New Lender Application Data for Interested Program Enrolled Clients
     // Uses Loan Interest Status = "Interested" to Run
     public void createLoan(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram){
-        if (newProgram.Loan_Interest_Status__c == 'Skybridge - Interested'){
+        if (newProgram.Loan_Interest_Status__c == 'Not_Interested'){
             if(newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c){
                 //if(!newProgram.Flow_Initiated__c){
                     System.debug('loan if statement');

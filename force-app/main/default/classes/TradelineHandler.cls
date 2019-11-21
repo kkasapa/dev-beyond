@@ -149,12 +149,13 @@ public class TradelineHandler extends TriggerHandler {
 
     public void collectSavingCalcTradelines(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
 
-        if((Trigger.isInsert && (newTradeline.nu_dse__Current_Balance__c  != null || newTradeline.nu_dse__Original_Debt__c != null
-                || newTradeline.nu_dse__Current_Balance__c  != 0 || newTradeline.nu_dse__Original_Debt__c != 0 ))
-            || (savignCalculatedTradelineIds.contains(newTradeline.Id) == false
-                && (newTradeline.nu_dse__Current_Balance__c != oldTradeline.nu_dse__Current_Balance__c
-                    || ((newTradeline.nu_dse__Current_Balance__c == null || newTradeline.nu_dse__Current_Balance__c == 0)
-                        && newTradeline.nu_dse__Original_Debt__c != oldTradeline.nu_dse__Original_Debt__c)))) {
+        if((newTradeline.nu_dse__Current_Balance__c  != null || newTradeline.nu_dse__Original_Debt__c != null
+                || newTradeline.nu_dse__Current_Balance__c  != 0 || newTradeline.nu_dse__Original_Debt__c != 0)
+                && (Trigger.isInsert 
+                    || (savignCalculatedTradelineIds.contains(newTradeline.Id) == false
+                        && (newTradeline.nu_dse__Current_Balance__c != oldTradeline.nu_dse__Current_Balance__c
+                            || ((newTradeline.nu_dse__Current_Balance__c == null || newTradeline.nu_dse__Current_Balance__c == 0)
+                                && newTradeline.nu_dse__Original_Debt__c != oldTradeline.nu_dse__Original_Debt__c))))) {
 
             savignCalcTradelineIds.add(newTradeline.Id);
             savignCalculatedTradelineIds.add(newTradeline.Id);
@@ -232,14 +233,16 @@ public class TradelineHandler extends TriggerHandler {
     @future(callout=true)
     public static void calculateSavings(Set<Id> tradelineIds) {
 
-        Savings_Calculator_Microservice__c savingCalcSettings = Savings_Calculator_Microservice__c.getInstance(UserInfo.getUserId());
+        /*Savings_Calculator_Microservice__c savingCalcSettings = Savings_Calculator_Microservice__c.getInstance(UserInfo.getUserId());
         String endpoint;
         Double interestRate;
-        Decimal minimumPaymentPercent;
+        Decimal minimumPaymentPercent;*/
         
         List<nu_dse__TradeLine__c> tradelineToUpdateList = new List<nu_dse__TradeLine__c>(); 
 
-        if (savingCalcSettings != null) {
+        PaymentsCalcService.SavingCalcSettings savingCalcSetting = PaymentsCalcService.getSavingCalcSettings();
+
+        /*if (savingCalcSettings != null) {
             if (String.isNotBlank(savingCalcSettings.Endpoint__c) ) {
                 endpoint = savingCalcSettings.Endpoint__c;
             } else {
@@ -255,12 +258,12 @@ public class TradelineHandler extends TriggerHandler {
             } else {
                 minimumPaymentPercent = 0.02;
             }
-        }
+        }*/
 
         for (nu_dse__TradeLine__c newTradeline : [SELECT Id, Name, nu_dse__Current_Balance__c, nu_dse__Original_Debt__c 
                                                   FROM nu_dse__TradeLine__c WHERE Id IN :tradelineIds]) {
             
-            Double debt = 0, minimumPayment = 0; 
+            Double debt = 0; 
 
             if((newTradeline.nu_dse__Current_Balance__c == 0
                 || newTradeline.nu_dse__Current_Balance__c == null)
@@ -273,12 +276,8 @@ public class TradelineHandler extends TriggerHandler {
                 debt = newTradeline.nu_dse__Current_Balance__c;
             }
             
-            minimumPayment = minimumPaymentPercent * debt;
             nu_dse__TradeLine__c tradelineToUpdate = (nu_dse__Tradeline__c)PaymentsCalcService.savingsCalculatorExternalService(
-                                                                new PaymentsCalcService.SavingCalcInputWrapper(
-                                                                    endpoint, debt, 
-                                                                    minimumPayment, interestRate, 
-                                                                    'nu_dse__Tradeline__c'));
+                                                                    savingCalcSetting, debt, 'nu_dse__Tradeline__c');
             tradelineToUpdate.Id = newTradeline.Id;
             tradelineToUpdateList.add(tradelineToUpdate);
         }

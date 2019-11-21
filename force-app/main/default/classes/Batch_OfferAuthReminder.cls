@@ -7,7 +7,7 @@
 * @maintainedBy   Vignesh   <vsadhasivam@selastech.com>
 * @version        1.0
 * @created        2019-11-11
-* @modified       2019-11-12
+* @modified       2019-11-20
 * @logic           
 * @description    This batch will Create Offer Authorization reminder SMS/Email Tasks.
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -17,13 +17,24 @@ public with sharing class Batch_OfferAuthReminder implements Database.Batchable<
     List<Default_Task_Assignments_to_User__mdt> defaultTaskAssignConfigList = new List<Default_Task_Assignments_to_User__mdt>();
     Map<String, Id> communicationTemplateMap = new Map<String, Id>();
     Set<Id> filterOfferIds = new Set<Id>();
+    Integer paddingDays;
 
     public Batch_OfferAuthReminder() {
 
         getBasicConfig();
     }
 
-    public Batch_OfferAuthReminder(Set<Id> offerIds) {
+    public Batch_OfferAuthReminder(Integer paddingDaysCount) {
+
+        getBasicConfig();
+
+        if(paddingDaysCount != null) {
+
+            paddingDays = paddingDaysCount;
+        }
+    }
+
+    public Batch_OfferAuthReminder(Set<Id> offerIds, Integer paddingDaysCount) {
 
         getBasicConfig();
 
@@ -31,12 +42,21 @@ public with sharing class Batch_OfferAuthReminder implements Database.Batchable<
 
             filterOfferIds.addAll(offerIds);
         }
+
+        if(paddingDaysCount != null) {
+
+            paddingDays = paddingDaysCount;
+        }
     }
 
     public Database.QueryLocator start(Database.BatchableContext BC) {
         
         Set<String> offerStatusSet = new Set<String>{'03-Offer Approved (Pre-payment setup)'};
         DateTime futurePreApprovedDate = system.today().addDays(-30);
+        if(paddingDays != null) {
+            futurePreApprovedDate = system.today().addDays(paddingDays);
+        }
+        
         String queryStr = 'SELECT Id, Client_Authorization_Received__c, nu_dse__First_Payment_Date__c, Accepted_Date__c, nu_dse__Status__c '+
                           'FROM nu_dse__Offer__c '+
                           'WHERE (nu_dse__Status__c IN :offerStatusSet OR (Offer_Pre_Approved_Date__c >= :futurePreApprovedDate '+

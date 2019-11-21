@@ -283,7 +283,7 @@ public without sharing class PaymentsCalcService {
         }
     }*/
 
-    public static SObject savingsCalculatorExternalService(SavingCalcInputWrapper savingCalcInputWrap) {
+    public static SObject savingsCalculatorExternalService(SavingCalcSettings savingCalcSetting, Decimal debtAmount, String sObjectType) {
 
             Map<String, String> savingsCalcTradelineMappings = new Map<String,String> {
                                                                     'total-months' => 'Savings_Months_to_Payoff__c',
@@ -304,15 +304,15 @@ public without sharing class PaymentsCalcService {
             requestBodyJson.writeStringField('type', 'savings');
             requestBodyJson.writeFieldName('attributes');
             requestBodyJson.writeStartObject();
-            requestBodyJson.writeNumberField('current_balance', savingCalcInputWrap.debtAmount);
-            requestBodyJson.writeNumberField('minimum_payment', savingCalcInputWrap.minimumPayment);
-            requestBodyJson.writeNumberField('annual_interest_rate',savingCalcInputWrap.interestRate);
+            requestBodyJson.writeNumberField('current_balance', debtAmount);
+            requestBodyJson.writeNumberField('minimum_payment', debtAmount * savingCalcSetting.minimumPaymentPercent);
+            requestBodyJson.writeNumberField('annual_interest_rate', savingCalcSetting.interestRate);
             requestBodyJson.writeEndObject();
             requestBodyJson.writeEndObject();
             requestBodyJson.writeEndObject();
 
             HttpRequest request = new HttpRequest();
-            request.setEndpoint(savingCalcInputWrap.endpoint);
+            request.setEndpoint(savingCalcSetting.endpoint);
             request.setMethod('POST');
             request.setTimeout(2000);
             request.setHeader('Content-Type','application/vnd.api+json');
@@ -320,15 +320,44 @@ public without sharing class PaymentsCalcService {
             request.setBody(requestBodyJson.getAsString());
             system.debug('requestBody-->'+request.getBody());
 
-            SObject sObjInstance = Schema.getGlobalDescribe().get(savingCalcInputWrap.sObjectType).newSObject();
+            SObject sObjInstance = Schema.getGlobalDescribe().get(sObjectType).newSObject();
             try{
 
                 HTTP http = new http();
-                HTTPResponse response = http.send(request);
+                HTTPResponse response = new HTTPResponse();
+                
+                if(Test.isRunningTest() == false) {
+
+                    response = http.send(request);
+
+                } else {
+                    
+                    if(request.getEndpoint().contains('savings') == true) {
+
+                        if(Integer.valueOf(request.getbody().substringBetween('"current_balance" : ', ',')) > 100) {
+                            
+                            response.setStatus('OK');
+                            response.setBody('{"data": {"id": "772285","type": "savings","links": {"self": "/api/v1/savings/772285"},'+
+                                        '"attributes": {"current-balance": 1000.0,"annual-interest-rate": "16.41",'+
+                                        '"minimum-percentage-principle": "20.0","minimum-payment": 200.0,"total-savings": 271.0,'+
+                                        '"total-months": 18,"total-payments": 1071.0,"absolute-minimum-payment": 15.0}}}');
+                        } else {
+
+                            response.setStatus('400');
+                            response.setBody('Balance must be greater than 0');
+                        } 
+
+                    } else {
+
+                        CalloutException e = (CalloutException)CalloutException.class.newInstance();
+                        e.setMessage('Unauthorized endpoint, please check Setup->Security->Remote site settings.');
+                        throw e;
+                    }
+                }
+
                 String resp = response.getStatus();
                 String body = response.getBody();
-                system.debug('responseStatus-->'+response.getStatus());
-                system.debug('responseBody-->'+response.getBody());
+
                 if(resp == 'OK') {
 
                     JSONParser parser = JSON.createParser(body);
@@ -338,9 +367,9 @@ public without sharing class PaymentsCalcService {
                         if(parser.getText() == 'total-months') {
 
                             parser.nextToken();
-                            if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                            if (sObjectType == 'nu_dse__Program__c' ) {
                                 sObjInstance.put(savingsCalcProgramMappings.get('total-months'), parser.getIntegerValue());
-                            } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                            } else if (sObjectType == 'nu_dse__Tradeline__c') {
                                 sObjInstance.put(savingsCalcTradelineMappings.get('total-months'), parser.getIntegerValue());
                             }
                         }
@@ -348,37 +377,37 @@ public without sharing class PaymentsCalcService {
                         if(parser.getText() == 'total-payments') {
 
                             parser.nextToken();
-                            if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                            if (sObjectType == 'nu_dse__Program__c' ) {
                                 sObjInstance.put(savingsCalcProgramMappings.get('total-payments'), parser.getIntegerValue());
-                            } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                            } else if (sObjectType == 'nu_dse__Tradeline__c') {
                                 sObjInstance.put(savingsCalcTradelineMappings.get('total-payments'), parser.getIntegerValue());
                             }
                         }
 
                         if(parser.getText() == 'total-savings') {
                             parser.nextToken();
-                            if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                            if (sObjectType == 'nu_dse__Program__c' ) {
                                 sObjInstance.put(savingsCalcProgramMappings.get('total-savings'), parser.getIntegerValue());
-                            } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                            } else if (sObjectType == 'nu_dse__Tradeline__c') {
                                 sObjInstance.put(savingsCalcTradelineMappings.get('total-savings'), parser.getIntegerValue());
                             }
                         }
                     }
-                    if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                    if (sObjectType == 'nu_dse__Program__c' ) {
                         sObjInstance.put(savingsCalcProgramMappings.get('error'), '');
                         sObjInstance.put(savingsCalcProgramMappings.get('timestamp'), system.now());
-                    } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                    } else if (sObjectType == 'nu_dse__Tradeline__c') {
                         sObjInstance.put(savingsCalcTradelineMappings.get('error'), '');
                         sObjInstance.put(savingsCalcTradelineMappings.get('timestamp'), system.now());
                     }
                 } else {
-                    if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                    if (sObjectType == 'nu_dse__Program__c' ) {
                         sObjInstance.put(savingsCalcProgramMappings.get('error'), body);
                         sObjInstance.put(savingsCalcProgramMappings.get('timestamp'), system.now());
                         sObjInstance.put(savingsCalcProgramMappings.get('total-savings'), 0);
                         sObjInstance.put(savingsCalcProgramMappings.get('total-payments'), 0);
                         sObjInstance.put(savingsCalcProgramMappings.get('total-months'), 0);
-                    } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                    } else if (sObjectType == 'nu_dse__Tradeline__c') {
                         sObjInstance.put(savingsCalcTradelineMappings.get('error'), body);
                         sObjInstance.put(savingsCalcTradelineMappings.get('timestamp'), system.now());
                         sObjInstance.put(savingsCalcTradelineMappings.get('total-savings'), 0);
@@ -388,13 +417,13 @@ public without sharing class PaymentsCalcService {
                 }
 
             } catch(CalloutException e){
-                if (savingCalcInputWrap.sObjectType == 'nu_dse__Program__c' ) {
+                if (sObjectType == 'nu_dse__Program__c' ) {
                     sObjInstance.put(savingsCalcProgramMappings.get('error'), e.getTypeName()+ ' ' +e.getMessage());
                     sObjInstance.put(savingsCalcProgramMappings.get('timestamp'), system.now());
                     sObjInstance.put(savingsCalcProgramMappings.get('total-savings'), 0);
                     sObjInstance.put(savingsCalcProgramMappings.get('total-payments'), 0);
                     sObjInstance.put(savingsCalcProgramMappings.get('total-months'), 0);
-                } else if (savingCalcInputWrap.sObjectType == 'nu_dse__Tradeline__c') {
+                } else if (sObjectType == 'nu_dse__Tradeline__c') {
                     sObjInstance.put(savingsCalcTradelineMappings.get('error'), e.getTypeName()+ ' ' +e.getMessage());
                     sObjInstance.put(savingsCalcTradelineMappings.get('timestamp'), system.now());
                     sObjInstance.put(savingsCalcTradelineMappings.get('total-savings'), 0);
@@ -410,13 +439,44 @@ public without sharing class PaymentsCalcService {
        return Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get(recordTypeDeveloperName).getRecordTypeId();
     }
 
+    public static SavingCalcSettings getSavingCalcSettings() {
+
+        Savings_Calculator_Microservice__c savingCalcSettings = Savings_Calculator_Microservice__c.getInstance(UserInfo.getUserId());
+        SavingCalcSettings savingCalcSetting = new SavingCalcSettings();
+
+        if (savingCalcSettings != null) {
+
+            if (String.isNotBlank(savingCalcSettings.Endpoint__c) ) {
+                savingCalcSetting.endpoint = savingCalcSettings.Endpoint__c;
+            } else {
+                savingCalcSetting.endpoint = 'https://beyondfinance.com/api/v1/savings';
+            }
+            if (savingCalcSettings.InterestRate__c != null && savingCalcSettings.InterestRate__c > 0) {
+                savingCalcSetting.interestRate = savingCalcSettings.InterestRate__c;
+            } else {
+                savingCalcSetting.interestRate = 16.4;  
+            }
+            if (savingCalcSettings.Minimum_Payment__c != null && savingCalcSettings.Minimum_Payment__c > 0) {
+                savingCalcSetting.minimumPaymentPercent = savingCalcSettings.Minimum_Payment__c/100;
+            } else {
+                savingCalcSetting.minimumPaymentPercent = 0.02;
+            }
+        } else {
+
+            savingCalcSetting.endpoint = 'https://beyondfinance.com/api/v1/savings';
+            savingCalcSetting.interestRate = 16.4;
+            savingCalcSetting.minimumPaymentPercent = 0.02;
+        }
+        return savingCalcSetting;
+    }
+
     public class PaymentCalcWrapper{
         public Map<Id, nu_dse__Program__c> programToUpdateMap = new Map<Id, nu_dse__Program__c>();
         public Map<Id, nu_dse__TradeLine__c> tradelineIdRecMap = new Map<Id, nu_dse__TradeLine__c>();
         public Map<Id, nu_dse__Offer__c> offerIdRecMap = new Map<Id, nu_dse__Offer__c>();
     }
 
-    public class SavingCalcInputWrapper{
+    /*public class SavingCalcInputWrapper{
         String endpoint;
         Double debtAmount;
         Double minimumPayment;
@@ -430,6 +490,13 @@ public without sharing class PaymentsCalcService {
             this.interestRate = interestRate;
             this.sObjectType = sObjectType;
         }
+    }*/
+
+    public class SavingCalcSettings {
+
+        public String endpoint;
+        public Double interestRate;
+        public Decimal minimumPaymentPercent;
     }
 
 }

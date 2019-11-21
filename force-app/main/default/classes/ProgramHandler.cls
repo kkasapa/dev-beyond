@@ -367,8 +367,8 @@ public class ProgramHandler extends TriggerHandler {
     public void collectProgramsForSavingsCalc(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram) {
         if(newProgram.Original_Enrolled_Program_Debt__c != null
             && newProgram.Original_Enrolled_Program_Debt__c > 0 
-            && Trigger.isInsert 
-                ||(newProgram.Original_Enrolled_Program_Debt__c != oldProgram.Original_Enrolled_Program_Debt__c)) {
+            && (Trigger.isInsert 
+                ||(newProgram.Original_Enrolled_Program_Debt__c != oldProgram.Original_Enrolled_Program_Debt__c))) {
             savingsCalcProgramIds.add(newProgram.Id);
         }
     }
@@ -387,15 +387,17 @@ public class ProgramHandler extends TriggerHandler {
 
     @future(callout=true)
     public static void calculateSavings(Set<Id> programIds) {
+        
+        PaymentsCalcService.SavingCalcSettings savingCalcSetting = PaymentsCalcService.getSavingCalcSettings();
 
-        Savings_Calculator_Microservice__c savingCalcSettings = Savings_Calculator_Microservice__c.getInstance(UserInfo.getUserId());
+        /*Savings_Calculator_Microservice__c savingCalcSettings = Savings_Calculator_Microservice__c.getInstance(UserInfo.getUserId());
         String endpoint;
         Double interestRate;
-        Decimal minimumPaymentPercent;
+        Decimal minimumPaymentPercent;*/
         
         List<nu_dse__Program__c> programsToUpdateList = new List<nu_dse__Program__c>(); 
 
-        if (savingCalcSettings != null) {
+        /*if (savingCalcSettings != null) {
             if (String.isNotBlank(savingCalcSettings.Endpoint__c) ) {
                 endpoint = savingCalcSettings.Endpoint__c;
             } else {
@@ -411,23 +413,19 @@ public class ProgramHandler extends TriggerHandler {
             } else {
                 minimumPaymentPercent = 0.02;
             }
-        }
+        }*/
 
         for (nu_dse__Program__c newProgram : [SELECT Id, Name, Original_Enrolled_Program_Debt__c
                                                   FROM nu_dse__Program__c WHERE Id IN :programIds]) {
             
-            Double debt = 0, minimumPayment = 0; 
+            Double debt = 0; 
 
-             if(newProgram.Original_Enrolled_Program_Debt__c != null && newProgram.Original_Enrolled_Program_Debt__c > 0) {
+            if(newProgram.Original_Enrolled_Program_Debt__c != null && newProgram.Original_Enrolled_Program_Debt__c > 0) {
                 debt = newProgram.Original_Enrolled_Program_Debt__c;
             }
             
-            minimumPayment = minimumPaymentPercent * debt;
             nu_dse__Program__c programToUpdate = (nu_dse__Program__c)PaymentsCalcService.savingsCalculatorExternalService(
-                                                                new PaymentsCalcService.SavingCalcInputWrapper(
-                                                                    endpoint, debt, 
-                                                                    minimumPayment, interestRate, 
-                                                                    'nu_dse__Program__c'));
+                                                                        savingCalcSetting, debt, 'nu_dse__Program__c');
             programToUpdate.Id = newProgram.Id;
             programsToUpdateList.add(programToUpdate);
         }
