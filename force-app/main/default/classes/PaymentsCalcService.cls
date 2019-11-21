@@ -33,7 +33,7 @@ public without sharing class PaymentsCalcService {
     public static Id feeRecordTypeId = getPaymentRecordTypeId('Fee');  // recordType Id for fee
     public static Id settlementRecordTypeId = getPaymentRecordTypeId('Settlement');  // recordType Id for settlement
 
-    public static PaymentCalcWrapper calcProgramEstimatedBalance(Set<Id> programIds) {
+    /*public static PaymentCalcWrapper calcProgramEstimatedBalance(Set<Id> programIds) {
 
         PaymentCalcWrapper paymentCalcWrap = new PaymentCalcWrapper();
         Set<Id> recordTypeIds = new Set<Id> {draftRecordTypeId, settlementRecordTypeId, feeRecordTypeId};
@@ -259,7 +259,7 @@ public without sharing class PaymentsCalcService {
             calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
         }
         return paymentCalcWrap;
-    }
+    }*/
 
     //common method for handling DML and process the result as error logs
     /*public static void updateRecords(List<Sobject> recordsToUpdateList) {
@@ -470,11 +470,11 @@ public without sharing class PaymentsCalcService {
         return savingCalcSetting;
     }
 
-    public class PaymentCalcWrapper{
+    /*public class PaymentCalcWrapper{
         public Map<Id, nu_dse__Program__c> programToUpdateMap = new Map<Id, nu_dse__Program__c>();
         public Map<Id, nu_dse__TradeLine__c> tradelineIdRecMap = new Map<Id, nu_dse__TradeLine__c>();
         public Map<Id, nu_dse__Offer__c> offerIdRecMap = new Map<Id, nu_dse__Offer__c>();
-    }
+    }*/
 
     /*public class SavingCalcInputWrapper{
         String endpoint;

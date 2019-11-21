@@ -1,5 +1,5 @@
 @isTest
-public with sharing class TradelineTrigger_Test implements HttpCalloutMock {
+public with sharing class TradelineTrigger_Test {
 
 
     @testsetup
@@ -17,7 +17,6 @@ public with sharing class TradelineTrigger_Test implements HttpCalloutMock {
         nu_dse__Program__c program = TestRecordCreator.createProgram(acc.Id, processor.Id);
         insert program;
 
-        Test.setMock(HttpCalloutMock.class,new TradelineTrigger_Test());
         nu_dse__TradeLine__c tradeLine = TestRecordCreator.createTradeLine(acc.id, program.Id);
         insert tradeLine;
 
@@ -38,7 +37,6 @@ public with sharing class TradelineTrigger_Test implements HttpCalloutMock {
         tradeLine.nu_dse__Current_Balance__c = 1500;
 
         Test.startTest();
-            Test.setMock(HttpCalloutMock.class,new TradelineTrigger_Test());
             insert tradeLine;
         Test.stopTest();
 
@@ -56,7 +54,6 @@ public with sharing class TradelineTrigger_Test implements HttpCalloutMock {
         nu_dse__TradeLine__c tradeLine = [SELECT Id FROM nu_dse__TradeLine__c LIMIT 1];
 
         Test.startTest();
-            Test.setMock(HttpCalloutMock.class,new TradelineTrigger_Test());
             tradeLine.nu_dse__Current_Balance__c = 0;
             tradeLine.nu_dse__Original_Debt__c = 1500;
             update tradeline;
@@ -79,8 +76,7 @@ public with sharing class TradelineTrigger_Test implements HttpCalloutMock {
         nu_dse__TradeLine__c tradeLine = TestRecordCreator.createTradeLine(acc.id, program.Id);
        
         Test.startTest();
-            Test.setMock(HttpCalloutMock.class,new TradelineTrigger_Test());
-            tradeLine.nu_dse__Current_Balance__c = -500;
+            tradeLine.nu_dse__Current_Balance__c = 100;
             insert tradeLine;
         Test.stopTest();
 
@@ -104,8 +100,7 @@ public with sharing class TradelineTrigger_Test implements HttpCalloutMock {
             savingCalcSettings.InterestRate__c = null;
             savingCalcSettings.Minimum_Payment__c = null;
             update savingCalcSettings;
-
-            Test.setMock(HttpCalloutMock.class,new TradelineTrigger_Test());
+            
             tradeLine.nu_dse__Current_Balance__c = 200;
             insert tradeLine;
         Test.stopTest();
@@ -116,32 +111,56 @@ public with sharing class TradelineTrigger_Test implements HttpCalloutMock {
         system.assertEquals('System.CalloutException Unauthorized endpoint, please check Setup->Security->Remote site settings.',
                          updatedTradeLine.Savings_Calc_Error__c);
     }
-
-    public HTTPResponse respond(HTTPRequest req) {
-
-        String body = req.getBody();
-        HTTPResponse resp = new HTTPResponse();
-
-        if(req.getEndpoint().contains('savings') == true) {
+    
+    /*Public static testmethod void tradelineSettlementOrderInsert_Test(){
+        
+        nu_dse__Program__c program = [SELECT Id FROM nu_dse__Program__c LIMIT 1];
+        Account acc = [SELECT Id FROM Account LIMIT 1];
+        
+        nu_dse__TradeLine__c tradeLine = TestRecordCreator.createTradeLine(acc.id, program.Id);
+        
+        Test.startTest();
             
-            if(Integer.valueOf(body.substringBetween('"current_balance" : ', ',')) > 0) {
-
-                resp.setStatus('OK');
-                resp.setBody('{"data": {"id": "772285","type": "savings","links": {"self": "/api/v1/savings/772285"},"attributes": {"current-balance": 1000.0,"annual-interest-rate": "16.41","minimum-percentage-principle": "20.0","minimum-payment": 200.0,"total-savings": 271.0,"total-months": 18,"total-payments": 1071.0,"absolute-minimum-payment": 15.0}}}');
-                
-            } else {
-
-                resp.setStatus('400');
-                resp.setBody('Balance must be greater than 0');
-                
-            } 
-
-        } else {
-
-            CalloutException e = (CalloutException)CalloutException.class.newInstance();
-            e.setMessage('Unauthorized endpoint, please check Setup->Security->Remote site settings.');
-            throw e;
-        }
-        return resp;
+            tradeLine.nu_dse__Current_Stage__c = 'Settled - Legal';
+            insert tradeLine;
+            
+        Test.stopTest();
+        
+        nu_dse__TradeLine__c updaterTradeline = [SELECT Program_Settlement_Order__c FROM nu_dse__TradeLine__c 
+                                                WHERE Id = :tradeLine.Id LIMIT 1];
+        
+        system.assertEquals(1, updaterTradeline.Program_Settlement_Order__c);
+        
     }
+    
+    Public static testmethod void tradelineSettlementOrderUpdate_Test(){
+        
+        nu_dse__Program__c program = [SELECT Id FROM nu_dse__Program__c LIMIT 1];
+        Account acc = [SELECT Id FROM Account LIMIT 1];
+        List<nu_dse__TradeLine__c> tradelineList = new List<nu_dse__TradeLine__c>();
+        
+        nu_dse__TradeLine__c tradeLineInst1 = TestRecordCreator.createTradeLine(acc.id, program.Id);
+        nu_dse__TradeLine__c tradeLineInst2 = TestRecordCreator.createTradeLine(acc.id, program.Id);
+        nu_dse__TradeLine__c tradeLineInst3 = TestRecordCreator.createTradeLine(acc.id, program.Id);
+        tradeLineInst3.nu_dse__Current_Stage__c = 'Making payments';
+        tradelineList.add(tradeLineInst1);
+        tradelineList.add(tradeLineInst2);
+        tradelineList.add(tradeLineInst3);
+        insert tradelineList;
+        
+        Test.startTest();
+            
+            tradelineList[0].nu_dse__Current_Stage__c = 'Making payments';
+            tradelineList[1].nu_dse__Current_Stage__c = 'Settled - Non Legal';
+            update tradelineList;
+            
+        Test.stopTest();
+        
+        List<nu_dse__TradeLine__c> updaterTradelineList = [SELECT Program_Settlement_Order__c FROM nu_dse__TradeLine__c 
+                                                           WHERE Id IN :tradelineList LIMIT 3];
+        
+        system.assertEquals(2, updaterTradelineList[0].Program_Settlement_Order__c);
+        system.assertEquals(3, updaterTradelineList[1].Program_Settlement_Order__c);
+        system.assertEquals(1, updaterTradelineList[2].Program_Settlement_Order__c);
+    }*/
 }

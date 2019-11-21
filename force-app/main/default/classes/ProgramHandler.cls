@@ -338,14 +338,6 @@ public class ProgramHandler extends TriggerHandler {
             }
         }
     }
-    
-    // Updates Flow Initiated Checkbox if Client No longer Interested in a Loan
-    public void updateLoanApplication(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram){
-        if(newProgram.Loan_Interest_Status__c != 'Interested' && newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c){
-            //newProgram.Flow_Initiated__c = false;
-            update newProgram;
-        }
-    }
 
     // Create New Lender Application Data for Interested Program Enrolled Clients
     // Uses Loan Interest Status = "Interested" to Run

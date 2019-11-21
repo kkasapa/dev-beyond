@@ -17,6 +17,7 @@ public without sharing class Batch_SavingsCalculation implements Database.Batcha
     public Set<Id> recordIds;
     public String sObjectType;
     PaymentsCalcService.SavingCalcSettings savingCalcSetting;
+    Set<String> programStatusExclusionSet = new Set<String>();// Set of Program status excludes in payment query
 
     public Batch_SavingsCalculation(String sObjectTypeParam) {
 
@@ -27,13 +28,14 @@ public without sharing class Batch_SavingsCalculation implements Database.Batcha
         } else {
             throw new CustomException('sObjectTypeParam must have valid sObjectType.Supported types: nu_dse__Program__c, nu_dse__Tradeline__c');
         }
-
+        //getting saving calc API configurations
         savingCalcSetting = PaymentsCalcService.getSavingCalcSettings();
+        getProgramExclusionStatus();
     }
 
     public Batch_SavingsCalculation(String sObjectTypeParam, Set<Id> recordIdsParam) {
 
-        if (recordIdsParam.isEmpty() == false) {
+        if (recordIdsParam != null && recordIdsParam.isEmpty() == false) {
             recordIds = recordIdsParam;
         } else {
             throw new CustomException('recordIdsParam must have valid Ids');
@@ -46,46 +48,46 @@ public without sharing class Batch_SavingsCalculation implements Database.Batcha
         } else {
             throw new CustomException('sObjectTypeParam must have valid sObjectType.Supported types: nu_dse__Program__c, nu_dse__Tradeline__c');
         }
-
-        savingCalcSetting = PaymentsCalcService.getSavingCalcSettings();
         
-        if(savingCalcSetting == null) {
-            throw new CustomException('Savings Calculator API configurations unavailable.');
-        }
+        savingCalcSetting = PaymentsCalcService.getSavingCalcSettings();
+        getProgramExclusionStatus();
     }
 
     public Database.QueryLocator start(Database.BatchableContext BC) {
 
         String queryString = '';
        
-        if (sObjectType == 'nu_dse__Program__c') {
+        if (sObjectType == 'nu_dse__Program__c') { //building query for Program 
             queryString = 'SELECT Id, Original_Enrolled_Program_Debt__c FROM nu_dse__Program__c ';
 
-            if (recordIds.isEmpty() == false) {
+            if (recordIds != null && recordIds.isEmpty() == false) { // with set of record Ids
                 queryString += ' WHERE Id IN :recordIds';
-            } else {
-                queryString += ' WHERE Savings_Months_to_Payoff_Original__c = 0 '+
+            } else { // for all programs without saving calc values
+                queryString += ' WHERE (Savings_Months_to_Payoff_Original__c = 0 '+
                                         ' OR Savings_Months_to_Payoff_Original__c = null '+
                                         ' OR Savings_Payoff_Amount_Original__c = 0'+
                                         ' OR Savings_Payoff_Amount_Original__c = null'+
                                         ' OR Savings_Calculated_Savings_Original__c = 0'+
-                                        ' OR Savings_Calculated_Savings_Original__c = null';
+                                        ' OR Savings_Calculated_Savings_Original__c = null)';
             }
-        } else if(sObjectType == 'nu_dse__Tradeline__c'){
+            
+            queryString += ' AND (nu_dse__Program_Status__c IN :programStatusExclusionSet)';
+            
+        } else if(sObjectType == 'nu_dse__Tradeline__c'){ //building query for Tradeline 
             queryString = 'SELECT Id, nu_dse__Current_Balance__c, nu_dse__Original_Debt__c FROM nu_dse__Tradeline__c ';
 
-            if (recordIds.isEmpty() == false) {
+            if (recordIds != null && recordIds.isEmpty() == false) { // with set of record Ids
                 queryString += ' WHERE Id IN :recordIds';
-            } else {
-                queryString += ' WHERE Savings_Months_to_Payoff__c = 0 '+
+            } else { // for all tradelines without saving calc values
+                queryString += ' WHERE (Savings_Months_to_Payoff__c = 0 '+
                                         ' OR Savings_Months_to_Payoff__c = null '+
                                         ' OR Savings_Payoff_Amount__c = 0'+
                                         ' OR Savings_Payoff_Amount__c = null'+
                                         ' OR Savings_Calculated_Savings__c = 0'+
-                                        ' OR Savings_Calculated_Savings__c = null';
+                                        ' OR Savings_Calculated_Savings__c = null)';
             }
+            queryString += ' AND (nu_dse__Program__c = null OR nu_dse__Program__r.nu_dse__Program_Status__c IN :programStatusExclusionSet)';
         }
-        
         return Database.getQueryLocator(queryString);
     }
 
@@ -94,39 +96,14 @@ public without sharing class Batch_SavingsCalculation implements Database.Batcha
         List<nu_dse__Program__c> programs = new List<nu_dse__Program__c>();
         List<nu_dse__Tradeline__c> tradelines = new List<nu_dse__Tradeline__c>();
         
-        /*Savings_Calculator_Microservice__c savingCalcSettings = Savings_Calculator_Microservice__c.getInstance(UserInfo.getUserId());
-        String endpoint;
-        Double interestRate;
-        Decimal minimumPaymentPercent;
-        
-        List<nu_dse__Program__c> programsToUpdateList = new List<nu_dse__Program__c>(); 
-
-        if (savingCalcSettings != null) {
-            if (String.isNotBlank(savingCalcSettings.Endpoint__c) ) {
-                endpoint = savingCalcSettings.Endpoint__c;
-            } else {
-                 endpoint = 'https://beyondfinance.com/api/v1/savings';
-            }
-            if (savingCalcSettings.InterestRate__c != null && savingCalcSettings.InterestRate__c > 0) {
-                interestRate = savingCalcSettings.InterestRate__c;
-            } else {
-                interestRate = 16.4;  
-            }
-            if (savingCalcSettings.Minimum_Payment__c != null && savingCalcSettings.Minimum_Payment__c > 0) {
-                minimumPaymentPercent = savingCalcSettings.Minimum_Payment__c/100;
-            } else {
-                minimumPaymentPercent = 0.02;
-            }
-        }*/
-
         for (sObject sObj: scope) {
             Double debt = 0; 
-            if (sObjectType == 'nu_dse__Program__c') {
+            if (sObjectType == 'nu_dse__Program__c') { // saving calc API for Program
 
                 nu_dse__Program__c program = (nu_dse__Program__c)sObj;
                 
                 if(program.Original_Enrolled_Program_Debt__c != null && program.Original_Enrolled_Program_Debt__c > 0) {
-                    debt = program.Original_Enrolled_Program_Debt__c;
+                    debt = program.Original_Enrolled_Program_Debt__c; 
                 }
                 
                 nu_dse__Program__c programToUpdate = (nu_dse__Program__c)PaymentsCalcService.savingsCalculatorExternalService(
@@ -134,7 +111,7 @@ public without sharing class Batch_SavingsCalculation implements Database.Batcha
                 programToUpdate.Id = program.Id;
                 programs.add(programToUpdate);
 
-            } else if(sObjectType == 'nu_dse__Tradeline__c'){
+            } else if(sObjectType == 'nu_dse__Tradeline__c'){ // saving calc API for Program
                 nu_dse__Tradeline__c tradeline = (nu_dse__Tradeline__c)sObj;
 
                 if((tradeline.nu_dse__Current_Balance__c == 0
@@ -157,8 +134,33 @@ public without sharing class Batch_SavingsCalculation implements Database.Batcha
         update programs;
         update Tradelines;
     }
-
+    
     public void finish(Database.BatchableContext BC) {
+        //not required
+    }
+    
+    // Method to query Program_Status_Configuration meta data for get excluded program Statuses
+    public void getProgramExclusionStatus() {
+         
+        Program_Status_Configuration__mdt progStatusConfig = new Program_Status_Configuration__mdt();
 
+        if (Test.isRunningTest() == true) {
+        
+            progStatusConfig = new Program_Status_Configuration__mdt(
+                                        MasterLabel = 'Saving Calculation', 
+                                        DeveloperName = 'Saving_Calculation', 
+                                        Excluded_Statuses__c = 'New Client,Active,Termination Pending,Graduation Pending');
+
+        } else {
+            progStatusConfig = [SELECT Label, DeveloperName, Excluded_Statuses__c 
+                                        FROM Program_Status_Configuration__mdt 
+                                        WHERE DeveloperName = 'Saving_Calculation' LIMIT 1];
+
+        }
+
+        if(progStatusConfig != null
+            && String.isNotBlank(progStatusConfig.Excluded_Statuses__c)) {
+            programStatusExclusionSet = new Set<String>(progStatusConfig.Excluded_Statuses__c.split(',', 0));
+        }
     }
 }

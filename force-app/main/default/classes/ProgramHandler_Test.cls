@@ -134,7 +134,6 @@ public class ProgramHandler_Test {
         List<Account> acc = [SELECT Id FROM Account];
         List<nu_dse__Program__c> programList = [SELECT Id FROM nu_dse__Program__c];
         
-        Test.setMock(HttpCalloutMock.class,new TradelineTrigger_Test());
         nu_dse__TradeLine__c tradeLine = TestRecordCreator.createTradeLine(acc[0].id, programList[0].Id);
         insert tradeLine;
         nu_dse__Offer__c offer = TestRecordCreator.createoffer(programList[0].Id, tradeLine.Id, 100, 10, 25, 10);
@@ -169,6 +168,7 @@ public class ProgramHandler_Test {
     Public static testmethod void updateProspectStatus_Test(){
 
         nu_dse__Prospect__c prospect = TestRecordCreator.createProspect();
+        prospect.velocify_id__c = '1';
         insert prospect;
         List<nu_dse__Program__c> programList = [SELECT Id FROM nu_dse__Program__c];
         programList[0].nu_dse__Program_Status__c = 'Did Not Sell';
@@ -303,7 +303,7 @@ public class ProgramHandler_Test {
         
         insert testProgram;
     
-        testProgram.Loan_Interest_Status__c = 'Interested';
+        testProgram.Loan_Interest_Status__c = 'Interested - Skybridge';
         testProgram.Eligible_for_Skybridge__c = true;
         
         update testProgram;
@@ -315,7 +315,6 @@ public class ProgramHandler_Test {
 
             nu_dse__Program__c program = [SELECT Id, Name FROM nu_dse__Program__c LIMIT 1];
             program.Original_Enrolled_Program_Debt__c = 1500;
-            Test.setMock(HttpCalloutMock.class,new TradelineTrigger_Test());
             update program;
 
         Test.stopTest();
@@ -398,7 +397,7 @@ public class ProgramHandler_Test {
     // Create New Lender Application Data for Interested Program Enrolled Clients
     // Uses Loan Interest Status = "Interested" to Run
     public void createLoan(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram){
-        if (newProgram.Loan_Interest_Status__c == 'Not_Interested'){
+        if (newProgram.Loan_Interest_Status__c != 'Not_Interested' || newProgram.Loan_Interest_Status__c != null){
             if(newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c){
                 //if(!newProgram.Flow_Initiated__c){
                     System.debug('loan if statement');

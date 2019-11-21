@@ -21,13 +21,12 @@ public class TradelineHandler extends TriggerHandler {
     public TradelineHandler() {
         this.newTLMap = (Map<Id, nu_dse__TradeLine__c>) Trigger.newMap;
         this.oldTLMap = (Map<Id, nu_dse__TradeLine__c>) Trigger.oldMap;
-        this.TLIds = trigger.newMap.keySet();
     }
     
     Static Set<Id> savignCalculatedTradelineIds = new Set<Id>();
     Set<Id> savignCalcTradelineIds = new Set<Id>();
     Set<Id> savingCalcUpdateProgramIds = new Set<Id>();
-    Map<Id, List<nu_dse__TradeLine__c>> programIdTradelineMap = new Map<Id, List<nu_dse__TradeLine__c>>();
+    //Map<Id, List<nu_dse__TradeLine__c>> programIdTradelineMap = new Map<Id, List<nu_dse__TradeLine__c>>();
     // List<nu_dse__Offer__c> offersToUpdate = new List<nu_dse__Offer__c>();
     List<nu_dse__TradeLine__c> TradelinesToUpdate = new List<nu_dse__TradeLine__c>();
     Map<Id, nu_dse__Program__c> programsToUpdate = new Map<Id,nu_dse__Program__c>();
@@ -39,15 +38,15 @@ public class TradelineHandler extends TriggerHandler {
             if(newTradeline.nu_dse__Program__c != null) {
                 collectSavingCalcTradelines(newTradeline, null);
             }
-            
-            if(savignCalcTradelineIds.isEmpty() == false) {
+        }
+        
+        if(savignCalcTradelineIds.isEmpty() == false) {
 
-                calculateSavings(savignCalcTradelineIds);
-            }
+            calculateSavings(savignCalcTradelineIds);
         }
     }
     
-    public override void beforeInsert() {
+    /*public override void beforeInsert() {
 
         for (nu_dse__TradeLine__c newTradeline : (List<nu_dse__TradeLine__c>) trigger.new) {
 
@@ -71,7 +70,7 @@ public class TradelineHandler extends TriggerHandler {
 
             updateTradelineSettlementOrder();
         }
-    }
+    }*/
 
     public override void afterUpdate() {
 
@@ -130,14 +129,14 @@ public class TradelineHandler extends TriggerHandler {
         // update offersToUpdate;
     }
 
-    public void collectProgramIdsforSettlementOrder(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
-
+    /*public void collectProgramIdsforSettlementOrder(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
+        
+        Set<String> currentStageSet = new Set<String>{'Settled - Legal', 'Settled - Non Legal', 'Making payments'};
         if(newTradeline.nu_dse__Program__c != null
-            && (newTradeline.nu_dse__Current_Stage__c == 'Settled - Legal' 
-                || newTradeline.nu_dse__Current_Stage__c == 'Settled - Non Legal'
-                || newTradeline.nu_dse__Current_Stage__c == 'Making payments')
+            && currentStageSet.contains(newTradeline.nu_dse__Current_Stage__c) == true
             && (Trigger.isInsert 
-                || (newTradeline.nu_dse__Current_Stage__c != oldTradeline.nu_dse__Current_Stage__c))) {
+                || (newTradeline.nu_dse__Current_Stage__c != oldTradeline.nu_dse__Current_Stage__c
+                    && currentStageSet.contains(oldTradeline.nu_dse__Current_Stage__c) == false))) {
             
             if(programIdTradelineMap.containsKey(newTradeline.nu_dse__Program__c) == false) {
                 programIdTradelineMap.put(newTradeline.nu_dse__Program__c, new List<nu_dse__TradeLine__c> {newTradeline});
@@ -145,7 +144,7 @@ public class TradelineHandler extends TriggerHandler {
                 programIdTradelineMap.get(newTradeline.nu_dse__Program__c).add(newTradeline);
             }
         }
-    }
+    }*/
 
     public void collectSavingCalcTradelines(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
 
@@ -165,7 +164,8 @@ public class TradelineHandler extends TriggerHandler {
     public void collectsavingCalcUpdates(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
 
         if(newTradeline.nu_dse__Program__c != null && (Trigger.isInsert
-            || (newTradeline.Savings_Months_to_Payoff__c != oldTradeline.Savings_Months_to_Payoff__c
+            || (newTradeline.nu_dse__Program__c != oldTradeline.nu_dse__Program__c
+                || newTradeline.Savings_Months_to_Payoff__c != oldTradeline.Savings_Months_to_Payoff__c
                 ||newTradeline.Savings_Payoff_Amount__c != oldTradeline.Savings_Payoff_Amount__c
                 || newTradeline.Savings_Calculated_Savings__c != oldTradeline.Savings_Calculated_Savings__c
                 || newTradeline.nu_dse__Include_In_The_Program__c != oldTradeline.nu_dse__Include_In_The_Program__c ))) {
@@ -174,7 +174,7 @@ public class TradelineHandler extends TriggerHandler {
         }
     }
 
-    public void updateTradelineSettlementOrder() {
+    /*public void updateTradelineSettlementOrder() {
 
         for(AggregateResult result: [SELECT count(Id) setteledTradelinesCount, nu_dse__Program__c
                                      FROM nu_dse__Tradeline__c
@@ -203,13 +203,13 @@ public class TradelineHandler extends TriggerHandler {
                 setteledTradelinesCount++;
             }
         }
-    }
+    }*/
 
     public void aggregateSavingsToProgram() {
 
         for (AggregateResult result: [SELECT sum(Savings_Months_to_Payoff__c) payOffMonthSum, 
                                         sum(Savings_Payoff_Amount__c) payOffAmountSum, 
-                                    	sum(Savings_Calculated_Savings__c) savingCalcSum , 
+                                        sum(Savings_Calculated_Savings__c) savingCalcSum , 
                                         nu_dse__Program__c 
                                         FROM nu_dse__Tradeline__c 
                                         WHERE nu_dse__Program__c IN :savingCalcUpdateProgramIds 
