@@ -42,7 +42,14 @@ public class ProgramHandler extends TriggerHandler {
             // publishing Platform Event BLP Bus for triggering sync with BLP
             createBLP_BusList(newProgram, null);
             // Run the Savings Calculator for New Programs
+            //savings calculation based on Original_Enrolled_Program_Debt__c
+            collectProgramsForSavingsCalc(newProgram, null);
         }
+
+        if (savingsCalcProgramIds.isEmpty() == false) {
+            calculateSavings(savingsCalcProgramIds);
+        }
+
         upsert groupTaskList nu_dse__Unique_Identifier__c; // Upsert Group Task based on unique Identifier
 
         if(velocifyProspectIds.isEmpty() == false) {
@@ -116,18 +123,22 @@ public class ProgramHandler extends TriggerHandler {
     //filters Programs that are to be synced with BLP
     public void createBLP_BusList(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram) {
         
-        system.debug(newProgram.BLP_Member_Type__c);
-        if (newProgram.BLP_Member_Type__c =='Club Member' || newProgram.BLP_Member_Type__c == 'Flat Fee')
+        /*system.debug(newProgram.BLP_Member_Type__c);
+        if (newProgram.BLP_Member_Type__c != oldProgram.BLP_Member_Type__c 
+        && newProgram.BLP_Member_Type__c =='Club Member' || newProgram.BLP_Member_Type__c == 'Flat Fee')
         {
             system.debug('added');
             BLPBUSEvents.add(new BLP_Bus__e(action__c='create', program_id__c=newProgram.Id));
-        }
+        }*/
+        
         if (String.isNotBlank(newProgram.nu_dse__Fee_Template__c) == true 
-                && newProgram.Legal_Plan_Included__c == true) {
+                && newProgram.Legal_Plan_Included__c == true
+                && (newProgram.BLP_Member_Type__c =='Club Member' || newProgram.BLP_Member_Type__c == 'Flat Fee')) {
             //create BLP Bus events and append to scope variable
             if (Trigger.isInsert) {
                 BLPBUSEvents.add(new BLP_Bus__e(action__c='create', program_id__c=newProgram.Id));
-            } else if (newProgram.nu_dse__Program_Status__c != oldProgram.nu_dse__Program_Status__c) {
+            } else if (newProgram.nu_dse__Program_Status__c != oldProgram.nu_dse__Program_Status__c
+                        || newProgram.BLP_Member_Type__c != oldProgram.BLP_Member_Type__c) {
                 BLPBUSEvents.add(new BLP_Bus__e(action__c='update', program_id__c=newProgram.Id));
             }
         } 
@@ -331,42 +342,34 @@ public class ProgramHandler extends TriggerHandler {
             }
         }
     }
-    
-    // Updates Flow Initiated Checkbox if Client No longer Interested in a Loan
-    public void updateLoanApplication(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram){
-        if(newProgram.Loan_Interest_Status__c != 'Interested' && newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c){
-            //newProgram.Flow_Initiated__c = false;
-            update newProgram;
-        }
-    }
 
     // Create New Lender Application Data for Interested Program Enrolled Clients
     // Uses Loan Interest Status = "Interested" to Run
     public void createLoan(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram){
         System.debug('It Works 1!');
-        if (newProgram.Loan_Interest_Status__c != 'Not_Interested' || newProgram.Loan_Interest_Status__c != null){
+        if ((newProgram.Loan_Interest_Status__c != 'Not_Interested' && newProgram.Loan_Interest_Status__c != null) 
+            && (newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c)){
             System.debug('It Works! 2');
-            if(newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c){
-                System.debug('It Works! 3');
                 // A Check to Make Sure flow runs once, so multiple loan are not created
                 if(!newProgram.Flow_Started__c){
-                    System.debug('It Works! 4');
-                    futureFlowCall(newProgram.Id);
+                    System.debug('It Works! 3');
+                    futureCreateLoan(newProgram.Id);
                 }
-            }
+         
         } 
     }
 
     public void collectProgramsForSavingsCalc(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram) {
-        if(newProgram.Original_Enrolled_Program_Debt__c != null 
-            && Trigger.isInsert 
-                ||(newProgram.Original_Enrolled_Program_Debt__c != oldProgram.Original_Enrolled_Program_Debt__c)) {
+        if(newProgram.Original_Enrolled_Program_Debt__c != null
+            && newProgram.Original_Enrolled_Program_Debt__c > 0 
+            && (Trigger.isInsert 
+                ||(newProgram.Original_Enrolled_Program_Debt__c != oldProgram.Original_Enrolled_Program_Debt__c))) {
             savingsCalcProgramIds.add(newProgram.Id);
         }
     }
     
     @future(callout=true)
-    public static void futureFlowCall(string ProgramId){
+    public static void futureCreateLoan(string ProgramId){
         Map<String, Object> params = new Map<String, Object>();
         params.put('ProgramId', ProgramId);
         try {
@@ -379,18 +382,20 @@ public class ProgramHandler extends TriggerHandler {
 
     @future(callout=true)
     public static void calculateSavings(Set<Id> programIds) {
+        
+        PaymentsCalcService.SavingCalcSettings savingCalcSetting = PaymentsCalcService.getSavingCalcSettings();
 
-        Savings_Calculator_Microservice__c savingCalcSettings = Savings_Calculator_Microservice__c.getInstance(UserInfo.getUserId());
+        /*Savings_Calculator_Microservice__c savingCalcSettings = Savings_Calculator_Microservice__c.getInstance(UserInfo.getUserId());
         String endpoint;
         Double interestRate;
-        Decimal minimumPaymentPercent;
+        Decimal minimumPaymentPercent;*/
         
         List<nu_dse__Program__c> programsToUpdateList = new List<nu_dse__Program__c>(); 
 
-        if (savingCalcSettings != null) {
+        /*if (savingCalcSettings != null) {
             if (String.isNotBlank(savingCalcSettings.Endpoint__c) ) {
                 endpoint = savingCalcSettings.Endpoint__c;
-            } else {
+
                  endpoint = 'https://beyondfinance.com/api/v1/savings';
             }
             if (savingCalcSettings.InterestRate__c != null && savingCalcSettings.InterestRate__c > 0) {
@@ -403,23 +408,19 @@ public class ProgramHandler extends TriggerHandler {
             } else {
                 minimumPaymentPercent = 0.02;
             }
-        }
+        }*/
 
         for (nu_dse__Program__c newProgram : [SELECT Id, Name, Original_Enrolled_Program_Debt__c
                                                   FROM nu_dse__Program__c WHERE Id IN :programIds]) {
             
-            Double debt = 0, minimumPayment = 0; 
+            Double debt = 0; 
 
-             if(newProgram.Original_Enrolled_Program_Debt__c != null && newProgram.Original_Enrolled_Program_Debt__c > 0) {
+            if(newProgram.Original_Enrolled_Program_Debt__c != null && newProgram.Original_Enrolled_Program_Debt__c > 0) {
                 debt = newProgram.Original_Enrolled_Program_Debt__c;
             }
             
-            minimumPayment = minimumPaymentPercent * debt;
             nu_dse__Program__c programToUpdate = (nu_dse__Program__c)PaymentsCalcService.savingsCalculatorExternalService(
-                                                                new PaymentsCalcService.SavingCalcInputWrapper(
-                                                                    endpoint, debt, 
-                                                                    minimumPayment, interestRate, 
-                                                                    'nu_dse__Program__c'));
+                                                                        savingCalcSetting, debt, 'nu_dse__Program__c');
             programToUpdate.Id = newProgram.Id;
             programsToUpdateList.add(programToUpdate);
         }
