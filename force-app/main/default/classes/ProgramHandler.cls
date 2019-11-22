@@ -347,16 +347,15 @@ public class ProgramHandler extends TriggerHandler {
     // Uses Loan Interest Status = "Interested" to Run
     public void createLoan(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram){
         System.debug('It Works 1!');
-        if (newProgram.Loan_Interest_Status__c != 'Not_Interested' || newProgram.Loan_Interest_Status__c != null){
+        if ((newProgram.Loan_Interest_Status__c != 'Not_Interested' && newProgram.Loan_Interest_Status__c != null) 
+            && (newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c)){
             System.debug('It Works! 2');
-            if(newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c){
-                System.debug('It Works! 3');
                 // A Check to Make Sure flow runs once, so multiple loan are not created
                 if(!newProgram.Flow_Started__c){
-                    System.debug('It Works! 4');
-                    futureFlowCall(newProgram.Id);
+                    System.debug('It Works! 3');
+                    futureCreateLoan(newProgram.Id);
                 }
-            }
+         
         } 
     }
 
@@ -370,7 +369,7 @@ public class ProgramHandler extends TriggerHandler {
     }
     
     @future(callout=true)
-    public static void futureFlowCall(string ProgramId){
+    public static void futureCreateLoan(string ProgramId){
         Map<String, Object> params = new Map<String, Object>();
         params.put('ProgramId', ProgramId);
         try {
@@ -396,7 +395,7 @@ public class ProgramHandler extends TriggerHandler {
         /*if (savingCalcSettings != null) {
             if (String.isNotBlank(savingCalcSettings.Endpoint__c) ) {
                 endpoint = savingCalcSettings.Endpoint__c;
-            } else {
+
                  endpoint = 'https://beyondfinance.com/api/v1/savings';
             }
             if (savingCalcSettings.InterestRate__c != null && savingCalcSettings.InterestRate__c > 0) {

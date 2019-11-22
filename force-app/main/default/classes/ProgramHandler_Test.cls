@@ -397,18 +397,14 @@ public class ProgramHandler_Test {
     // Create New Lender Application Data for Interested Program Enrolled Clients
     // Uses Loan Interest Status = "Interested" to Run
     public void createLoan(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram){
-        if (newProgram.Loan_Interest_Status__c != 'Not_Interested' || newProgram.Loan_Interest_Status__c != null){
-            if(newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c){
-                //if(!newProgram.Flow_Initiated__c){
-                    System.debug('loan if statement');
-                    futureFlowCall(newProgram.Id);
-                //}
-            }
+        if ((newProgram.Loan_Interest_Status__c != 'Not_Interested' && newProgram.Loan_Interest_Status__c != null) 
+            && (newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c)){
+                 futureCreateLoan(newProgram.Id);
         }
     }
     
     //@future(callout=true)
-    public static void futureFlowCall(string ProgramId){
+    public static void futureCreateLoan(string ProgramId){
         Map<String, Object> params = new Map<String, Object>();
         params.put('ProgramId', ProgramId);
         try {
