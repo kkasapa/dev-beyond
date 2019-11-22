@@ -33,7 +33,9 @@ public class PaymentHandler extends TriggerHandler {
     Set<Id> verbalAuthRecivedPaymentProgramIds = new Set<Id>(); // collect program id of payment which has verbal auth received = true
     Set<Id> draftDateUpdateProgramIds = new Set<Id>();
     // Map<Id, Date> updatedIdscheduleDateMap = new Map<Id, Date>(); // Map of Payment Ids and those payments scheduleDate 
-    static Set<Id> processedPaymentIds = new Set<Id>(); 
+    static Set<Id> processedDepositReminderPaymentIds = new Set<Id>(); 
+    static Set<Id> processedCompletedPaymentIds = new Set<Id>(); 
+    Set<Id> completedPaymentOfferIds = new Set<Id>(); //Set of Offer Id which has completed payments
 
     String MissingCommTemps = '';
 
@@ -95,6 +97,8 @@ public class PaymentHandler extends TriggerHandler {
                 instantiateNSFTasks(newPayment, null);
                 //Creates a NSF Taskes and assign to Salesperson
                 createSalespersonNSFNotifiTask(newPayment, null);
+                // Collect Offer Ids to Update First and Last Creditor Payment Completed Date
+                collectcompletedPaymentOfferIds(newPayment, null);
             }
         }
         if(completedPaymentProgramIds.isEmpty() == false) {
@@ -104,7 +108,12 @@ public class PaymentHandler extends TriggerHandler {
         if(verbalAuthRecivedPaymentProgramIds.isEmpty() == false) {
             //creates a Group tasks for Verbal Authorization and assigns it to Payment Authorization Queue
             createVerbalAuthGroupTask();      
-        }                       
+        }       
+        if(completedPaymentOfferIds.isEmpty() == false) {
+            // Update First and Last Creditor Payment Completed Date
+            System.enqueueJob(new PaymentsQueueable(completedPaymentOfferIds));
+        }   
+
         update programsToBeUpdatedMap.values(); // finally updating all programs that are to be modified
         upsert taskToUpsertMap.values() Unique_Identifier__c; // finally upsertng tasks based on Unique_Identifier__c field
         upsert groupTaskToInsert nu_dse__Unique_Identifier__c ; //finally upserting group tasks
@@ -147,6 +156,8 @@ public class PaymentHandler extends TriggerHandler {
                 createSalespersonNSFNotifiTask(newPayment, oldPaymentMap.get(newPayment.Id));
                 //If a Draft was completed, set a flag on the program.
                 draftCompletedFlag(newPayment, oldPaymentMap.get(newPayment.Id));
+                // Collect Offer Ids to Update First and Last Creditor Payment Completed Date
+                collectcompletedPaymentOfferIds(newPayment, oldPaymentMap.get(newPayment.Id));
             }
         }   
         if(completedPaymentProgramIds.isEmpty() == false) {
@@ -166,7 +177,11 @@ public class PaymentHandler extends TriggerHandler {
         if(draftDateUpdateProgramIds.isEmpty() == false) {
             // Updated Program NextDraftDate as upcoming draft Payment schedule date
             updateProgramNextDraftDate();
-        }                
+        }         
+        if(completedPaymentOfferIds.isEmpty() == false) {
+            // Update First and Last Creditor Payment Completed Date
+            System.enqueueJob(new PaymentsQueueable(completedPaymentOfferIds));
+        }         
         update programsToBeUpdatedMap.values(); // finally updating all programs that are to be modified
         upsert taskToUpsertMap.values() Unique_Identifier__c; // finally upsertng tasks based on Unique_Identifier__c field
         upsert groupTaskToInsert nu_dse__Unique_Identifier__c ; //finally upserting group tasks
@@ -259,13 +274,30 @@ public class PaymentHandler extends TriggerHandler {
             completedPaymentProgramIds.add(newPayment.nu_dse__Program__c);   
         }
     }
+
+    /* When a Transaction Status is changed to Completed or Cleared,
+        collecting offerIds for processing
+    */
+    public void collectcompletedPaymentOfferIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
+        
+        if(newPayment.RecordTypeId == settlementRecordTypeId
+            && (newPayment.nu_dse__Transaction_Status__c == 'Completed'
+                || newPayment.nu_dse__Transaction_Status__c == 'Cleared')
+            && newPayment.nu_dse__Offer__c != null
+            && processedCompletedPaymentIds.contains(newPayment.Id) == false
+            && (Trigger.isInsert 
+                || newPayment.nu_dse__Transaction_Status__c != oldPayment.nu_dse__Transaction_Status__c)){
+            completedPaymentOfferIds.add(newPayment.nu_dse__Offer__c);   
+            processedCompletedPaymentIds.add(newPayment.nu_dse__Offer__c);
+        }
+    }
     //If nu_dse__Transaction_Status__c changes to Cancelled, we collect paymentIds to delete the Tasks under the payment
     /*public void collectCancelledPaymentIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
         if(newPayment.nu_dse__Transaction_Status__c == 'Cancelled'
             && oldPayment.nu_dse__Transaction_Status__c != newPayment.nu_dse__Transaction_Status__c
-            && processedPaymentIds.contains(newPayment.Id) == false) {
+            && processedDepositReminderPaymentIds.contains(newPayment.Id) == false) {
             cancelledPaymentIds.add(newPayment.Id);
-            processedPaymentIds.add(newPayment.Id);
+            processedDepositReminderPaymentIds.add(newPayment.Id);
         }
     }*/
     //If nu_dse__Schedule_date__c updates, we collect paymentIds and Schedule date to update the Tasks activity date under the payment
@@ -275,9 +307,9 @@ public class PaymentHandler extends TriggerHandler {
                 || newPayment.nu_dse__Transaction_Status__c == 'Scheduled')
             && newPayment.nu_dse__Schedule_date__c != null
             && oldPayment.nu_dse__Schedule_date__c != newPayment.nu_dse__Schedule_date__c
-            && processedPaymentIds.contains(newPayment.Id) == false) {
+            && processedDepositReminderPaymentIds.contains(newPayment.Id) == false) {
             updatedIdscheduleDateMap.put(newPayment.Id, newPayment.nu_dse__Schedule_date__c);
-            processedPaymentIds.add(newPayment.Id);
+            processedDepositReminderPaymentIds.add(newPayment.Id);
         }
     }*/
     //If nu_dse__Transaction_Status__c changes to Failed, we collect paymentIds to Create the Group Tasks under the payment

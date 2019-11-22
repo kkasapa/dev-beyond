@@ -2,17 +2,19 @@ public with sharing class PaymentsQueueable implements Queueable {
 
     private List<nu_dse__Offer__c> offersList;
 
-    public PaymentsQueueable(List<Id> offerIds) {
+    public PaymentsQueueable(Set<Id> offerIds) {
         
         Id settlementRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Settlement').getRecordTypeId();
 
         offersList = [SELECT Id, First_Creditor_Payment_Completed_Date__c,
-                         (SELECT Id, nu_dse__Schedule_Date__c, nu_dse__Transaction_Status__c 
-                          FROM nu_dse__Payments__r 
-                          WHERE RecordTypeId = :settlementRecordTypeId
-                          ORDER BY nu_dse__Schedule_Date__c)
-                      FROM nu_dse__Offer__c 
-                      WHERE Id IN :offerIds];
+                                                (SELECT Id, nu_dse__Schedule_Date__c, nu_dse__Transaction_Status__c 
+                                                FROM nu_dse__Payments__r 
+                                                WHERE RecordTypeId = :settlementRecordTypeId
+                                                ORDER BY nu_dse__Schedule_Date__c)
+                                            FROM nu_dse__Offer__c 
+                                            WHERE Id IN :offerIds];
+
+        system.debug('offerList:::'+offersList);
 
     }
 
@@ -20,12 +22,13 @@ public with sharing class PaymentsQueueable implements Queueable {
 
         Boolean isUpdateOffer;
         List<nu_dse__Offer__c> offerToUpdateList = new List<nu_dse__Offer__c>();
+        system.debug('offersList:::'+offersList);
 
         for (nu_dse__Offer__c offer : offersList) {
             
             isUpdateOffer = false;
 
-            if(offer.First_Creditor_Payment_Completed_Date__c != null) {
+            if(offer.First_Creditor_Payment_Completed_Date__c == null) {
 
                 for(nu_dse__Payment__c payment : offer.nu_dse__Payments__r) {
 

@@ -123,18 +123,22 @@ public class ProgramHandler extends TriggerHandler {
     //filters Programs that are to be synced with BLP
     public void createBLP_BusList(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram) {
         
-        system.debug(newProgram.BLP_Member_Type__c);
-        if (newProgram.BLP_Member_Type__c =='Club Member' || newProgram.BLP_Member_Type__c == 'Flat Fee')
+        /*system.debug(newProgram.BLP_Member_Type__c);
+        if (newProgram.BLP_Member_Type__c != oldProgram.BLP_Member_Type__c 
+        && newProgram.BLP_Member_Type__c =='Club Member' || newProgram.BLP_Member_Type__c == 'Flat Fee')
         {
             system.debug('added');
             BLPBUSEvents.add(new BLP_Bus__e(action__c='create', program_id__c=newProgram.Id));
-        }
+        }*/
+        
         if (String.isNotBlank(newProgram.nu_dse__Fee_Template__c) == true 
-                && newProgram.Legal_Plan_Included__c == true) {
+                && newProgram.Legal_Plan_Included__c == true
+                && (newProgram.BLP_Member_Type__c =='Club Member' || newProgram.BLP_Member_Type__c == 'Flat Fee')) {
             //create BLP Bus events and append to scope variable
             if (Trigger.isInsert) {
                 BLPBUSEvents.add(new BLP_Bus__e(action__c='create', program_id__c=newProgram.Id));
-            } else if (newProgram.nu_dse__Program_Status__c != oldProgram.nu_dse__Program_Status__c) {
+            } else if (newProgram.nu_dse__Program_Status__c != oldProgram.nu_dse__Program_Status__c
+                        || newProgram.BLP_Member_Type__c != oldProgram.BLP_Member_Type__c) {
                 BLPBUSEvents.add(new BLP_Bus__e(action__c='update', program_id__c=newProgram.Id));
             }
         } 

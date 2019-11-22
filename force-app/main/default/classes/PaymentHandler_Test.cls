@@ -236,4 +236,44 @@ public class PaymentHandler_Test {
                                       WHERE WhatId = :paymentInst.Id];
         System.assertEquals(system.today().addDays(5), updatedTaskList[0].ActivityDate);  
     }*/
+
+    public static testmethod void paymentCompletedDate_UpdateTest() {
+        
+        nu_dse__Program__c programInst = [SELECT Id FROM nu_dse__Program__c LIMIT 1];
+        nu_dse__Offer__c offerInst = [SELECT Id FROM nu_dse__Offer__c LIMIT 1];
+
+        Id settlementRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Settlement').getRecordTypeId();
+
+        List<nu_dse__Payment__c> paymentList = new List<nu_dse__Payment__c>();
+        nu_dse__Payment__c paymentInst1 = TestRecordCreator.createPayment(programInst.Id, 'Completed', 'Withdrawal', settlementRecordTypeId, offerInst.Id);
+        paymentInst1.nu_dse__Schedule_Date__c = system.today().addDays(-5);
+        nu_dse__Payment__c paymentInst2 = TestRecordCreator.createPayment(programInst.Id, 'Pending', 'Withdrawal', settlementRecordTypeId, offerInst.Id);
+        nu_dse__Payment__c paymentInst3 = TestRecordCreator.createPayment(programInst.Id, 'Pending', 'Withdrawal', settlementRecordTypeId, offerInst.Id);
+        paymentInst3.nu_dse__Schedule_Date__c = system.today().addDays(-2);
+
+        paymentList.add(paymentInst1);
+        paymentList.add(paymentInst2);
+        paymentList.add(paymentInst3);
+
+        insert paymentList;
+
+        List<nu_dse__Payment__c> updatePaymentList = new List<nu_dse__Payment__c>();
+
+        Test.startTest();
+
+            paymentInst2.nu_dse__Schedule_Date__c = system.today().addDays(-3);
+            paymentInst2.nu_dse__Transaction_Status__c = 'Completed';
+            paymentInst3.nu_dse__Transaction_Status__c = 'Completed';
+            updatePaymentList.add(paymentInst2);
+            updatePaymentList.add(paymentInst3);
+            update updatePaymentList;
+
+        Test.stopTest();
+
+        nu_dse__Offer__c updatedOfferInst = [SELECT First_Creditor_Payment_Completed_Date__c, Last_Creditor_Payment_Completed_Date__c
+                                             FROM nu_dse__Offer__c LIMIT 1];
+
+        System.assertEquals(system.today().addDays(-5), updatedOfferInst.First_Creditor_Payment_Completed_Date__c);
+        System.assertEquals(system.today().addDays(-2), updatedOfferInst.Last_Creditor_Payment_Completed_Date__c);  
+     }
 }
