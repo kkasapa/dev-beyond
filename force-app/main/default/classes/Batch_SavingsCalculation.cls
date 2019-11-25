@@ -17,7 +17,7 @@ public without sharing class Batch_SavingsCalculation implements Database.Batcha
     public Set<Id> recordIds;
     public String sObjectType;
     PaymentsCalcService.SavingCalcSettings savingCalcSetting;
-    Set<String> programStatusExclusionSet = new Set<String>();// Set of Program status excludes in payment query
+    Set<String> programStatusInclusionSet = new Set<String>();// Set of Program status excludes in payment query
 
     public Batch_SavingsCalculation(String sObjectTypeParam) {
 
@@ -68,10 +68,9 @@ public without sharing class Batch_SavingsCalculation implements Database.Batcha
                                         ' OR Savings_Payoff_Amount_Original__c = 0'+
                                         ' OR Savings_Payoff_Amount_Original__c = null'+
                                         ' OR Savings_Calculated_Savings_Original__c = 0'+
-                                        ' OR Savings_Calculated_Savings_Original__c = null)';
+                                        ' OR Savings_Calculated_Savings_Original__c = null)'+
+                                        ' AND (nu_dse__Program_Status__c IN :programStatusInclusionSet)';
             }
-            
-            queryString += ' AND (nu_dse__Program_Status__c IN :programStatusExclusionSet)';
             
         } else if(sObjectType == 'nu_dse__Tradeline__c'){ //building query for Tradeline 
             queryString = 'SELECT Id, nu_dse__Current_Balance__c, nu_dse__Original_Debt__c FROM nu_dse__Tradeline__c ';
@@ -84,9 +83,9 @@ public without sharing class Batch_SavingsCalculation implements Database.Batcha
                                         ' OR Savings_Payoff_Amount__c = 0'+
                                         ' OR Savings_Payoff_Amount__c = null'+
                                         ' OR Savings_Calculated_Savings__c = 0'+
-                                        ' OR Savings_Calculated_Savings__c = null)';
+                                        ' OR Savings_Calculated_Savings__c = null)'+
+                                        ' AND (nu_dse__Program__c = null OR nu_dse__Program__r.nu_dse__Program_Status__c IN :programStatusInclusionSet)';
             }
-            queryString += ' AND (nu_dse__Program__c = null OR nu_dse__Program__r.nu_dse__Program_Status__c IN :programStatusExclusionSet)';
         }
         return Database.getQueryLocator(queryString);
     }
@@ -95,6 +94,7 @@ public without sharing class Batch_SavingsCalculation implements Database.Batcha
 
         List<nu_dse__Program__c> programs = new List<nu_dse__Program__c>();
         List<nu_dse__Tradeline__c> tradelines = new List<nu_dse__Tradeline__c>();
+        List<nu_dse__Error_Log__c> errLogsToInsert = new List<nu_dse__Error_Log__c>();
         
         for (sObject sObj: scope) {
             Double debt = 0; 
@@ -131,8 +131,10 @@ public without sharing class Batch_SavingsCalculation implements Database.Batcha
                 tradelines.add(tradelineToUpdate);
             }
         }
-        update programs;
-        update Tradelines;
+
+        errLogsToInsert.addAll(dmlRecords(programs));
+        errLogsToInsert.addAll(dmlRecords(Tradelines));
+        insert errLogsToInsert;
     }
     
     public void finish(Database.BatchableContext BC) {
@@ -147,20 +149,41 @@ public without sharing class Batch_SavingsCalculation implements Database.Batcha
         if (Test.isRunningTest() == true) {
         
             progStatusConfig = new Program_Status_Configuration__mdt(
-                                        MasterLabel = 'Saving Calculation', 
-                                        DeveloperName = 'Saving_Calculation', 
-                                        Excluded_Statuses__c = 'New Client,Active,Termination Pending,Graduation Pending');
+                                        MasterLabel = 'Savings Calculation', 
+                                        DeveloperName = 'Savings_Calculation', 
+                                        Included_Statuses__c = 'New Client,Active,Termination Pending,Graduation Pending');
 
         } else {
-            progStatusConfig = [SELECT Label, DeveloperName, Excluded_Statuses__c 
+            progStatusConfig = [SELECT Label, DeveloperName, Included_Statuses__c 
                                         FROM Program_Status_Configuration__mdt 
-                                        WHERE DeveloperName = 'Saving_Calculation' LIMIT 1];
+                                        WHERE DeveloperName = 'Savings_Calculation' LIMIT 1];
 
         }
 
         if(progStatusConfig != null
-            && String.isNotBlank(progStatusConfig.Excluded_Statuses__c)) {
-            programStatusExclusionSet = new Set<String>(progStatusConfig.Excluded_Statuses__c.split(',', 0));
+            && String.isNotBlank(progStatusConfig.Included_Statuses__c)) {
+            programStatusInclusionSet = new Set<String>(progStatusConfig.Included_Statuses__c.split(',', 0));
         }
+    }
+
+    public List<nu_dse__Error_Log__c> dmlRecords(List<Sobject> recordsToUpdateList) {
+
+        List<nu_dse__Error_Log__c> errLogs = new List<nu_dse__Error_Log__c>();
+        Integer count = 0;
+
+        for (Database.SaveResult dmlResult: Database.update(recordsToUpdateList, false)) {
+
+            if (dmlResult.isSuccess() == false) {
+                nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(nu_dse__Class_Method__c = 'Batch_SavingsCalculation.excute',nu_dse__Error_Causing_Record_Id__c = String.valueOf(recordsToUpdateList[count].get('Id')),nu_dse__Stack_Trace__c = JSON.serialize(recordsToUpdateList[count]), nu_dse__User_Context__c = UserInfo.getName());
+
+                errLog.nu_dse__Message__c = '';
+                for (Database.Error error: dmlResult.getErrors()) {
+                    errLog.nu_dse__Message__c += error.getMessage();
+                }
+                errLogs.add(errLog);
+            }
+            count++;
+        }
+        return errLogs;
     }
 }

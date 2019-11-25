@@ -35,9 +35,7 @@ public class TradelineHandler extends TriggerHandler {
     
         for (nu_dse__TradeLine__c newTradeline : (List<nu_dse__TradeLine__c>) trigger.new) {
             
-            if(newTradeline.nu_dse__Program__c != null) {
-                collectSavingCalcTradelines(newTradeline, null);
-            }
+            collectSavingCalcTradelines(newTradeline, null);
         }
         
         if(savignCalcTradelineIds.isEmpty() == false) {
