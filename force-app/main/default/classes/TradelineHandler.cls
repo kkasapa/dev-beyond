@@ -26,7 +26,7 @@ public class TradelineHandler extends TriggerHandler {
     Static Set<Id> savignCalculatedTradelineIds = new Set<Id>();
     Set<Id> savignCalcTradelineIds = new Set<Id>();
     Set<Id> savingCalcUpdateProgramIds = new Set<Id>();
-    //Map<Id, List<nu_dse__TradeLine__c>> programIdTradelineMap = new Map<Id, List<nu_dse__TradeLine__c>>();
+    Map<Id, List<nu_dse__TradeLine__c>> programIdTradelineMap = new Map<Id, List<nu_dse__TradeLine__c>>();
     // List<nu_dse__Offer__c> offersToUpdate = new List<nu_dse__Offer__c>();
     List<nu_dse__TradeLine__c> TradelinesToUpdate = new List<nu_dse__TradeLine__c>();
     Map<Id, nu_dse__Program__c> programsToUpdate = new Map<Id,nu_dse__Program__c>();
@@ -44,7 +44,7 @@ public class TradelineHandler extends TriggerHandler {
         }
     }
     
-    /*public override void beforeInsert() {
+    public override void beforeInsert() {
 
         for (nu_dse__TradeLine__c newTradeline : (List<nu_dse__TradeLine__c>) trigger.new) {
 
@@ -68,7 +68,7 @@ public class TradelineHandler extends TriggerHandler {
 
             updateTradelineSettlementOrder();
         }
-    }*/
+    }
 
     public override void afterUpdate() {
 
@@ -127,7 +127,7 @@ public class TradelineHandler extends TriggerHandler {
         // update offersToUpdate;
     }
 
-    /*public void collectProgramIdsforSettlementOrder(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
+    public void collectProgramIdsforSettlementOrder(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
         
         Set<String> currentStageSet = new Set<String>{'Settled - Legal', 'Settled - Non Legal', 'Making payments'};
         if(newTradeline.nu_dse__Program__c != null
@@ -142,7 +142,7 @@ public class TradelineHandler extends TriggerHandler {
                 programIdTradelineMap.get(newTradeline.nu_dse__Program__c).add(newTradeline);
             }
         }
-    }*/
+    }
 
     public void collectSavingCalcTradelines(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
 
@@ -172,7 +172,7 @@ public class TradelineHandler extends TriggerHandler {
         }
     }
 
-    /*public void updateTradelineSettlementOrder() {
+    public void updateTradelineSettlementOrder() {
 
         for(AggregateResult result: [SELECT count(Id) setteledTradelinesCount, nu_dse__Program__c
                                      FROM nu_dse__Tradeline__c
@@ -201,7 +201,7 @@ public class TradelineHandler extends TriggerHandler {
                 setteledTradelinesCount++;
             }
         }
-    }*/
+    }
 
     public void aggregateSavingsToProgram() {
 

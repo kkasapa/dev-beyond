@@ -261,29 +261,7 @@ public without sharing class PaymentsCalcService {
         return paymentCalcWrap;
     }*/
 
-    //common method for handling DML and process the result as error logs
-    /*public static void updateRecords(List<Sobject> recordsToUpdateList) {
-        Integer count = 0;
-        if(recordsToUpdateList.isEmpty() == false) {
-            for (Database.SaveResult dmlResult: Database.update(recordsToUpdateList, false)) {
-                if (dmlResult.isSuccess() == false) {
-                    nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(
-                                                    nu_dse__Class_Method__c = 'Batch_ProgramEstimatedBalanceUpdate.excute',
-                                                    nu_dse__Error_Causing_Record_Id__c = String.valueOf(recordsToUpdateList[count].get('Id')),
-                                                    nu_dse__Stack_Trace__c = JSON.serialize(recordsToUpdateList[count]), 
-                                                    nu_dse__User_Context__c = UserInfo.getName());
-                    errLog.nu_dse__Message__c = '';
-                    for (Database.Error error: dmlResult.getErrors()) {
-                        errLog.nu_dse__Message__c += error.getMessage();
-                    }
-                    errLogs.add(errLog);
-                } 
-                count++;
-            }
-        }
-    }*/
-
-    public static SObject savingsCalculatorExternalService(SavingCalcSettings savingCalcSetting, Decimal debtAmount, String sObjectType) {
+    public static SObject savingsCalculatorExternalService(SavingCalcSettings savingCalcSetting, Double debtAmount, String sObjectType) {
 
             Map<String, String> savingsCalcTradelineMappings = new Map<String,String> {
                                                                     'total-months' => 'Savings_Months_to_Payoff__c',
@@ -378,18 +356,18 @@ public without sharing class PaymentsCalcService {
 
                             parser.nextToken();
                             if (sObjectType == 'nu_dse__Program__c' ) {
-                                sObjInstance.put(savingsCalcProgramMappings.get('total-payments'), parser.getIntegerValue());
+                                sObjInstance.put(savingsCalcProgramMappings.get('total-payments'), parser.getDoubleValue());
                             } else if (sObjectType == 'nu_dse__Tradeline__c') {
-                                sObjInstance.put(savingsCalcTradelineMappings.get('total-payments'), parser.getIntegerValue());
+                                sObjInstance.put(savingsCalcTradelineMappings.get('total-payments'), parser.getDoubleValue());
                             }
                         }
 
                         if(parser.getText() == 'total-savings') {
                             parser.nextToken();
                             if (sObjectType == 'nu_dse__Program__c' ) {
-                                sObjInstance.put(savingsCalcProgramMappings.get('total-savings'), parser.getIntegerValue());
+                                sObjInstance.put(savingsCalcProgramMappings.get('total-savings'), parser.getDoubleValue());
                             } else if (sObjectType == 'nu_dse__Tradeline__c') {
-                                sObjInstance.put(savingsCalcTradelineMappings.get('total-savings'), parser.getIntegerValue());
+                                sObjInstance.put(savingsCalcTradelineMappings.get('total-savings'), parser.getDoubleValue());
                             }
                         }
                     }
@@ -470,11 +448,11 @@ public without sharing class PaymentsCalcService {
         return savingCalcSetting;
     }
 
-    /*public class PaymentCalcWrapper{
+    public class PaymentCalcWrapper{
         public Map<Id, nu_dse__Program__c> programToUpdateMap = new Map<Id, nu_dse__Program__c>();
         public Map<Id, nu_dse__TradeLine__c> tradelineIdRecMap = new Map<Id, nu_dse__TradeLine__c>();
         public Map<Id, nu_dse__Offer__c> offerIdRecMap = new Map<Id, nu_dse__Offer__c>();
-    }*/
+    }
 
     /*public class SavingCalcInputWrapper{
         String endpoint;

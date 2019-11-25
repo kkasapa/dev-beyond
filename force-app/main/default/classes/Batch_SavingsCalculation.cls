@@ -4,6 +4,7 @@
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 * @author         Ashwin Bretto   <abretto@selastech.com>
 * @modifiedBy     Ashwin Bretto   <abretto@selastech.com>
+*@modifiedBy      Digu         <digupatel@beyondfinance.com>
 * @maintainedBy   Ashwin Bretto   <abretto@selastech.com>
 * @version        1.0
 * @created        2019-11-20
@@ -69,6 +70,7 @@ public without sharing class Batch_SavingsCalculation implements Database.Batcha
                                         ' OR Savings_Payoff_Amount_Original__c = null'+
                                         ' OR Savings_Calculated_Savings_Original__c = 0'+
                                         ' OR Savings_Calculated_Savings_Original__c = null)'+
+                                        ' AND Prospect_Lookup__r.Accepted_Quote_Count__c > 0'+
                                         ' AND (nu_dse__Program_Status__c IN :programStatusInclusionSet)';
             }
             
@@ -84,6 +86,8 @@ public without sharing class Batch_SavingsCalculation implements Database.Batcha
                                         ' OR Savings_Payoff_Amount__c = null'+
                                         ' OR Savings_Calculated_Savings__c = 0'+
                                         ' OR Savings_Calculated_Savings__c = null)'+
+                                        ' AND nu_dse__Include_In_The_Program__c = True '+
+                                        ' AND nu_dse__Prospect__r.Accepted_Quote_Count__c > 0'+
                                         ' AND (nu_dse__Program__c = null OR nu_dse__Program__r.nu_dse__Program_Status__c IN :programStatusInclusionSet)';
             }
         }
