@@ -270,10 +270,10 @@ public class PaymentHandler_Test {
 
         Test.stopTest();
 
-        nu_dse__Offer__c updatedOfferInst = [SELECT First_Creditor_Payment_Completed_Date__c, Last_Creditor_Payment_Completed_Date__c
+        nu_dse__Offer__c updatedOfferInst = [SELECT First_Creditor_Payment_Completed_Date__c, Last_Payment_Completed_Date__c
                                              FROM nu_dse__Offer__c LIMIT 1];
 
         System.assertEquals(system.today().addDays(-5), updatedOfferInst.First_Creditor_Payment_Completed_Date__c);
-        System.assertEquals(system.today(), updatedOfferInst.Last_Creditor_Payment_Completed_Date__c);  
+        System.assertEquals(system.today(), updatedOfferInst.Last_Payment_Completed_Date__c);  
      }
 }

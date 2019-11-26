@@ -46,6 +46,7 @@ public class PaymentHandler extends TriggerHandler {
 
     Id draftRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Draft').getRecordTypeId();
     Id settlementRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Settlement').getRecordTypeId();
+    Id feeRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Fee').getRecordTypeId();
     
     public override void beforeInsert() {
         
@@ -280,7 +281,8 @@ public class PaymentHandler extends TriggerHandler {
     */
     public void collectcompletedPaymentOfferIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
         
-        if(newPayment.RecordTypeId == settlementRecordTypeId
+        if((newPayment.RecordTypeId == settlementRecordTypeId
+            || newPayment.RecordTypeId == feeRecordTypeId)
             && (newPayment.nu_dse__Transaction_Status__c == 'Completed'
                 || newPayment.nu_dse__Transaction_Status__c == 'Cleared')
             && newPayment.nu_dse__Offer__c != null

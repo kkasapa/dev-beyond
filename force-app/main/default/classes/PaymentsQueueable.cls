@@ -14,16 +14,16 @@
 public with sharing class PaymentsQueueable implements Queueable {
 
     private List<nu_dse__Offer__c> offersList;
+    Id settlementRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Settlement').getRecordTypeId();
+    Id feeRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Fee').getRecordTypeId();
 
     // query the Offers and related settlement payments based on offerIds. 
     public PaymentsQueueable(Set<Id> offerIds) {
         
-        Id settlementRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Settlement').getRecordTypeId();
-
         offersList = [SELECT Id, First_Creditor_Payment_Completed_Date__c,
-                            (SELECT Id, nu_dse__Schedule_Date__c, nu_dse__Transaction_Status__c 
+                            (SELECT Id, nu_dse__Schedule_Date__c, nu_dse__Transaction_Status__c, RecordTypeId  
                             FROM nu_dse__Payments__r 
-                            WHERE RecordTypeId = :settlementRecordTypeId
+                            WHERE (RecordTypeId = :settlementRecordTypeId OR RecordTypeId = :feeRecordTypeId)
                             ORDER BY nu_dse__Schedule_Date__c)
                         FROM nu_dse__Offer__c 
                         WHERE Id IN :offerIds];
@@ -40,17 +40,34 @@ public with sharing class PaymentsQueueable implements Queueable {
         for (nu_dse__Offer__c offer : offersList) {
             
             isUpdateOffer = false;
+            Integer completedPaymentsCount = 0;
+            Date firstCompletedPaymentDate;
 
             if(offer.First_Creditor_Payment_Completed_Date__c == null) {
 
                 for(nu_dse__Payment__c payment : offer.nu_dse__Payments__r) {
 
-                    if(payment.nu_dse__Transaction_Status__c == 'Completed'
-                        || payment.nu_dse__Transaction_Status__c == 'Cleared'){
-
-                        offer.First_Creditor_Payment_Completed_Date__c = payment.nu_dse__Schedule_Date__c;
-                        isUpdateOffer = true;
-                        break;
+                    if(payment.RecordTypeId == settlementRecordTypeId) { 
+                       
+                       if(payment.nu_dse__Transaction_Status__c == 'Completed'
+                            || payment.nu_dse__Transaction_Status__c == 'Cleared'){
+                            
+                            if(completedPaymentsCount == 0) {
+                            
+                                offer.First_Creditor_Payment_Completed_Date__c = system.today();
+                                firstCompletedPaymentDate = payment.nu_dse__Schedule_Date__c;
+                            } else {
+                                offer.First_Creditor_Payment_Completed_Date__c = firstCompletedPaymentDate;
+                            }
+                            isUpdateOffer = true;
+                            completedPaymentsCount++;
+                        }
+                        
+                        if(completedPaymentsCount > 1 
+                            || (payment.nu_dse__Transaction_Status__c == 'Scheduled'
+                                || payment.nu_dse__Transaction_Status__c == 'In Progress')) {
+                            break;
+                        }
                     }
                 }
             }
@@ -60,7 +77,7 @@ public with sharing class PaymentsQueueable implements Queueable {
                 && (offer.nu_dse__Payments__r[offer.nu_dse__Payments__r.size() - 1].nu_dse__Transaction_Status__c == 'Completed'
                     || offer.nu_dse__Payments__r[offer.nu_dse__Payments__r.size() - 1].nu_dse__Transaction_Status__c == 'Cleared')) {
 
-                offer.Last_Creditor_Payment_Completed_Date__c = system.today();
+                offer.Last_Payment_Completed_Date__c = system.today();
                 isUpdateOffer = true;
             }
 
