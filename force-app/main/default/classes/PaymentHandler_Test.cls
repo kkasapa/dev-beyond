@@ -274,6 +274,6 @@ public class PaymentHandler_Test {
                                              FROM nu_dse__Offer__c LIMIT 1];
 
         System.assertEquals(system.today().addDays(-5), updatedOfferInst.First_Creditor_Payment_Completed_Date__c);
-        System.assertEquals(system.today().addDays(-2), updatedOfferInst.Last_Creditor_Payment_Completed_Date__c);  
+        System.assertEquals(system.today(), updatedOfferInst.Last_Creditor_Payment_Completed_Date__c);  
      }
 }

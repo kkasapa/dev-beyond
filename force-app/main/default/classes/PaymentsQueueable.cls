@@ -60,7 +60,7 @@ public with sharing class PaymentsQueueable implements Queueable {
                 && (offer.nu_dse__Payments__r[offer.nu_dse__Payments__r.size() - 1].nu_dse__Transaction_Status__c == 'Completed'
                     || offer.nu_dse__Payments__r[offer.nu_dse__Payments__r.size() - 1].nu_dse__Transaction_Status__c == 'Cleared')) {
 
-                offer.Last_Creditor_Payment_Completed_Date__c = offer.nu_dse__Payments__r[offer.nu_dse__Payments__r.size() - 1].nu_dse__Schedule_Date__c;
+                offer.Last_Creditor_Payment_Completed_Date__c = system.today();
                 isUpdateOffer = true;
             }
 

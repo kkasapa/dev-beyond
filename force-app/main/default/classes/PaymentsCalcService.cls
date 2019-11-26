@@ -171,10 +171,6 @@ public without sharing class PaymentsCalcService {
                     && updateProgram.Estimated_Month_30_Balance__c != null) {
                     updateProgram.Estimated_Month_36_Balance__c = updateProgram.Estimated_Month_30_Balance__c;
                 }
-                if(updateProgram.Estimated_Balance_at_End_of_the_Program__c == null 
-                    && updateProgram.Estimated_Month_36_Balance__c != null) {
-                    updateProgram.Estimated_Balance_at_End_of_the_Program__c = updateProgram.Estimated_Month_36_Balance__c;
-                }
 
                 updateProgram.Estimated_lowest_balance_amount__c = programLowestAmount;
                 updateProgram.Estimated_lowest_balance_date__c = programLowestDate;
