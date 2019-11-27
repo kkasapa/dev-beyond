@@ -281,16 +281,17 @@ public class PaymentHandler extends TriggerHandler {
     */
     public void collectcompletedPaymentOfferIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
         
-        if((newPayment.RecordTypeId == settlementRecordTypeId
-            || newPayment.RecordTypeId == feeRecordTypeId)
+        if(newPayment.nu_dse__Offer__c != null
+            && (newPayment.RecordTypeId == settlementRecordTypeId
+                || (newPayment.RecordTypeId == feeRecordTypeId 
+                    && newPayment.nu_dse__Payment_Type__c == 'Fee Withdrawal'))
             && (newPayment.nu_dse__Transaction_Status__c == 'Completed'
                 || newPayment.nu_dse__Transaction_Status__c == 'Cleared')
-            && newPayment.nu_dse__Offer__c != null
             && processedCompletedPaymentIds.contains(newPayment.Id) == false
             && (Trigger.isInsert 
                 || newPayment.nu_dse__Transaction_Status__c != oldPayment.nu_dse__Transaction_Status__c)){
             completedPaymentOfferIds.add(newPayment.nu_dse__Offer__c);   
-            processedCompletedPaymentIds.add(newPayment.nu_dse__Offer__c);
+            processedCompletedPaymentIds.add(newPayment.Id);
         }
     }
     //If nu_dse__Transaction_Status__c changes to Cancelled, we collect paymentIds to delete the Tasks under the payment

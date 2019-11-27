@@ -23,7 +23,8 @@ public with sharing class PaymentsQueueable implements Queueable {
         offersList = [SELECT Id, First_Creditor_Payment_Completed_Date__c,
                             (SELECT Id, nu_dse__Schedule_Date__c, nu_dse__Transaction_Status__c, RecordTypeId  
                             FROM nu_dse__Payments__r 
-                            WHERE (RecordTypeId = :settlementRecordTypeId OR RecordTypeId = :feeRecordTypeId)
+                            WHERE (RecordTypeId = :settlementRecordTypeId OR 
+                                (RecordTypeId = :feeRecordTypeId AND nu_dse__Payment_Type__c = 'Fee Withdrawal'))
                             ORDER BY nu_dse__Schedule_Date__c)
                         FROM nu_dse__Offer__c 
                         WHERE Id IN :offerIds];
