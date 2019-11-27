@@ -52,15 +52,19 @@ public with sharing class Batch_OfferAuthReminder implements Database.Batchable<
     public Database.QueryLocator start(Database.BatchableContext BC) {
         
         Set<String> offerStatusSet = new Set<String>{'03-Offer Approved (Pre-payment setup)'};
-        DateTime futurePreApprovedDate = system.today().addDays(-30);
+        DateTime offerApprovalPaddingdays = system.today().addDays(-30);
         if(paddingDays != null) {
-            futurePreApprovedDate = system.today().addDays(paddingDays);
+            offerApprovalPaddingdays = system.today().addDays(-paddingDays);
         }
         
-        String queryStr = 'SELECT Id, Client_Authorization_Received__c, nu_dse__First_Payment_Date__c, Accepted_Date__c, nu_dse__Status__c '+
+        String queryStr = 'SELECT Id, Client_Authorization_Received__c, nu_dse__First_Payment_Date__c, Offer_Pre_Approved_Date__c, nu_dse__Status__c '+
                           'FROM nu_dse__Offer__c '+
-                          'WHERE (nu_dse__Status__c IN :offerStatusSet OR (Offer_Pre_Approved_Date__c >= :futurePreApprovedDate '+
-                          'AND (Client_Authorization_Received__c = true OR nu_dse__First_Payment_Date__c >= TODAY)))';
+                          'WHERE (nu_dse__Status__c IN :offerStatusSet '+ 
+                                    ' OR (Offer_Pre_Approved_Date__c >= :offerApprovalPaddingdays '+
+                                            'AND (Client_Authorization_Received__c = true '+ 
+                                                    'OR nu_dse__First_Payment_Date__c <= TODAY)'+
+                                        ')'+
+                                ')';
 
         if(filterOfferIds.isEmpty() == false) {
             queryStr += ' AND Id IN :filterOfferIds';
@@ -75,26 +79,26 @@ public with sharing class Batch_OfferAuthReminder implements Database.Batchable<
         List<Id> authorizedOfferIds = new List<Id>();
         List<Task> taskToDeleteList = new List<Task>();
 
-        for(nu_dse__Offer__c acceptedOffer : scope) {
+        for(nu_dse__Offer__c approvedOffer : scope) {
 
-            if(acceptedOffer.nu_dse__Status__c == '03-Offer Approved (Pre-payment setup)'
-                && acceptedOffer.Client_Authorization_Received__c == false
-                && acceptedOffer.nu_dse__First_Payment_Date__c > system.today()) {
+            if(approvedOffer.nu_dse__Status__c == '03-Offer Approved (Pre-payment setup)'
+                && approvedOffer.Client_Authorization_Received__c == false
+                && approvedOffer.nu_dse__First_Payment_Date__c > system.today()) {
 
-                Integer daysDiff = acceptedOffer.Accepted_Date__c.daysBetween(system.today());
+                Integer daysDiff = Date.valueOf(approvedOffer.Offer_Pre_Approved_Date__c).daysBetween(system.today());
 
                 if(daysDiff == 0) { 
 
                     system.debug('defaultTaskAssignConfigList::'+defaultTaskAssignConfigList);
 
-                    Task newSMSTask = new Task(activityDate = system.today(), whatId = acceptedOffer.Id, subject = 'Offer Auth SMS Day '+ daysDiff,
-                        Unique_Identifier__c = acceptedOffer.Id + 'Offer Auth SMS Day '+daysDiff, ownerId = defaultTaskAssignConfigList[0].Task_Assignement_User_Id__c,
+                    Task newSMSTask = new Task(activityDate = system.today(), whatId = approvedOffer.Id, subject = 'Offer Auth SMS Day '+ daysDiff,
+                        Unique_Identifier__c = approvedOffer.Id + 'Offer Auth SMS Day '+daysDiff, ownerId = defaultTaskAssignConfigList[0].Task_Assignement_User_Id__c,
                         nu_dse__Communication_Template__c = communicationTemplateMap.get('Get Offer Auth SMS'));
 
                     taskToUpsertList.add(newSMSTask);
 
-                    Task newEmailTask = new Task(activityDate = system.today(), whatId = acceptedOffer.Id, subject = 'Offer Auth Email Day '+ daysDiff,
-                        Unique_Identifier__c = acceptedOffer.Id+'Offer Auth Email Day '+daysDiff, ownerId = defaultTaskAssignConfigList[0].Task_Assignement_User_Id__c,
+                    Task newEmailTask = new Task(activityDate = system.today(), whatId = approvedOffer.Id, subject = 'Offer Auth Email Day '+ daysDiff,
+                        Unique_Identifier__c = approvedOffer.Id+'Offer Auth Email Day '+daysDiff, ownerId = defaultTaskAssignConfigList[0].Task_Assignement_User_Id__c,
                         nu_dse__Communication_Template__c = communicationTemplateMap.get('Get Offer Auth Email'));
                     
                     taskToUpsertList.add(newEmailTask);    
@@ -102,20 +106,20 @@ public with sharing class Batch_OfferAuthReminder implements Database.Batchable<
 
                 if(daysDiff == 0 || math.mod(daysDiff, 2) == 0) {
 
-                    Task newSMSTask = new Task(activityDate = system.today().addDays(2), whatId = acceptedOffer.Id, subject = 'Offer Auth SMS Day '+ (daysDiff + 2),
-                        Unique_Identifier__c = acceptedOffer.Id+'Offer Auth SMS Day '+(daysDiff + 2), ownerId = defaultTaskAssignConfigList[0].Task_Assignement_User_Id__c,
+                    Task newSMSTask = new Task(activityDate = system.today().addDays(2), whatId = approvedOffer.Id, subject = 'Offer Auth SMS Day '+ (daysDiff + 2),
+                        Unique_Identifier__c = approvedOffer.Id+'Offer Auth SMS Day '+(daysDiff + 2), ownerId = defaultTaskAssignConfigList[0].Task_Assignement_User_Id__c,
                         nu_dse__Communication_Template__c = communicationTemplateMap.get('Get Offer Auth SMS'));
 
                     taskToUpsertList.add(newSMSTask);
 
-                    Task newEmailTask = new Task(activityDate = system.today().addDays(2), whatId = acceptedOffer.Id, subject = 'Offer Auth Email Day '+ (daysDiff + 2),
-                        Unique_Identifier__c = acceptedOffer.Id+'Offer Auth Email Day '+(daysDiff + 2), ownerId = defaultTaskAssignConfigList[0].Task_Assignement_User_Id__c,
+                    Task newEmailTask = new Task(activityDate = system.today().addDays(2), whatId = approvedOffer.Id, subject = 'Offer Auth Email Day '+ (daysDiff + 2),
+                        Unique_Identifier__c = approvedOffer.Id+'Offer Auth Email Day '+(daysDiff + 2), ownerId = defaultTaskAssignConfigList[0].Task_Assignement_User_Id__c,
                         nu_dse__Communication_Template__c = communicationTemplateMap.get('Get Offer Auth Email'));
                     
                     taskToUpsertList.add(newEmailTask);
                 }
             } else {
-                authorizedOfferIds.add(acceptedOffer.Id);
+                authorizedOfferIds.add(approvedOffer.Id);
             }
         }
 

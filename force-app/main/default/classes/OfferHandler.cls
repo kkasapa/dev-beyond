@@ -30,44 +30,19 @@ public class OfferHandler extends TriggerHandler {
         //for (nu_dse__Offer__c newOffer : (List<nu_dse__Offer__c>)Trigger.New){
         	//addLoanAppLookup(newOffer, null, programIdWithLoan);
         //}
-        
-        //Run the savings calculator after offer create
-        // savingsCalc moved to tradeline level
-        // savingsCalc(offerIds);
     }
         
     public override void afterUpdate() {
-        /*Set<ID> OfferstoUpdate = new Set<ID>();
-        run savings calculator ONLY if enrolled balance is changed.
-        for( Id offerId : offerIds)
-        {
-            if(newOfferMap.get(offerId).Update_Savings_Calc__c)
-            {
-                Set<ID> toUpdate = new Set<ID>();
-                toUpdate.add(offerId);
-                savingsCalc(toUpdate);    
-            }
-        }*/
+
         for (nu_dse__Offer__c newOffer: (List<nu_dse__Offer__c>)Trigger.New) {
 
             // To collect the Cancelled offers Ids to delete the related payments 
             collectCancelledOffers(newOffer, oldOfferMap.get(newOffer.Id));
-            // savingsCalc moved to tradeline level
-        	/*if(newOffer.Update_Savings_Calc__c == true && oldOfferMap.get(newOffer.Id).Update_Savings_Calc__c == false)
-            {
-                OfferstoUpdate.add(newOffer.ID);  
-            }*/
         }
         // Delete Cancelled Offer related Payments
         if(cancelledOfferIds.isEmpty() == false) {
             deletePayments(cancelledOfferIds);        
         }
-
-        /* Updated by Vignesh on 31-10-2019 to fix Future method cannot be called from a future or batch method
-        // savingsCalc moved to tradeline level
-        if(OfferstoUpdate.isEmpty() == false) {
-            savingsCalc(OfferstoUpdate);
-        }*/
     }
     // Method to collect the Cancelled offers Ids to delete the related payments 
     public void collectCancelledOffers(nu_dse__Offer__c newOffer, nu_dse__Offer__c oldOffer) {
@@ -82,86 +57,6 @@ public class OfferHandler extends TriggerHandler {
     public void deletePayments(Set<Id> cancelledOfferIds) {
         delete [SELECT Id FROM nu_dse__Payment__c WHERE nu_dse__Offer__c IN :cancelledOfferIds];
     }
-    
-    // savingsCalc moved to tradeline level
-    /*
- 	@future(callout=true)
-    public static void savingsCalc(Set<ID> recordIds)
-    {   
-        //Set up required variables, list of offers to be updated, list of offers to be modified 
-        List<nu_dse__Offer__c> offers = [SELECT Name,Enrolled_Balance__c FROM nu_dse__Offer__c WHERE Id IN :recordIds];
-        List<nu_dse__Offer__c> offersToUpdate = new List<nu_dse__Offer__c>();
-        Double debt;
-        Double payment;
-        Double rate;
-        SavingsCalcService api = new SavingsCalcService();
-        HttpRequest send = new HttpRequest();
-        System.debug('savings calc');
-        
-        //extract relevant info, run savings calc, and store value for each offer that triggered.
-        for (nu_dse__Offer__c newOffer: offers)
-        {
-          	debt = newOffer.Enrolled_Balance__c;
-            payment = 0.02*debt;
-            send = api.BuildQuery(debt, payment);
-            HttpResponse response;
-            try{
-                response = api.sendRequest(send);
-                String resp = response.getStatus();
-                String body = response.getBody();
-                Double saved;
-                Integer months;
-                Double totalPayment;
-                
-                System.debug('response Body '+body);
-                if (resp != 'OK')
-                {
-                    newOffer.Savings_Calculation__c = 0;
-                    newOffer.Update_Savings_Calc__c = false;
-                    offersToUpdate.add(newOffer);
-                }
-                else if(resp == 'OK')
-                {
-                    JSONParser parser = JSON.createParser(body);
-                    while (parser.nextToken() != null)
-                    {
-                        if(parser.getText() == 'total-months')
-                        {
-                            parser.nextToken();
-                            months = parser.getIntegerValue();
-                            newOffer.Months_to_Payoff__c = months;
-                            system.debug(months);
-                        }
-                        if(parser.getText() == 'total-payments')
-                        {
-                        	parser.nextToken();
-                        	totalPayment = parser.getDoubleValue();
-                            newOffer.Payoff_Amount__c = totalPayment;
-                        	system.debug(totalPayment); 
-                        }
-                        if(parser.getText() == 'total-savings')
-                        {
-                                parser.nextToken();
-                                saved = parser.getDoubleValue();
-                                newOffer.Savings_Calculation__c = saved;
-                                newOffer.Update_Savings_Calc__c = false;
-                            	newOffer.Savings_Calc_Error__c = '';
-                            	System.debug(newOffer);
-                                offersToUpdate.add(newOffer);
-                        }
-                    }
-                }
-            }catch(CalloutException e){
-                system.debug('whoops');
-                newOffer.Savings_Calculation__c = 0;
-                newOffer.Update_Savings_Calc__c = false;
-                newOffer.Savings_Calc_Error__c = e.getTypeName()+ ' ' +e.getMessage();
-                offersToUpdate.add(newOffer);
-            }
-            
-        }
-        update offersToUpdate;
-    } */  
     
     // Add Loan 
     public static void addLoanAppLookup(nu_dse__Offer__c newOffer, nu_dse__Offer__c oldOffer, Set<Id> programIdWithLoan){

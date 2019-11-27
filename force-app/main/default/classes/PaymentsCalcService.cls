@@ -33,7 +33,7 @@ public without sharing class PaymentsCalcService {
     public static Id feeRecordTypeId = getPaymentRecordTypeId('Fee');  // recordType Id for fee
     public static Id settlementRecordTypeId = getPaymentRecordTypeId('Settlement');  // recordType Id for settlement
 
-    /*public static PaymentCalcWrapper calcProgramEstimatedBalance(Set<Id> programIds) {
+    public static PaymentCalcWrapper calcProgramEstimatedBalance(Set<Id> programIds) {
 
         PaymentCalcWrapper paymentCalcWrap = new PaymentCalcWrapper();
         Set<Id> recordTypeIds = new Set<Id> {draftRecordTypeId, settlementRecordTypeId, feeRecordTypeId};
@@ -90,7 +90,7 @@ public without sharing class PaymentsCalcService {
                         }
                         
                         if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(1).addDays(-1)) {
-                    
+
                             updateProgram.Estimated_Current_Month_Balance__c = programBal;
                         
                         } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(2).addDays(-1)) {
@@ -172,6 +172,7 @@ public without sharing class PaymentsCalcService {
                     updateProgram.Estimated_Month_36_Balance__c = updateProgram.Estimated_Month_30_Balance__c;
                 }
 
+                updateProgram.Estimated_Current_Month_Balance__c = programLowestAmount;
                 updateProgram.Estimated_lowest_balance_amount__c = programLowestAmount;
                 updateProgram.Estimated_lowest_balance_date__c = programLowestDate;
                 updateProgram.Estimated_Balance_Calculations_Timestamp__c = System.now();
@@ -255,7 +256,7 @@ public without sharing class PaymentsCalcService {
             calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
         }
         return paymentCalcWrap;
-    }*/
+    }
 
     public static SObject savingsCalculatorExternalService(SavingCalcSettings savingCalcSetting, Double debtAmount, String sObjectType) {
 
@@ -449,22 +450,6 @@ public without sharing class PaymentsCalcService {
         public Map<Id, nu_dse__TradeLine__c> tradelineIdRecMap = new Map<Id, nu_dse__TradeLine__c>();
         public Map<Id, nu_dse__Offer__c> offerIdRecMap = new Map<Id, nu_dse__Offer__c>();
     }
-
-    /*public class SavingCalcInputWrapper{
-        String endpoint;
-        Double debtAmount;
-        Double minimumPayment;
-        Decimal interestRate;
-        String sObjectType;
-
-        public SavingCalcInputWrapper(String endpoint, Double debtAmount, Double minimumPayment, Decimal interestRate, String sObjectType) {
-            this.endpoint = endpoint;
-            this.debtAmount = debtAmount;
-            this.minimumPayment = minimumPayment;
-            this.interestRate = interestRate;
-            this.sObjectType = sObjectType;
-        }
-    }*/
 
     public class SavingCalcSettings {
 
