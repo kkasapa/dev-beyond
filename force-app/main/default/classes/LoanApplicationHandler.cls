@@ -25,33 +25,41 @@ public class LoanApplicationHandler extends TriggerHandler {
         for (Loan_Application__c newLoanApplication : (List<Loan_Application__c>)Trigger.New) {
             // Update Loan Record based on Application Status
             updateLoan(newLoanApplication, oldLoanApplicationMap.get(newLoanApplication.Id));
-            updateLoanEstimator(newLoanApplication, oldLoanApplicationMap.get(newLoanApplication.Id));
+            // updateLoanEstimator(newLoanApplication, oldLoanApplicationMap.get(newLoanApplication.Id));
         }
     }
     
-    // Calls Flow to Update Loan Application Record once Loan is Status = "04-Preapproved"
+    // Calls Flow to Update Loan Application Record once Loan is Status = 01-Interested || 02-UW Pending || 04-Preapproved
     public void updateLoan(Loan_Application__c newLoanApplication, Loan_Application__c oldLoanApplication){
-        if ((newLoanApplication.Application_Status__c == '04-Preapproved' && newLoanApplication.Application_Status__c != oldLoanApplication.Application_Status__c && Trigger.isUpdate)
-           || (newLoanApplication.Application_Status__c == '04-Preapproved' && newLoanApplication.Re_Calculate_Loan_Operations_Details__c == true)){
-            futureFlowCall(newLoanApplication.Id);
-        }
+        if (((newLoanApplication.Application_Status__c == '01-Interested'
+              || newLoanApplication.Application_Status__c == '02-UW_Pending'
+              || newLoanApplication.Application_Status__c == '04-Preapproved') 
+              && newLoanApplication.Application_Status__c != oldLoanApplication.Application_Status__c)
+              || ((newLoanApplication.Application_Status__c == '01-Interested'
+                 || newLoanApplication.Application_Status__c == '02-UW_Pending'
+                 || newLoanApplication.Application_Status__c == '04-Preapproved')
+                && newLoanApplication.Re_Calculate_Loan_Operations_Details__c == true)){
+                    System.debug('before flow');
+                    updateLoanCalcs(newLoanApplication.Id);
+                }
     }
     
-    // Future Call so that This will run when SF has the time
-    @future(callout=true)
-    public static void futureFlowCall(string LoanApplicationId){
+    // Call to run Calculations update.
+    public static void updateLoanCalcs(string LoanApplicationId){
+        System.debug('flow working');
         Map<String, Object> params = new Map<String, Object>();
         params.put('LoanApplicationId', LoanApplicationId);
         try {
             Flow.Interview.Update_Loan Update_Loan = new Flow.Interview.Update_Loan(params);
             Update_Loan.start();
+            System.debug('after flow');
         } catch (Exception e){
             system.debug('Exception caught: ' + e.getMessage());
         }
     }
     
      // Calls Flow to Update Running Schedule
-    public void updateLoanEstimator(Loan_Application__c newLoanApplication, Loan_Application__c oldLoanApplication){
+    /* public void updateLoanEstimator(Loan_Application__c newLoanApplication, Loan_Application__c oldLoanApplication){
         if (newLoanApplication.Estimated_Funded_Date__c != oldLoanApplication.Estimated_Funded_Date__c && Trigger.isUpdate){
             Map<String, Object> params = new Map<String, Object>();
         	params.put('LoanApplicationId', newLoanApplication.Id);
@@ -62,5 +70,5 @@ public class LoanApplicationHandler extends TriggerHandler {
             	system.debug('Exception caught: ' + e.getMessage());
         	}
         }
-    }    
+    } */    
 }

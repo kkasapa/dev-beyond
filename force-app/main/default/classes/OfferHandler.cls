@@ -23,12 +23,14 @@ public class OfferHandler extends TriggerHandler {
     }
 
     Set<Id> cancelledOfferIds = new Set<Id>();
+	Set<Id> programIdWithLoan = new Set<Id>(); // programIds for Offer Loan Application field update
 
     public override void afterInsert() {
 
-        for (nu_dse__Offer__c newOffer : (List<nu_dse__Offer__c>)Trigger.New){
-        	addLoanAppLookup(newOffer, null);
-        }
+        //for (nu_dse__Offer__c newOffer : (List<nu_dse__Offer__c>)Trigger.New){
+        	//addLoanAppLookup(newOffer, null, programIdWithLoan);
+        //}
+        
         //Run the savings calculator after offer create
         // savingsCalc moved to tradeline level
         // savingsCalc(offerIds);
@@ -161,14 +163,17 @@ public class OfferHandler extends TriggerHandler {
         update offersToUpdate;
     } */  
     
-    public static void addLoanAppLookup(nu_dse__Offer__c newOffer, nu_dse__Offer__c oldOffer){
-        nu_dse__Program__c program = new nu_dse__Program__c();
-        system.debug('This works 1');
-        if(program.Loan_Application__c != null && newOffer.Loan_Application__c == null){
-            system.debug('This works 2');
-            newOffer.Loan_Application__c = program.Loan_Application_Status__c;
-            update newOffer;
+    // Add Loan 
+    public static void addLoanAppLookup(nu_dse__Offer__c newOffer, nu_dse__Offer__c oldOffer, Set<Id> programIdWithLoan){
+        
+        for (nu_dse__Program__c programId : [SELECT Id, Loan_Application_Status__c 
+                                             FROM nu_dse__Program__c WHERE Id IN :programIdWithLoan]){ 
+            system.debug('This works 1');
+            if(programId.Loan_Application__c != '' && newOffer.Loan_Application__c != ''){
+                system.debug('This works 2');
+                newOffer.Loan_Application__c = programId.Loan_Application_Status__c;
+                update newOffer;
+            }
         }
-    }
-    
+    }    
 }

@@ -164,7 +164,7 @@ public class TradelineHandler extends TriggerHandler {
         if(newTradeline.nu_dse__Program__c != null && (Trigger.isInsert
             || (newTradeline.nu_dse__Program__c != oldTradeline.nu_dse__Program__c
                 || newTradeline.Savings_Months_to_Payoff__c != oldTradeline.Savings_Months_to_Payoff__c
-                ||newTradeline.Savings_Payoff_Amount__c != oldTradeline.Savings_Payoff_Amount__c
+                || newTradeline.Savings_Payoff_Amount__c != oldTradeline.Savings_Payoff_Amount__c
                 || newTradeline.Savings_Calculated_Savings__c != oldTradeline.Savings_Calculated_Savings__c
                 || newTradeline.nu_dse__Include_In_The_Program__c != oldTradeline.nu_dse__Include_In_The_Program__c ))) {
 
@@ -390,4 +390,17 @@ public class TradelineHandler extends TriggerHandler {
         }
         update tradelineToUpdateList;
     }*/
+    
+    public void loanAppCalcUpdate(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
+        
+    	if((oldTradeline.Creditor_Payments_Made__c != newTradeline.Creditor_Payments_Made__c
+        	|| oldTradeline.Creditor_Payments_Outstanding__c != newTradeline.Creditor_Payments_Outstanding__c
+            || oldTradeline.Fees_Collected__c != newTradeline.Fees_Collected__c
+            || oldTradeline.Fees_Outstanding__c != newTradeline.Fees_Outstanding__c)
+        	&& newTradeline.Loan_Application__c != ''){
+                //for (nu_dse__TradeLine__c loanId : [SELECT Loan_Application__c.Id FROM nu_dse__TradeLine__c WHERE Id = newTradeline.Id]){ 
+                    //futureFlowCall(newTradeline.Id);
+                //}
+            }
+    }   
 }

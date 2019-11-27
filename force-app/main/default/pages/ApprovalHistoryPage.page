@@ -1,0 +1,81 @@
+<apex:page standardController="nu_dse__Prospect__c" extensions="ApprovalHistoryController" sidebar="true" showHeader="false" >     
+    <apex:form id="fm">
+        <apex:pageBlock id="pb" title="Approval Histroy">
+            <apex:pageBlockButtons location="top">
+                <apex:outputPanel style="position: relative; float: right;">
+                    <a href="https://help.salesforce.com/articleView?id=approvals_approval_history.htm&type=5" target="_blank" >
+                        <span class="linkSpan">Approval History Help</span>
+                        <img src="/img/s.gif" alt="Approval History Help (New Window)" class="helpIcon" title="Approval History Help (New Window)"/>
+                    </a>
+                </apex:outputPanel>
+                <apex:commandButton value="Recall Approval Request" onclick="reCall();" reRender="fm" rendered="{!isRecallShow}"/>
+                <apex:commandButton value="Submit for approval" action="{!doSubmitForApproval}" rendered="{!!isRecallShow}" rerender="fm" oncomplete="openRecord();"/>
+            </apex:pageBlockButtons>
+            <apex:pageBlockTable value="{!approvalHistroies}" var="ahis">
+                <apex:column headerValue="Action" style="width:25%; background-color: {!IF(ahis.action != null, '#7593D7', '')};"
+                             styleClass="{!IF(ahis.overall_status != NULL || ahis.action != null,'tertiaryPalette extraRow dataRow even first', '')}" >
+                    <apex:outputLabel value="{!ahis.action}" style="color:white; font-weight: bold;"/>
+                    <apex:commandLink value="Reassign |" style="color: #015ba7;text-decoration: none;font-weight: normal;" rendered="{!IF(ahis.status == 'Pending', true, false)}" onclick="reAssign();" reRender="fm"/>
+                    <apex:commandLink value=" Approve / Reject" style="color: #015ba7;text-decoration: none;font-weight: normal;" rendered="{!IF(ahis.status == 'Pending', true, false)}" onclick="approveReject();" reRender="fm" />
+                </apex:column>
+                <apex:column headerValue="Date" style="background-color: {!IF(ahis.action != null, '#7593D7', '')};"
+                             styleClass="{!IF(ahis.overall_status != NULL || ahis.action != null,'tertiaryPalette extraRow dataRow even first', '')}">
+                    <apex:outputText value="{!ahis.Dt}"/>                    
+                </apex:column>
+                <apex:column headerValue="Status" style="background-color: {!IF(ahis.action != null, '#7593D7', '')};"
+                             styleClass="{!IF(ahis.overall_status != NULL || ahis.action != null,'tertiaryPalette extraRow dataRow even first', '')}">
+                    <apex:outputLabel value="{!ahis.status}"/>
+                </apex:column>
+                <apex:column headerValue="Assigned To" style="background-color: {!IF(ahis.action != null, '#7593D7', '')};"
+                             styleClass="{!IF(ahis.overall_status != NULL || ahis.action != null,'tertiaryPalette extraRow dataRow even first', '')}">
+                    <apex:outputLink value="/{!ahis.assigned_To}" target="_top" rendered="{!!ahis.isAssignedisQ}">{!ahis.assigned_To_name}</apex:outputLink>
+                    <apex:outputLink value="/p/own/Queue/d?id={!ahis.assigned_To}" target="_top" rendered="{!ahis.isAssignedisQ}">{!ahis.assigned_To_name}</apex:outputLink>
+                </apex:column>
+                <apex:column headerValue="Actual Approver" style="background-color: {!IF(ahis.action != null, '#7593D7', '')};"
+                             styleClass="{!IF(ahis.overall_status != NULL || ahis.action != null,'tertiaryPalette extraRow dataRow even first', '')}">
+                    <apex:outputLink value="/{!ahis.actualApprover}" target="_top" rendered="{!!ahis.isactualApproverisQ}">{!ahis.actualApprover_name}</apex:outputLink>
+                    <apex:outputLink value="/p/own/Queue/d?id={!ahis.actualApprover}" target="_top" rendered="{!ahis.isactualApproverisQ}">{!ahis.actualApprover_name}</apex:outputLink>
+                </apex:column>
+                <apex:column headerValue="Comments" style="background-color: {!IF(ahis.action != null, '#7593D7', '')};"
+                             styleClass="{!IF(ahis.overall_status != NULL || ahis.action != null,'tertiaryPalette extraRow dataRow even first', '')}">
+                    <apex:outputLabel value="{!ahis.comments}"/>
+                </apex:column>
+                <apex:column headerValue="Overall Status" style="border-top: {!IF(ahis.overall_status == 'Pending', 'solid #7593D7 4px',IF(ahis.overall_status == 'Rejected', 'solid #7593D7 4px',IF(ahis.overall_status == 'Approved', 'solid #7593D7 4px',IF(ahis.overall_status == 'Recalled', 'solid #7593D7 4px', ''))))};
+                                                                 border-bottom: {!IF(ahis.overall_status == 'Pending', 'solid #7593D7 4px',IF(ahis.overall_status == 'Rejected', 'solid #7593D7 4px',IF(ahis.overall_status == 'Approved', 'solid #7593D7 4px',IF(ahis.overall_status == 'Recalled', 'solid #7593D7 4px', ''))))};
+                                                                 border-left: {!IF(ahis.overall_status == 'Pending', 'solid #7593D7 10px',IF(ahis.overall_status == 'Rejected', 'solid #7593D7 10px',IF(ahis.overall_status == 'Approved', 'solid #7593D7  10px',IF(ahis.overall_status == 'Recalled', 'solid #7593D7 10px', ''))))};
+                                                                 padding: {!IF(ahis.overall_status == 'Pending', '1px',IF(ahis.overall_status == 'Rejected', '1px',IF(ahis.overall_status == 'Approved', '1px',IF(ahis.overall_status == 'Recalled', '1px', ''))))};
+                                                                 box-sizing: {!IF(ahis.overall_status == 'Pending', 'border-box',IF(ahis.overall_status == 'Rejected', 'border-box',IF(ahis.overall_status == 'Approved', 'border-box',IF(ahis.overall_status == 'Recalled', 'border-box', ''))))};
+                                                                 background-color: {!IF(ahis.overall_status == 'Pending', '#FFD74B',IF(ahis.overall_status == 'Rejected', '#FE8791',IF(ahis.overall_status == 'Approved', '#A1F78D',IF(ahis.overall_status == 'Recalled', '#C0BEBC',IF(ahis.action != null, '#7593D7', '')))))};" 
+                             styleClass="{!IF(ahis.overall_status != NULL || ahis.action != null,'tertiaryPalette extraRow dataRow even first', '')}">
+                    <apex:outputPanel rendered="{!IF(ahis.overall_status == 'Pending',true,false)}">
+                        <img src="/img/icon/pending12.gif" />
+                    </apex:outputPanel>
+                    <apex:outputPanel rendered="{!IF(ahis.overall_status == 'Approved',true,false)}">
+                        <img src="/img/icon/approve12.gif" />
+                    </apex:outputPanel>
+                    <apex:outputPanel rendered="{!IF(ahis.overall_status == 'Rejected',true,false)}">
+                        <img src="/img/icon/reject12.gif" />
+                    </apex:outputPanel>
+                    <apex:outputPanel rendered="{!IF(ahis.overall_status == 'Recalled',true,false)}">
+                        <img src="/img/icon/recall12.gif" />
+                    </apex:outputPanel>&nbsp;&nbsp;
+                    <apex:outputLabel value="{!ahis.overall_status}" style="font-weight: bold;color:black;"/>
+                </apex:column>
+            </apex:pageBlockTable>
+        </apex:pageBlock>
+    </apex:form>
+    <script>
+    function reAssign(){
+        window.open('/{!piwobj.Id}/e?et=REASSIGN&retURL=%2F{!currentRecord.Id}','_parent');
+    }
+    function reCall(){
+        window.open('/{!piwobj.Id}/e?et=REMOVE&retURL=%2F{!currentRecord.Id}','_parent');
+    }
+    function approveReject(){
+        window.open('/apex/ApprovalProcessPage?id={!currentRecord.Id}', '_parent');
+    }
+    function openRecord(){
+        window.open('/{!currentRecord.Id}', '_parent');
+    }
+    </script>
+</apex:page>
