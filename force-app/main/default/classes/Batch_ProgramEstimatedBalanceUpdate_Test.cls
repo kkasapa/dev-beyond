@@ -45,6 +45,18 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
         nu_dse__Payment__c draftPayment5 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Deposit', draftRecordTypeId, offer.Id);
         draftPayment5.nu_dse__Amount__c = 1000;
         draftPayment5.nu_dse__Schedule_Date__c  = system.today().addMonths(10);
+        nu_dse__Payment__c draftPayment6 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Deposit', draftRecordTypeId, offer.Id);
+        draftPayment6.nu_dse__Amount__c = 1000;
+        draftPayment6.nu_dse__Schedule_Date__c  = system.today().addMonths(13);
+        nu_dse__Payment__c draftPayment7 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Deposit', draftRecordTypeId, offer.Id);
+        draftPayment7.nu_dse__Amount__c = 1000;
+        draftPayment7.nu_dse__Schedule_Date__c  = system.today().addMonths(19);
+        nu_dse__Payment__c draftPayment8 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Deposit', draftRecordTypeId, offer.Id);
+        draftPayment8.nu_dse__Amount__c = 1000;
+        draftPayment8.nu_dse__Schedule_Date__c  = system.today().addMonths(26);
+        nu_dse__Payment__c draftPayment9 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Deposit', draftRecordTypeId, offer.Id);
+        draftPayment9.nu_dse__Amount__c = 1000;
+        draftPayment9.nu_dse__Schedule_Date__c  = system.today().addMonths(32);
 
         nu_dse__Payment__c feepPayment1 = TestRecordCreator.createPayment(program.Id, 'Scheduled', 'Fee Withdrawal', feeRecordTypeId, offer.Id);
         feepPayment1.nu_dse__Amount__c = 500;
@@ -82,6 +94,10 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
         paymentList.add(draftPayment3);
         paymentList.add(draftPayment4);
         paymentList.add(draftPayment5);
+        paymentList.add(draftPayment6);
+        paymentList.add(draftPayment7);
+        paymentList.add(draftPayment8);
+        paymentList.add(draftPayment9);
         paymentList.add(feepPayment1);
         paymentList.add(feepPayment2);
         paymentList.add(feepPayment3);
@@ -98,14 +114,16 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
     static testMethod void ProgramEstimatedBalanceUpdate() {
         
         List<nu_dse__Program__c> programList = [SELECT Id FROM nu_dse__Program__c LIMIT 2];
+        nu_dse__TradeLine__c tradeLineInst = [SELECT Id FROM nu_dse__TradeLine__c LIMIT 1];
 
         Test.startTest();
             // executing the batch to calculate the estimated balance of 2,3,6,9,12 months
             Database.executeBatch(new Batch_ProgramEstimatedBalanceUpdate(new Set<Id>{programList[0].Id, programList[1].Id}));
 
-            Schedule_ProgramEstimatedBalanceUpdate schedulerInst = new Schedule_ProgramEstimatedBalanceUpdate();
+            Schedule_ProgramEstimatedBalanceUpdate schedulerInst = new Schedule_ProgramEstimatedBalanceUpdate(new Set<Id>{programList[0].Id, programList[1].Id});
             String schCronExp = '0 0 23 * * ?'; 
             system.schedule('Test Schedule ProgramEstimatedBalanceUpdateBatch', schCronExp, schedulerInst); 
+            PaymentsCalcService.calcPaidOutstandingForCreditor(new Set<Id>{tradeLineInst.Id});
             
         Test.stopTest(); 
         
