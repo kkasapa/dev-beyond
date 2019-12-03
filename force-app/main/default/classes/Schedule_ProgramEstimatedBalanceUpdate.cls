@@ -1,6 +1,6 @@
-global class Schedule_ProgramEstimatedBalanceUpdate implements Schedulable {
+public class Schedule_ProgramEstimatedBalanceUpdate implements Schedulable {
    
-    global Integer batchSize;
+    public Integer batchSize;
     public Set<Id> filteredProgramIdSet;
 
     public Schedule_ProgramEstimatedBalanceUpdate() {
@@ -25,6 +25,5 @@ global class Schedule_ProgramEstimatedBalanceUpdate implements Schedulable {
             Batch_ProgramEstimatedBalanceUpdate programEstdBalUpdateBatch = new Batch_ProgramEstimatedBalanceUpdate(); 
             database.executebatch(programEstdBalUpdateBatch, batchSize);
         }
-        
     }
 }

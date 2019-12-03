@@ -112,7 +112,7 @@ public with sharing class TradelineTrigger_Test {
                          updatedTradeLine.Savings_Calc_Error__c);
     }
     
-    /*Public static testmethod void tradelineSettlementOrderInsert_Test(){
+    public static testmethod void tradelineSettlementOrderInsert_Test(){
         
         nu_dse__Program__c program = [SELECT Id FROM nu_dse__Program__c LIMIT 1];
         Account acc = [SELECT Id FROM Account LIMIT 1];
@@ -162,5 +162,5 @@ public with sharing class TradelineTrigger_Test {
         system.assertEquals(2, updaterTradelineList[0].Program_Settlement_Order__c);
         system.assertEquals(3, updaterTradelineList[1].Program_Settlement_Order__c);
         system.assertEquals(1, updaterTradelineList[2].Program_Settlement_Order__c);
-    }*/
+    }
 }
