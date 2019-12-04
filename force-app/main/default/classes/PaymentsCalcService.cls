@@ -58,12 +58,23 @@ public without sharing class PaymentsCalcService {
             Decimal programLowestAmount;
             Date programLowestDate;
             
+            Decimal estimateLastPaymentBal; // estimated balance as per the last processed payment 
+            Date estimateLastPaymentDate; // estimated date as per the last processed payment
+            Decimal endOfMonthLowestBalance; // lowest balance at the end of the month
+            Date endOfMonthLowestBalDate; // date of last payment in the month that has lowest balance at the end
+            String paymentMonthIdentifier; // a string identifier for checking the last payment in the month, this id will be same for all payments in a month
+            
             if(program.nu_dse__Trust_Account_Balance__c != null) {
                 programBal = program.nu_dse__Trust_Account_Balance__c;
-                programLowestAmount = program.nu_dse__Trust_Account_Balance__c;
-                programLowestDate = system.today();
+                programLowestAmount = program.nu_dse__Trust_Account_Balance__c; // initially the current balance will be the lowest
+                programLowestDate = system.today(); // start of the calc, lowest amount and date will be current balance and today
+                
+                estimateLastPaymentBal = program.nu_dse__Trust_Account_Balance__c;  // initially the current balance will be the lowest
             }
             updateProgram.Estimated_Current_Month_Balance__c = programBal;
+            estimateLastPaymentDate = system.today();
+            paymentMonthIdentifier = system.today().month() + '-' + system.today().year(); // string UID for checking the last payment of month
+            
 
             for(nu_dse__Payment__c payment : program.nu_dse__Payments__r) {
                 // To calculate Program estimated balance
@@ -87,6 +98,20 @@ public without sharing class PaymentsCalcService {
                         programLowestAmount = programBal;
                         programLowestDate = payment.nu_dse__Schedule_Date__c;
                     }
+                    
+                    // if the current payment processed is first payment of the month and the last payment is lowest amonge the schedule 
+                    // then we are reserving that as lowest month end balance at this point
+                    if(payment.nu_dse__Schedule_Date__c.month() +'-'+ payment.nu_dse__Schedule_Date__c.year() != paymentMonthIdentifier
+                        && estimateLastPaymentBal != null 
+                        && (endOfMonthLowestBalance == null || estimateLastPaymentBal < endOfMonthLowestBalance)) {  
+                        
+                        endOfMonthLowestBalance = estimateLastPaymentBal;
+                        endOfMonthLowestBalDate = estimateLastPaymentDate;
+                        paymentMonthIdentifier = payment.nu_dse__Schedule_Date__c.month() +'-'+ payment.nu_dse__Schedule_Date__c.year();
+                    }
+                    
+                    estimateLastPaymentBal = programBal;
+                    estimateLastPaymentDate = payment.nu_dse__Schedule_Date__c;
                     
                     if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(1).addDays(-1)) {
 
@@ -170,10 +195,17 @@ public without sharing class PaymentsCalcService {
                 && updateProgram.Estimated_Month_30_Balance__c != null) {
                 updateProgram.Estimated_Month_36_Balance__c = updateProgram.Estimated_Month_30_Balance__c;
             }
+            
+            if(estimateLastPaymentBal != null 
+                && (endOfMonthLowestBalance == null || estimateLastPaymentBal < endOfMonthLowestBalance)) {
+                endOfMonthLowestBalance = estimateLastPaymentBal;
+                endOfMonthLowestBalDate = estimateLastPaymentDate;
+            }
 
-            updateProgram.Estimated_Current_Month_Balance__c = programLowestAmount;
-            updateProgram.Estimated_lowest_balance_amount__c = programLowestAmount;
-            updateProgram.Estimated_lowest_balance_date__c = programLowestDate;
+            //final assignments as per the calc
+            updateProgram.Estimated_Current_Month_Balance__c = endOfMonthLowestBalance;
+            updateProgram.Estimated_lowest_balance_amount__c = endOfMonthLowestBalance;
+            updateProgram.Estimated_lowest_balance_date__c = endOfMonthLowestBalDate;
             updateProgram.Estimated_Balance_Calculations_Timestamp__c = System.now();
             paymentCalcWrap.programToUpdateMap.put(updateProgram.Id, updateProgram);
         }
