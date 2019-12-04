@@ -55,8 +55,8 @@ public without sharing class PaymentsCalcService {
             }
 
             Decimal programBal = 0;
-            Decimal programLowestAmount;
-            Date programLowestDate;
+            // Decimal programLowestAmount;
+            //Date programLowestDate;
             
             Decimal estimateLastPaymentBal; // estimated balance as per the last processed payment 
             Date estimateLastPaymentDate; // estimated date as per the last processed payment
@@ -66,16 +66,14 @@ public without sharing class PaymentsCalcService {
             
             if(program.nu_dse__Trust_Account_Balance__c != null) {
                 programBal = program.nu_dse__Trust_Account_Balance__c;
-                programLowestAmount = program.nu_dse__Trust_Account_Balance__c; // initially the current balance will be the lowest
-                programLowestDate = system.today(); // start of the calc, lowest amount and date will be current balance and today
-                
+                // programLowestAmount = program.nu_dse__Trust_Account_Balance__c; // initially the current balance will be the lowest
+                // programLowestDate = system.today(); // start of the calc, lowest amount and date will be current balance and today
                 estimateLastPaymentBal = program.nu_dse__Trust_Account_Balance__c;  // initially the current balance will be the lowest
             }
             updateProgram.Estimated_Current_Month_Balance__c = programBal;
             estimateLastPaymentDate = system.today();
             paymentMonthIdentifier = system.today().month() + '-' + system.today().year(); // string UID for checking the last payment of month
             
-
             for(nu_dse__Payment__c payment : program.nu_dse__Payments__r) {
                 // To calculate Program estimated balance
                 if(payment.nu_dse__Schedule_Date__c >= system.today()
@@ -93,11 +91,11 @@ public without sharing class PaymentsCalcService {
                         programBal -= payment.nu_dse__Total_Amount__c;
                     }
 
-                    if(programLowestAmount == null || programLowestAmount > programBal) {
+                    /*if(programLowestAmount == null || programLowestAmount > programBal) {
 
                         programLowestAmount = programBal;
                         programLowestDate = payment.nu_dse__Schedule_Date__c;
-                    }
+                    }*/
                     
                     // if the current payment processed is first payment of the month and the last payment is lowest amonge the schedule 
                     // then we are reserving that as lowest month end balance at this point
