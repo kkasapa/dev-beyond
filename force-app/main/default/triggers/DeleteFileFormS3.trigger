@@ -1,5 +1,15 @@
-trigger DeleteFileFormS3 on AWS_Document__c (after delete) {
-	 if (Trigger.isDelete) 
+trigger DeleteFileFormS3 on AWS_Document__c (before insert, after delete) {
+    
+    if(Switch__c.getValues('Swith Off').Turn_Off__c == true){
+       
+        system.debug('I am Fired');
+        if(trigger.isInsert){
+            AWSSplitPDFService Aws = New AWSSplitPDFService();
+           
+        }
+    }
+
+     if (Trigger.isDelete) 
      {
          AWS_Credentials_Settings__c settings = [Select Key__c,Secret__c,Bucket_Name__c,ACL__c from AWS_Credentials_Settings__c Limit 1];
          for (AWS_Document__c doc : Trigger.old) 

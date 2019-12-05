@@ -76,10 +76,9 @@ public without sharing class PaymentsCalcService {
             
             for(nu_dse__Payment__c payment : program.nu_dse__Payments__r) {
                 // To calculate Program estimated balance
-                if(payment.nu_dse__Schedule_Date__c >= system.today()
-                    && payment.nu_dse__Schedule_Date__c <= futureEstimateDate
-                    && (payment.nu_dse__Transaction_Status__c == 'Scheduled' 
-                        || payment.nu_dse__Transaction_Status__c == 'In Progress')) {
+                if((payment.nu_dse__Schedule_Date__c >= system.today()
+                    && payment.nu_dse__Transaction_Status__c == 'Scheduled') 
+                    || payment.nu_dse__Transaction_Status__c == 'In Progress') {
                     
                     if(payment.RecordTypeId ==  draftRecordTypeId) {
                         programBal += payment.nu_dse__Amount__c;
@@ -110,48 +109,51 @@ public without sharing class PaymentsCalcService {
                     
                     estimateLastPaymentBal = programBal;
                     estimateLastPaymentDate = payment.nu_dse__Schedule_Date__c;
-                    
-                    if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(1).addDays(-1)) {
 
-                        updateProgram.Estimated_Current_Month_Balance__c = programBal;
-                    
-                    } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(2).addDays(-1)) {
+                    if(payment.nu_dse__Schedule_Date__c <= futureEstimateDate) {
+                        
+                        if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(1).addDays(-1)) {
 
-                        updateProgram.Estimated_Month_2_Balance__c = programBal;
+                            updateProgram.Estimated_Current_Month_Balance__c = programBal;
+                        
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(2).addDays(-1)) {
 
-                    } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(3).addDays(-1)) {
+                            updateProgram.Estimated_Month_2_Balance__c = programBal;
 
-                        updateProgram.Estimated_Month_3_Balance__c = programBal;
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(3).addDays(-1)) {
 
-                    } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(6).addDays(-1)) {
+                            updateProgram.Estimated_Month_3_Balance__c = programBal;
 
-                        updateProgram.Estimated_Month_6_Balance__c = programBal;
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(6).addDays(-1)) {
 
-                    } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(9).addDays(-1)) {
+                            updateProgram.Estimated_Month_6_Balance__c = programBal;
 
-                        updateProgram.Estimated_Month_9_Balance__c = programBal;
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(9).addDays(-1)) {
 
-                    } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(12).addDays(-1)) {
+                            updateProgram.Estimated_Month_9_Balance__c = programBal;
 
-                        updateProgram.Estimated_Month_12_Balance__c = programBal;
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(12).addDays(-1)) {
 
-                    } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(18).addDays(-1)) {
+                            updateProgram.Estimated_Month_12_Balance__c = programBal;
 
-                        updateProgram.Estimated_Month_18_Balance__c = programBal;
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(18).addDays(-1)) {
 
-                    } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(24).addDays(-1)) {
+                            updateProgram.Estimated_Month_18_Balance__c = programBal;
 
-                        updateProgram.Estimated_Month_24_Balance__c = programBal;
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(24).addDays(-1)) {
 
-                    } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(30).addDays(-1)) {
+                            updateProgram.Estimated_Month_24_Balance__c = programBal;
 
-                        updateProgram.Estimated_Month_30_Balance__c = programBal;
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(30).addDays(-1)) {
 
-                    } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(36).addDays(-1)) {
+                            updateProgram.Estimated_Month_30_Balance__c = programBal;
 
-                        updateProgram.Estimated_Month_36_Balance__c = programBal;
+                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(36).addDays(-1)) {
 
-                    } 
+                            updateProgram.Estimated_Month_36_Balance__c = programBal;
+
+                        } 
+                    }
                 }
                 //calc on Tradeline and Offer
                 calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);

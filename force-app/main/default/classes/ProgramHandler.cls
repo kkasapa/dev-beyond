@@ -131,18 +131,17 @@ public class ProgramHandler extends TriggerHandler {
             BLPBUSEvents.add(new BLP_Bus__e(action__c='create', program_id__c=newProgram.Id));
         }*/
         
-        if (String.isNotBlank(newProgram.nu_dse__Fee_Template__c) == true 
-                && newProgram.Legal_Plan_Included__c == true
-                && (newProgram.BLP_Member_Type__c =='Club Member' || newProgram.BLP_Member_Type__c == 'Flat Fee')) {
-            //create BLP Bus events and append to scope variable
-            if (Trigger.isInsert) {
-                BLPBUSEvents.add(new BLP_Bus__e(action__c='create', program_id__c=newProgram.Id));
-            } else if (newProgram.nu_dse__Program_Status__c != oldProgram.nu_dse__Program_Status__c
-                        || newProgram.BLP_Member_Type__c != oldProgram.BLP_Member_Type__c) {
-                BLPBUSEvents.add(new BLP_Bus__e(action__c='update', program_id__c=newProgram.Id));
-            }
+       if (newProgram.BLP_Member_Type__c != oldProgram.BLP_Member_Type__c || newProgram.Legal_Plan_Included__c != oldProgram.Legal_Plan_Included__c) 
+           if(newProgram.Legal_Plan_Included__c == true)
+           		if(newProgram.BLP_Member_Type__c =='Club Member' || newProgram.BLP_Member_Type__c == 'Flat Fee')
+                //create BLP Bus events and append to scope variable
+                if (Trigger.isInsert) {
+                    BLPBUSEvents.add(new BLP_Bus__e(action__c='create', program_id__c=newProgram.Id));
+                } else if (newProgram.nu_dse__Program_Status__c != oldProgram.nu_dse__Program_Status__c
+                            || newProgram.BLP_Member_Type__c != oldProgram.BLP_Member_Type__c) {
+                    BLPBUSEvents.add(new BLP_Bus__e(action__c='update', program_id__c=newProgram.Id));
+                }
         } 
-    }
     // Create Group Task for Termination Pending Programs based on Involuntary Termination
     public void createTermPendingGroupTask(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram) {
         
