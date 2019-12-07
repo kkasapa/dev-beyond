@@ -187,4 +187,105 @@ public class Holidays {
         } while(holidayMap.containsKey(currentDate.day() + '-' + currentDate.month()));
         return currentDate;
     }
+    
+    // Checks for Sundays - For Nth BusinessDays 
+    Public static Boolean CustomWeekend( String Day){
+        if(dayOfTheWeekmask(day) == 1){
+            return True;
+        }else{
+            return False;
+        }
+        
+    }
+    
+    //Below method checks passing date is holiday or not
+    public static boolean isHolidayOrCustomWeekend(List<Holiday> holidays, Date activityDate) {
+        
+        
+        Boolean CustomWeekend = CustomWeekend(dayOfTheWeek(activityDate));
+        
+        if(CustomWeekend == False) { // Not Sunday
+            
+            for(Holiday h: Holidays) {
+                
+                if(!h.IsRecurrence) { // Not Recurrsive Holiday
+                    
+                    // if not recurrence then activityDate should match exact holiday date. 
+                    if(h.ActivityDate.isSameDay(activityDate)) {
+                        
+                        System.debug('Non Recursive Holiday : ' +activityDate + ' ActivityDate : ' +h.ActivityDate);
+                        
+                        
+                        return true; 
+                    }
+                    
+                } else{ // Recursive Holiday
+                    
+                    
+                    
+                    // if reOccuring then activityDate should match reoccuring date, consturcted. 
+                    
+                    if( (h.RecurrenceStartDate !=null && h.RecurrenceStartDate<= activityDate ) && (h.recurrenceEndDateOnly==null || h.recurrenceEndDateOnly >= activityDate )){
+                        // checking input date is between Recursive start and end date if yes return true 
+                        
+                        // Checking  Activity Day and Month with parameter passing date. 
+                        if((h.ActivityDate.day() == activityDate.day()) && ( (h.ActivityDate.month()) == activityDate.month()) ){
+                            
+                            //System.debug('Recursive Activity Date Day : ' + h.ActivityDate.day()  + ' Nth Date Day '+activityDate.day());
+                            //System.debug('Recursive Activity Month Date : ' + h.ActivityDate.month() + 'Nth Date Month '+activityDate.month());                            
+                            
+                            return true; 
+                        }
+                    }
+                }
+            }
+            
+        } else{
+            
+            return true; 
+        }
+        
+        return false; 
+    }
+    
+//Below method return Nth working excluding Holidays and consider only Sunday is weekend.
+//Added by Santhosh; Avco Consulting Inc
+    
+    public static Date calculateNthWorkingDay(Date fromDate, Integer N){ // Method to return Nth Business Day excluding Sunday and Holidays
+        List<Holiday>hList = new List<Holiday>();
+        //Query hoildays from Org  
+        List<Holiday> holidays = [SELECT Id, Name, Description, EndTimeInMinutes, IsAllDay, ActivityDate, 
+                                  RecurrenceEndDateOnly, IsRecurrence, RecurrenceMonthOfYear, RecurrenceStartDate,
+                                  RecurrenceInstance,RecurrenceDayOfMonth FROM Holiday];
+        
+        for(Holiday hl : holidays){            
+            hList.add(hl);
+        }
+        
+        Date NthDay = fromDate; 
+        
+        for(Integer k=0;k<N ;k++ ){
+            
+            //System.debug('Day of the Week ' +dayOfTheWeek(NthDay));
+            
+            Boolean isHolidayOrSunday = isHolidayOrCustomWeekend(hList, NthDay.addDays(1));
+            if(isHolidayOrSunday){                        
+                NthDay = NthDay.addDays(1);
+                system.debug(' Holiday ++' +NthDay +' ++Int ++' +K);
+                K--;
+                
+            } 
+            else // if Not Holiday K increment
+            {
+                NthDay = NthDay.addDays(1);
+                system.debug(' Not Holiday --' +NthDay +' --Int --' +K);
+                
+            }
+        }
+        
+        system.debug('Nth Businessday --> '+NthDay);        
+        return NthDay;//send Nth Business day
+        
+    }
+    
 }

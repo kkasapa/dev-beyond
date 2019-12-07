@@ -135,13 +135,13 @@ public class ProgramHandler extends TriggerHandler {
                 && newProgram.Legal_Plan_Included__c == true
                 && (newProgram.BLP_Member_Type__c =='Club Member' || newProgram.BLP_Member_Type__c == 'Flat Fee')) {
             //create BLP Bus events and append to scope variable
-            if (Trigger.isInsert) {
+            if (newProgram.BLP_Client_Id__c == null) {
                 BLPBUSEvents.add(new BLP_Bus__e(action__c='create', program_id__c=newProgram.Id));
             } else if (newProgram.nu_dse__Program_Status__c != oldProgram.nu_dse__Program_Status__c
                         || newProgram.BLP_Member_Type__c != oldProgram.BLP_Member_Type__c) {
                 BLPBUSEvents.add(new BLP_Bus__e(action__c='update', program_id__c=newProgram.Id));
             }
-        } 
+        }
     }
     // Create Group Task for Termination Pending Programs based on Involuntary Termination
     public void createTermPendingGroupTask(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram) {
@@ -347,15 +347,17 @@ public class ProgramHandler extends TriggerHandler {
     // Uses Loan Interest Status = "Interested" to Run
     public void createLoan(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram){
         System.debug('It Works 1!');
-        if ((newProgram.Loan_Interest_Status__c != 'Not_Interested' && newProgram.Loan_Interest_Status__c != null) 
-            && (newProgram.Loan_Interest_Status__c != oldProgram.Loan_Interest_Status__c)){
+        if (oldProgram.Loan_Interest_Status__c != newProgram.Loan_Interest_Status__c){
             System.debug('It Works! 2');
+            //To be Updated -> string.isNotBlank(newProgram.Loan_Interest_Status__c) == true -> To check if Interest Status not Blank
+            if(newProgram.Loan_Interest_Status__c != 'Not_Interested' || newProgram.Loan_Interest_Status__c != null){
+            System.debug('It Works! 3');
                 // A Check to Make Sure flow runs once, so multiple loan are not created
                 if(!newProgram.Flow_Started__c){
-                    System.debug('It Works! 3');
+                    System.debug('It Works! 4');
                     futureCreateLoan(newProgram.Id);
                 }
-         
+            }
         } 
     }
 

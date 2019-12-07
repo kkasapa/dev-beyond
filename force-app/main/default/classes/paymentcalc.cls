@@ -44,79 +44,53 @@ public without sharing class PaymentsCalcService {
                                                 nu_dse__Offer__r.nu_dse__TradeLine__c FROM nu_dse__Payments__r 
                                             WHERE RecordTypeId IN :recordTypeIds AND (nu_dse__Transaction_Status__c = 'Scheduled' 
                                                 OR nu_dse__Transaction_Status__c = 'In Progress' OR nu_dse__Transaction_Status__c = 'Completed' 
-                                                OR nu_dse__Transaction_Status__c = 'Cleared' 
-                                                OR (nu_dse__Transaction_Status__c = 'Tentative' 
-                                                    AND (nu_dse__Offer__r.nu_dse__Status__c = '03-Offer Approved (Pre-payment setup)' 
-                                                         OR nu_dse__Offer__r.nu_dse__Status__c = '04-Ready for Payment Setup')))
+                                                OR nu_dse__Transaction_Status__c = 'Cleared') 
                                             ORDER BY nu_dse__Schedule_Date__c ASC)
                                         FROM nu_dse__Program__c WHERE Id IN :programIds]) {
 
-            nu_dse__Program__c updateProgram = new nu_dse__Program__c(Id = program.Id);
+            if(program.nu_dse__Payments__r.isEmpty() == false) {
+                nu_dse__Program__c updateProgram = new nu_dse__Program__c(Id = program.Id);
 
-            if(paymentCalcWrap.programToUpdateMap.containskey(updateProgram.Id) == true) {
-                updateProgram = paymentCalcWrap.programToUpdateMap.get(updateProgram.Id);
-            }
+                if(paymentCalcWrap.programToUpdateMap.containskey(updateProgram.Id) == true) {
+                    updateProgram = paymentCalcWrap.programToUpdateMap.get(updateProgram.Id);
+                }
 
-            Decimal programBal = 0;
-            // Decimal programLowestAmount;
-            //Date programLowestDate;
-            
-            Decimal estimateLastPaymentBal; // estimated balance as per the last processed payment 
-            Date estimateLastPaymentDate; // estimated date as per the last processed payment
-            Decimal endOfMonthLowestBalance; // lowest balance at the end of the month
-            Date endOfMonthLowestBalDate; // date of last payment in the month that has lowest balance at the end
-            String paymentMonthIdentifier; // a string identifier for checking the last payment in the month, this id will be same for all payments in a month
-            
-            if(program.nu_dse__Trust_Account_Balance__c != null) {
-                programBal = program.nu_dse__Trust_Account_Balance__c;
-                // programLowestAmount = program.nu_dse__Trust_Account_Balance__c; // initially the current balance will be the lowest
-                // programLowestDate = system.today(); // start of the calc, lowest amount and date will be current balance and today
-                estimateLastPaymentBal = program.nu_dse__Trust_Account_Balance__c;  // initially the current balance will be the lowest
-            }
-            updateProgram.Estimated_Current_Month_Balance__c = programBal;
-            estimateLastPaymentDate = system.today();
-            paymentMonthIdentifier = system.today().month() + '-' + system.today().year(); // string UID for checking the last payment of month
-            
-            for(nu_dse__Payment__c payment : program.nu_dse__Payments__r) {
-                // To calculate Program estimated balance
-                if((payment.nu_dse__Schedule_Date__c >= system.today()
-                    && payment.nu_dse__Transaction_Status__c == 'Scheduled') 
-                    || payment.nu_dse__Transaction_Status__c == 'In Progress') {
-                    
-                    if(payment.RecordTypeId ==  draftRecordTypeId) {
-                        programBal += payment.nu_dse__Amount__c;
-                    } else if((payment.RecordTypeId == feeRecordTypeId 
-                                && payment.nu_dse__Payment_Type__c == 'Fee Withdrawal')
-                                || (payment.RecordTypeId == settlementRecordTypeId 
-                                    && payment.nu_dse__Payment_Type__c == 'Withdrawal')) {
+                Decimal programBal = 0;
+                Decimal programLowestAmount;
+                Date programLowestDate;
+                
+                if(program.nu_dse__Trust_Account_Balance__c != null) {
+                    programBal = program.nu_dse__Trust_Account_Balance__c;
+                    programLowestAmount = program.nu_dse__Trust_Account_Balance__c;
+                    programLowestDate = system.today();
+                }
+                updateProgram.Estimated_Current_Month_Balance__c = programBal;
 
-                        programBal -= payment.nu_dse__Total_Amount__c;
-                    }
-
-                    /*if(programLowestAmount == null || programLowestAmount > programBal) {
-
-                        programLowestAmount = programBal;
-                        programLowestDate = payment.nu_dse__Schedule_Date__c;
-                    }*/
-                    
-                    // if the current payment processed is first payment of the month and the last payment is lowest amonge the schedule 
-                    // then we are reserving that as lowest month end balance at this point
-                    if(payment.nu_dse__Schedule_Date__c.month() +'-'+ payment.nu_dse__Schedule_Date__c.year() != paymentMonthIdentifier
-                        && estimateLastPaymentBal != null 
-                        && (endOfMonthLowestBalance == null || estimateLastPaymentBal < endOfMonthLowestBalance)) {  
+                for(nu_dse__Payment__c payment : program.nu_dse__Payments__r) {
+                    // To calculate Program estimated balance
+                    if(payment.nu_dse__Schedule_Date__c >= system.today()
+                        && payment.nu_dse__Schedule_Date__c <= futureEstimateDate
+                        && (payment.nu_dse__Transaction_Status__c == 'Scheduled' 
+                            || payment.nu_dse__Transaction_Status__c == 'In Progress')) {
                         
-                        endOfMonthLowestBalance = estimateLastPaymentBal;
-                        endOfMonthLowestBalDate = estimateLastPaymentDate;
-                        paymentMonthIdentifier = payment.nu_dse__Schedule_Date__c.month() +'-'+ payment.nu_dse__Schedule_Date__c.year();
-                    }
-                    
-                    estimateLastPaymentBal = programBal;
-                    estimateLastPaymentDate = payment.nu_dse__Schedule_Date__c;
+                        if(payment.RecordTypeId ==  draftRecordTypeId) {
+                            programBal += payment.nu_dse__Amount__c;
+                        } else if((payment.RecordTypeId == feeRecordTypeId 
+                                    && payment.nu_dse__Payment_Type__c == 'Fee Withdrawal')
+                                    || (payment.RecordTypeId == settlementRecordTypeId 
+                                        && payment.nu_dse__Payment_Type__c == 'Withdrawal')) {
 
-                    if(payment.nu_dse__Schedule_Date__c <= futureEstimateDate) {
+                            programBal -= payment.nu_dse__Total_Amount__c;
+                        }
+
+                        if(programLowestAmount == null || programLowestAmount > programBal) {
+
+                            programLowestAmount = programBal;
+                            programLowestDate = payment.nu_dse__Schedule_Date__c;
+                        }
                         
                         if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(1).addDays(-1)) {
-
+                    
                             updateProgram.Estimated_Current_Month_Balance__c = programBal;
                         
                         } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(2).addDays(-1)) {
@@ -157,60 +131,52 @@ public without sharing class PaymentsCalcService {
 
                         } 
                     }
+                    //calc on Tradeline and Offer
+                    calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
                 }
-                //calc on Tradeline and Offer
-                calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
-            }
 
-            if(updateProgram.Estimated_Month_2_Balance__c == null 
-                && updateProgram.Estimated_Current_Month_Balance__c != null) {
-                updateProgram.Estimated_Month_2_Balance__c = updateProgram.Estimated_Current_Month_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_3_Balance__c == null 
-                && updateProgram.Estimated_Month_2_Balance__c != null) {
-                updateProgram.Estimated_Month_3_Balance__c = updateProgram.Estimated_Month_2_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_6_Balance__c == null 
-                && updateProgram.Estimated_Month_3_Balance__c != null) {
-                updateProgram.Estimated_Month_6_Balance__c = updateProgram.Estimated_Month_3_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_9_Balance__c == null 
-                && updateProgram.Estimated_Month_6_Balance__c != null) {
-                updateProgram.Estimated_Month_9_Balance__c = updateProgram.Estimated_Month_6_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_12_Balance__c == null 
-                && updateProgram.Estimated_Month_9_Balance__c != null) {
-                updateProgram.Estimated_Month_12_Balance__c = updateProgram.Estimated_Month_9_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_18_Balance__c == null 
-                && updateProgram.Estimated_Month_12_Balance__c != null) {
-                updateProgram.Estimated_Month_18_Balance__c = updateProgram.Estimated_Month_12_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_24_Balance__c == null 
-                && updateProgram.Estimated_Month_18_Balance__c != null) {
-                updateProgram.Estimated_Month_24_Balance__c = updateProgram.Estimated_Month_18_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_30_Balance__c == null 
-                && updateProgram.Estimated_Month_24_Balance__c != null) {
-                updateProgram.Estimated_Month_30_Balance__c = updateProgram.Estimated_Month_24_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_36_Balance__c == null 
-                && updateProgram.Estimated_Month_30_Balance__c != null) {
-                updateProgram.Estimated_Month_36_Balance__c = updateProgram.Estimated_Month_30_Balance__c;
-            }
-            
-            if(estimateLastPaymentBal != null 
-                && (endOfMonthLowestBalance == null || estimateLastPaymentBal < endOfMonthLowestBalance)) {
-                endOfMonthLowestBalance = estimateLastPaymentBal;
-                endOfMonthLowestBalDate = estimateLastPaymentDate;
-            }
+                if(updateProgram.Estimated_Month_2_Balance__c == null 
+                    && updateProgram.Estimated_Current_Month_Balance__c != null) {
+                    updateProgram.Estimated_Month_2_Balance__c = updateProgram.Estimated_Current_Month_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_3_Balance__c == null 
+                    && updateProgram.Estimated_Month_2_Balance__c != null) {
+                    updateProgram.Estimated_Month_3_Balance__c = updateProgram.Estimated_Month_2_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_6_Balance__c == null 
+                    && updateProgram.Estimated_Month_3_Balance__c != null) {
+                    updateProgram.Estimated_Month_6_Balance__c = updateProgram.Estimated_Month_3_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_9_Balance__c == null 
+                    && updateProgram.Estimated_Month_6_Balance__c != null) {
+                    updateProgram.Estimated_Month_9_Balance__c = updateProgram.Estimated_Month_6_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_12_Balance__c == null 
+                    && updateProgram.Estimated_Month_9_Balance__c != null) {
+                    updateProgram.Estimated_Month_12_Balance__c = updateProgram.Estimated_Month_9_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_18_Balance__c == null 
+                    && updateProgram.Estimated_Month_12_Balance__c != null) {
+                    updateProgram.Estimated_Month_18_Balance__c = updateProgram.Estimated_Month_12_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_24_Balance__c == null 
+                    && updateProgram.Estimated_Month_18_Balance__c != null) {
+                    updateProgram.Estimated_Month_24_Balance__c = updateProgram.Estimated_Month_18_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_30_Balance__c == null 
+                    && updateProgram.Estimated_Month_24_Balance__c != null) {
+                    updateProgram.Estimated_Month_30_Balance__c = updateProgram.Estimated_Month_24_Balance__c;
+                }
+                if(updateProgram.Estimated_Month_36_Balance__c == null 
+                    && updateProgram.Estimated_Month_30_Balance__c != null) {
+                    updateProgram.Estimated_Month_36_Balance__c = updateProgram.Estimated_Month_30_Balance__c;
+                }
 
-            //final assignments as per the calc
-            updateProgram.Estimated_Current_Month_Balance__c = endOfMonthLowestBalance;
-            updateProgram.Estimated_lowest_balance_amount__c = endOfMonthLowestBalance;
-            updateProgram.Estimated_lowest_balance_date__c = endOfMonthLowestBalDate;
-            updateProgram.Estimated_Balance_Calculations_Timestamp__c = System.now();
-            paymentCalcWrap.programToUpdateMap.put(updateProgram.Id, updateProgram);
+                updateProgram.Estimated_lowest_balance_amount__c = programLowestAmount;
+                updateProgram.Estimated_lowest_balance_date__c = programLowestDate;
+                updateProgram.Estimated_Balance_Calculations_Timestamp__c = System.now();
+                paymentCalcWrap.programToUpdateMap.put(updateProgram.Id, updateProgram);
+            }
         }
         return paymentCalcWrap;
     } 

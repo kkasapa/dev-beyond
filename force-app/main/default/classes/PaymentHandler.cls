@@ -25,14 +25,14 @@ public class PaymentHandler extends TriggerHandler {
     List<nu_dse__Group_Task__c> groupTaskToInsert = new List<nu_dse__Group_Task__c>();  //grouptasks to be inserted 
     Map<String, Id> queueMap;       //Map of QueueName and QueueName
     List<nu_dse__Error_Log__c> errorLogList = new List<nu_dse__Error_Log__c>(); 
-    // Set<Id> cancelledPaymentIds = new Set<Id>(); //cancelled payment ids for deleting their tasks
+    Set<Id> cancelledPaymentIds = new Set<Id>(); //cancelled payment ids for deleting their tasks
     Map<String, Holiday> holidayMap;
     Map<String, Id> comuTempNameIdMap; // map of communication Template Name and Its Id
     static Map<Id, User> userMailMap = new Map<Id, User>(); //Map of user Id and Email
     List<nu_dse__Payment__c> verbalAuthRecivedPayments= new List<nu_dse__Payment__c>(); //payments with verbal authorization as true
     Set<Id> verbalAuthRecivedPaymentProgramIds = new Set<Id>(); // collect program id of payment which has verbal auth received = true
     Set<Id> draftDateUpdateProgramIds = new Set<Id>();
-    // Map<Id, Date> updatedIdscheduleDateMap = new Map<Id, Date>(); // Map of Payment Ids and those payments scheduleDate 
+    Map<Id, Date> updatedIdscheduleDateMap = new Map<Id, Date>(); // Map of Payment Ids and those payments scheduleDate 
     static Set<Id> processedDepositReminderPaymentIds = new Set<Id>(); 
     static Set<Id> processedCompletedPaymentIds = new Set<Id>(); 
     Set<Id> completedPaymentOfferIds = new Set<Id>(); //Set of Offer Id which has completed payments
@@ -46,6 +46,7 @@ public class PaymentHandler extends TriggerHandler {
 
     Id draftRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Draft').getRecordTypeId();
     Id settlementRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Settlement').getRecordTypeId();
+    Id feeRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Fee').getRecordTypeId();
     
     public override void beforeInsert() {
         
@@ -141,9 +142,9 @@ public class PaymentHandler extends TriggerHandler {
                 // If Transaction status is changed to Completed, collecting the paymentId to update the program Phase and progress
                 collectCompletedPaymentProgramIds(newPayment, oldPaymentMap.get(newPayment.Id));
                 // collect payment Ids of Cancelled payments to delete the existing tasks under those payments
-                // collectCancelledPaymentIds(newPayment, oldPaymentMap.get(newPayment.Id));
+                collectCancelledPaymentIds(newPayment, oldPaymentMap.get(newPayment.Id));
                 // collect payment Ids and schedule date of schedule date updated payments to update the existing tasks activity date under those payments
-                // collectscheduleDateUpdatedPaymentIds(newPayment, oldPaymentMap.get(newPayment.Id));
+                collectscheduleDateUpdatedPaymentIds(newPayment, oldPaymentMap.get(newPayment.Id));
                 // collect payment Ids of Verbal Authorization Received payments to Create Group tasks under those payments and assigns it to Payment Authorization Queue
                 collectVerbalAuthPaymentIds(newPayment, oldPaymentMap.get(newPayment.Id));
                 // Collect Program Ids to update next Draft Payment date
@@ -164,12 +165,12 @@ public class PaymentHandler extends TriggerHandler {
             // updates program with Complete % and Phase
             updateProgramPhaseAndProgress();  
         }
-        /*if(cancelledPaymentIds.isEmpty() == false
+        if(cancelledPaymentIds.isEmpty() == false
             || updatedIdscheduleDateMap.isEmpty() == false) {
             // When a payment was cancelled, We delete the task to skip them from Batch processing it
             // or schedule date changed, We change the Task activity date. 
             PaymentHandler.updateDeleteTask(cancelledPaymentIds, updatedIdscheduleDateMap);
-        }*/
+        }
         if(verbalAuthRecivedPaymentProgramIds.isEmpty() == false) {
             //creates a Group tasks for Verbal Authorization and assigns it to Payment Authorization Queue
             createVerbalAuthGroupTask(); 
@@ -280,28 +281,30 @@ public class PaymentHandler extends TriggerHandler {
     */
     public void collectcompletedPaymentOfferIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
         
-        if(newPayment.RecordTypeId == settlementRecordTypeId
+        if(newPayment.nu_dse__Offer__c != null
+            && (newPayment.RecordTypeId == settlementRecordTypeId
+                || (newPayment.RecordTypeId == feeRecordTypeId 
+                    && newPayment.nu_dse__Payment_Type__c == 'Fee Withdrawal'))
             && (newPayment.nu_dse__Transaction_Status__c == 'Completed'
                 || newPayment.nu_dse__Transaction_Status__c == 'Cleared')
-            && newPayment.nu_dse__Offer__c != null
             && processedCompletedPaymentIds.contains(newPayment.Id) == false
             && (Trigger.isInsert 
                 || newPayment.nu_dse__Transaction_Status__c != oldPayment.nu_dse__Transaction_Status__c)){
             completedPaymentOfferIds.add(newPayment.nu_dse__Offer__c);   
-            processedCompletedPaymentIds.add(newPayment.nu_dse__Offer__c);
+            processedCompletedPaymentIds.add(newPayment.Id);
         }
     }
     //If nu_dse__Transaction_Status__c changes to Cancelled, we collect paymentIds to delete the Tasks under the payment
-    /*public void collectCancelledPaymentIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
+    public void collectCancelledPaymentIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
         if(newPayment.nu_dse__Transaction_Status__c == 'Cancelled'
             && oldPayment.nu_dse__Transaction_Status__c != newPayment.nu_dse__Transaction_Status__c
             && processedDepositReminderPaymentIds.contains(newPayment.Id) == false) {
             cancelledPaymentIds.add(newPayment.Id);
             processedDepositReminderPaymentIds.add(newPayment.Id);
         }
-    }*/
+    }
     //If nu_dse__Schedule_date__c updates, we collect paymentIds and Schedule date to update the Tasks activity date under the payment
-    /*public void collectscheduleDateUpdatedPaymentIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
+    public void collectscheduleDateUpdatedPaymentIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
         if(newPayment.RecordTypeId == draftRecordTypeId
             && (newPayment.nu_dse__Transaction_Status__c == 'Pending' 
                 || newPayment.nu_dse__Transaction_Status__c == 'Scheduled')
@@ -311,7 +314,7 @@ public class PaymentHandler extends TriggerHandler {
             updatedIdscheduleDateMap.put(newPayment.Id, newPayment.nu_dse__Schedule_date__c);
             processedDepositReminderPaymentIds.add(newPayment.Id);
         }
-    }*/
+    }
     //If nu_dse__Transaction_Status__c changes to Failed, we collect paymentIds to Create the Group Tasks under the payment
     public void collectVerbalAuthPaymentIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
         if(newPayment.nu_dse__Offer__c != null 
@@ -613,7 +616,7 @@ public class PaymentHandler extends TriggerHandler {
 
     // for all cancelled payments, deleting child tasks
     // and schedule date changed, Updating child Tasks activity date. 
-    /*@future
+    @future
     public static void updateDeleteTask(Set<Id> cancelledPaymentIds, Map<Id, Date> updatedIdscheduleDateMap) {
 
         List<Task> taskToDeleteList = new List<Task>(); // Delete the Task when Payment was cancelled
@@ -622,6 +625,7 @@ public class PaymentHandler extends TriggerHandler {
         Map<Id, Date> prospectIdSMSTaskMaxSchDateMap = new Map<Id, Date>();
         Set<Id> EmailPaymentIdSet = new Set<Id>();
         Set<Id> SMSPaymentIdSet = new Set<Id>();
+        List<nu_dse__Error_Log__c> errLogsToInsert = new List<nu_dse__Error_Log__c>();
 
         for(Deposit_Reminder_Configuration__mdt depositReminderConfig : [SELECT Padding_Days__c, Sequence_number__c 
                                                                          FROM Deposit_Reminder_Configuration__mdt
@@ -687,7 +691,40 @@ public class PaymentHandler extends TriggerHandler {
                 }
             }
         }
-        upsert taskToUpsertMap.values() Unique_Identifier__c; // finally upsertng tasks based on Unique_Identifier__c field
-        delete taskToDeleteList; // delete the cancelled payment related tasks list
-    }*/
+
+        List<Task> taskToUpsertList = new List<Task>();
+        taskToUpsertList.addAll(taskToUpsertMap.values());
+        Integer count = 0;
+        for (Database.UpsertResult dmlResult : Database.upsert(taskToUpsertList, Task.Fields.Unique_Identifier__c, false)) {
+
+            if (dmlResult.isSuccess() == false) {
+                nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(nu_dse__Class_Method__c = 'PaymentHandler.updateDeleteTask[Update]',nu_dse__Error_Causing_Record_Id__c = String.valueOf(taskToUpsertList[count].Id), nu_dse__User_Context__c = UserInfo.getName());
+
+                errLog.nu_dse__Message__c = '';
+                for (Database.Error error: dmlResult.getErrors()) {
+                    errLog.nu_dse__Message__c += error.getMessage();
+                }
+                errLogsToInsert.add(errLog);
+            }
+            count++;
+        }
+        count = 0;
+        for (Database.DeleteResult dmlResult : Database.delete(taskToDeleteList, false)) {
+
+            if (dmlResult.isSuccess() == false) {
+                nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(nu_dse__Class_Method__c = 'PaymentHandler.updateDeleteTask[Delete]',nu_dse__Error_Causing_Record_Id__c = String.valueOf(taskToDeleteList[count].Id), nu_dse__User_Context__c = UserInfo.getName());
+
+                errLog.nu_dse__Message__c = '';
+                for (Database.Error error: dmlResult.getErrors()) {
+                    errLog.nu_dse__Message__c += error.getMessage();
+                }
+                errLogsToInsert.add(errLog);
+            }
+            count++;
+        }
+
+        //errLogsToInsert.addAll(taskToUpsertMap.values(), 'Upsert'); // finally upsertng tasks based on Unique_Identifier__c field
+        // errLogsToInsert.addAll(taskToDeleteList, 'Delete'); // delete the cancelled payment related tasks list
+        insert errLogsToInsert;
+    }
 }

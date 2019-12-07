@@ -66,7 +66,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
         if(programIds != null && programIds.isEmpty() == false) {
             queryStr += ' AND Id IN :programIds';
         }
-
+        queryStr += ' ORDER BY nu_dse__Payment_Frequency__c DESC, nu_dse__Program_Length__c DESC';
         return Database.getQueryLocator(queryStr);
     }
     public void execute(Database.BatchableContext BC, List<nu_dse__Program__c> scope) {
@@ -74,7 +74,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
         try {
             
             Set<Id> recordTypeIds = new Set<Id> {draftRecordTypeId, settlementRecordTypeId, feeRecordTypeId};
-            Date futureEstimateDate = system.today().toStartOfMonth().addMonths(12).addDays(-1); 
+            Date futureEstimateDate = system.today().toStartOfMonth().addMonths(36).addDays(-1); 
             
             Map<Id,nu_dse__Program__c> programIdsMap = new Map<Id,nu_dse__Program__c>(scope);
 
