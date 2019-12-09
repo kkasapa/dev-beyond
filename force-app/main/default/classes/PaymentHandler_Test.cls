@@ -164,7 +164,7 @@ public class PaymentHandler_Test {
         }
     }
     
-    /*public static testmethod void DarthMaulCancelPaymentReminders_Updatetest() {
+    public static testmethod void DarthMaulCancelPaymentReminders_Updatetest() {
     
         List<nu_dse__Payment__c> paymentsList = [SELECT Id, nu_dse__Transaction_Status__c, nu_dse__Program__c, nu_dse__Dont_Consider__c 
                                                  FROM nu_dse__Payment__c WHERE nu_dse__Dont_Consider__c = false];
@@ -180,7 +180,7 @@ public class PaymentHandler_Test {
             List<Task> taskList = [SELECT Id, Status FROM Task WHERE WhatId = :paymentsList[0].Id];
             System.assert(taskList.isEmpty() == true);
         }
-    } */
+    } 
     
      public static testmethod void updateProgramNextDraftDate_Updatetest() {
      
@@ -204,7 +204,7 @@ public class PaymentHandler_Test {
          System.assertEquals(null, completedProgramList[0].Next_Draft_Date__c);
      }
 
-     /*static testMethod void taskActivityDateTest(){
+     static testMethod void taskActivityDateTest(){
         
         nu_dse__Payment__c paymentInst = [SELECT Id, nu_dse__Schedule_Date__c
                                           FROM nu_dse__Payment__c LIMIT 1];
@@ -235,7 +235,7 @@ public class PaymentHandler_Test {
         List<Task> updatedTaskList = [SELECT Id, ActivityDate FROM Task 
                                       WHERE WhatId = :paymentInst.Id];
         System.assertEquals(system.today().addDays(5), updatedTaskList[0].ActivityDate);  
-    }*/
+    }
 
     public static testmethod void paymentCompletedDate_UpdateTest() {
         

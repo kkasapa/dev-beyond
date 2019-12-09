@@ -625,6 +625,7 @@ public class PaymentHandler extends TriggerHandler {
         Map<Id, Date> prospectIdSMSTaskMaxSchDateMap = new Map<Id, Date>();
         Set<Id> EmailPaymentIdSet = new Set<Id>();
         Set<Id> SMSPaymentIdSet = new Set<Id>();
+        List<nu_dse__Error_Log__c> errLogsToInsert = new List<nu_dse__Error_Log__c>();
 
         for(Deposit_Reminder_Configuration__mdt depositReminderConfig : [SELECT Padding_Days__c, Sequence_number__c 
                                                                          FROM Deposit_Reminder_Configuration__mdt
@@ -690,7 +691,40 @@ public class PaymentHandler extends TriggerHandler {
                 }
             }
         }
-        upsert taskToUpsertMap.values() Unique_Identifier__c; // finally upsertng tasks based on Unique_Identifier__c field
-        delete taskToDeleteList; // delete the cancelled payment related tasks list
+
+        List<Task> taskToUpsertList = new List<Task>();
+        taskToUpsertList.addAll(taskToUpsertMap.values());
+        Integer count = 0;
+        for (Database.UpsertResult dmlResult : Database.upsert(taskToUpsertList, Task.Fields.Unique_Identifier__c, false)) {
+
+            if (dmlResult.isSuccess() == false) {
+                nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(nu_dse__Class_Method__c = 'PaymentHandler.updateDeleteTask[Update]',nu_dse__Error_Causing_Record_Id__c = String.valueOf(taskToUpsertList[count].Id), nu_dse__User_Context__c = UserInfo.getName());
+
+                errLog.nu_dse__Message__c = '';
+                for (Database.Error error: dmlResult.getErrors()) {
+                    errLog.nu_dse__Message__c += error.getMessage();
+                }
+                errLogsToInsert.add(errLog);
+            }
+            count++;
+        }
+        count = 0;
+        for (Database.DeleteResult dmlResult : Database.delete(taskToDeleteList, false)) {
+
+            if (dmlResult.isSuccess() == false) {
+                nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(nu_dse__Class_Method__c = 'PaymentHandler.updateDeleteTask[Delete]',nu_dse__Error_Causing_Record_Id__c = String.valueOf(taskToDeleteList[count].Id), nu_dse__User_Context__c = UserInfo.getName());
+
+                errLog.nu_dse__Message__c = '';
+                for (Database.Error error: dmlResult.getErrors()) {
+                    errLog.nu_dse__Message__c += error.getMessage();
+                }
+                errLogsToInsert.add(errLog);
+            }
+            count++;
+        }
+
+        //errLogsToInsert.addAll(taskToUpsertMap.values(), 'Upsert'); // finally upsertng tasks based on Unique_Identifier__c field
+        // errLogsToInsert.addAll(taskToDeleteList, 'Delete'); // delete the cancelled payment related tasks list
+        insert errLogsToInsert;
     }
 }
