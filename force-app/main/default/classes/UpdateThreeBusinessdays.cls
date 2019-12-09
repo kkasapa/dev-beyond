@@ -1,13 +1,19 @@
 /*
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
-* Schedule Class for Updating Metadata field - Business_Days.Business_Days
+* Class for Updating Custom Setting. 
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 * @author         Avco Team - Karthik Kasapa <kkasapa@beyondfinance.com>
-* @created        Nov 2019
+* @created        Dec 2019
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
-global class Schedule_Batch_Holidays implements Schedulable {
-    global void execute(SchedulableContext SC) {
-        UpdateThreeBusinessdays.UpdateThreeBdays();
+public class UpdateThreeBusinessdays {
+    
+    public static  void UpdateThreeBdays(){
+      
+        BusinessDays__c Bst = BusinessDays__c.getOrgDefaults();
+        system.debug('I am BST'+Bst);
+        Bst.Three_Business_Days__c = Holidays.calculateNthWorkingDay(Date.Today(), 3);
+        update bst;
+        
     }
 }

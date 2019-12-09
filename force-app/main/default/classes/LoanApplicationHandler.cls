@@ -56,19 +56,5 @@ public class LoanApplicationHandler extends TriggerHandler {
         } catch (Exception e){
             system.debug('Exception caught: ' + e.getMessage());
         }
-    }
-    
-     // Calls Flow to Update Running Schedule
-    /* public void updateLoanEstimator(Loan_Application__c newLoanApplication, Loan_Application__c oldLoanApplication){
-        if (newLoanApplication.Estimated_Funded_Date__c != oldLoanApplication.Estimated_Funded_Date__c && Trigger.isUpdate){
-            Map<String, Object> params = new Map<String, Object>();
-        	params.put('LoanApplicationId', newLoanApplication.Id);
-        	try {
-            	Flow.Interview.Loan_Running_Schedule Loan_Running_Schedule = new Flow.Interview.Loan_Running_Schedule(params);
-            	Loan_Running_Schedule.start();
-        	} catch (Exception e){
-            	system.debug('Exception caught: ' + e.getMessage());
-        	}
-        }
-    } */    
+    }   
 }

@@ -228,14 +228,23 @@ public class TradelineHandler extends TriggerHandler {
     
     public void loanAppCalcUpdate(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
         
-    	if((oldTradeline.Creditor_Payments_Made__c != newTradeline.Creditor_Payments_Made__c
-        	|| oldTradeline.Creditor_Payments_Outstanding__c != newTradeline.Creditor_Payments_Outstanding__c
-            || oldTradeline.Fees_Collected__c != newTradeline.Fees_Collected__c
+    	if((oldTradeline.Creditor_Payments_Outstanding__c != newTradeline.Creditor_Payments_Outstanding__c
             || oldTradeline.Fees_Outstanding__c != newTradeline.Fees_Outstanding__c)
-        	&& newTradeline.Loan_Application__c != ''){
-                //for (nu_dse__TradeLine__c loanId : [SELECT Loan_Application__c.Id FROM nu_dse__TradeLine__c WHERE Id = newTradeline.Id]){ 
-                    //futureFlowCall(newTradeline.Id);
-                //}
+        	&& newTradeline.Loan_Application__c != null){
+                Id LoanId = newTradeline.Loan_Application__c;
+                updateLoanCalcs(LoanId);
             }
+    }
+     public static void updateLoanCalcs(string LoanApplicationId){
+        System.debug('flow working');
+        Map<String, Object> params = new Map<String, Object>();
+        params.put('LoanApplicationId', LoanApplicationId);
+        try {
+            Flow.Interview.Update_Loan Update_Loan = new Flow.Interview.Update_Loan(params);
+            Update_Loan.start();
+            System.debug('after flow');
+        } catch (Exception e){
+            system.debug('Exception caught: ' + e.getMessage());
+        }
     }   
 }

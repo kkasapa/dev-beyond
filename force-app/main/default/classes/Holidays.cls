@@ -188,8 +188,7 @@ public class Holidays {
         return currentDate;
     }
     
-    // Digu for Business Days + 3
-    // 
+    // Checks for Sundays - For Nth BusinessDays 
     Public static Boolean CustomWeekend( String Day){
         if(dayOfTheWeekmask(day) == 1){
             return True;

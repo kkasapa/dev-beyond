@@ -1,11 +1,19 @@
-trigger DeleteFileFormS3 on AWS_Document__c (before insert, after delete) {
-    
-    if(Switch__c.getValues('Swith Off').Turn_Off__c == true){
-       
-        system.debug('I am Fired');
+trigger DeleteFileFormS3 on AWS_Document__c (before insert,after insert, after delete) {
+    string uName = userinfo.getName();
+    if(Switch__c.getValues('Swith Off').Turn_Off__c == true){       
+        system.debug('I am Fired');        
         if(trigger.isInsert){
-            AWSSplitPDFService Aws = New AWSSplitPDFService();
-           
+            AWSSplitPDFService Aws = New AWSSplitPDFService();           
+        }
+    }
+    
+    if(Trigger.isAfter){
+        if(Trigger.isInsert){
+            for(AWS_Document__c awsRecord : Trigger.new){
+                if(!awsRecord.createdFromAWS__c  && AWS_PDF_Split__c.getValues('Enrollment-Agreement').AWS_PDF_Name_Start__c ==  'AUTHORIZATION-SPAA-Enrollment-Agreement'){
+                    AWSTriggerHandler.splitPdf(awsRecord.id,uName);
+                }
+            }            
         }
     }
 

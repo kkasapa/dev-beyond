@@ -44,7 +44,10 @@ public without sharing class PaymentsCalcService {
                                                 nu_dse__Offer__r.nu_dse__TradeLine__c FROM nu_dse__Payments__r 
                                             WHERE RecordTypeId IN :recordTypeIds AND (nu_dse__Transaction_Status__c = 'Scheduled' 
                                                 OR nu_dse__Transaction_Status__c = 'In Progress' OR nu_dse__Transaction_Status__c = 'Completed' 
-                                                OR nu_dse__Transaction_Status__c = 'Cleared') 
+                                                OR nu_dse__Transaction_Status__c = 'Cleared' 
+                                                OR (nu_dse__Transaction_Status__c = 'Tentative' 
+                                                    AND (nu_dse__Offer__r.nu_dse__Status__c = '03-Offer Approved (Pre-payment setup)' 
+                                                         OR nu_dse__Offer__r.nu_dse__Status__c = '04-Ready for Payment Setup')))
                                             ORDER BY nu_dse__Schedule_Date__c ASC)
                                         FROM nu_dse__Program__c WHERE Id IN :programIds]) {
 
@@ -58,6 +61,10 @@ public without sharing class PaymentsCalcService {
             // Decimal programLowestAmount;
             //Date programLowestDate;
             
+            //Map<String, Decimal> estimatedMonthBalancesMap = new Map<String, Decimal>();
+            Map<Integer, EstimatedMonthBalance> estdMonthBalanceMap = new Map<Integer, EstimatedMonthBalance>(); 
+            //String firstPaymentMonthYear;
+
             Decimal estimateLastPaymentBal; // estimated balance as per the last processed payment 
             Date estimateLastPaymentDate; // estimated date as per the last processed payment
             Decimal endOfMonthLowestBalance; // lowest balance at the end of the month
@@ -110,50 +117,8 @@ public without sharing class PaymentsCalcService {
                     estimateLastPaymentBal = programBal;
                     estimateLastPaymentDate = payment.nu_dse__Schedule_Date__c;
 
-                    if(payment.nu_dse__Schedule_Date__c <= futureEstimateDate) {
-                        
-                        if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(1).addDays(-1)) {
-
-                            updateProgram.Estimated_Current_Month_Balance__c = programBal;
-                        
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(2).addDays(-1)) {
-
-                            updateProgram.Estimated_Month_2_Balance__c = programBal;
-
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(3).addDays(-1)) {
-
-                            updateProgram.Estimated_Month_3_Balance__c = programBal;
-
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(6).addDays(-1)) {
-
-                            updateProgram.Estimated_Month_6_Balance__c = programBal;
-
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(9).addDays(-1)) {
-
-                            updateProgram.Estimated_Month_9_Balance__c = programBal;
-
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(12).addDays(-1)) {
-
-                            updateProgram.Estimated_Month_12_Balance__c = programBal;
-
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(18).addDays(-1)) {
-
-                            updateProgram.Estimated_Month_18_Balance__c = programBal;
-
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(24).addDays(-1)) {
-
-                            updateProgram.Estimated_Month_24_Balance__c = programBal;
-
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(30).addDays(-1)) {
-
-                            updateProgram.Estimated_Month_30_Balance__c = programBal;
-
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(36).addDays(-1)) {
-
-                            updateProgram.Estimated_Month_36_Balance__c = programBal;
-
-                        } 
-                    }
+                    //assignes values to Map in recursive manner untill 60 months
+                    putMonth_BalToMap(estdMonthBalanceMap, 01, payment.nu_dse__Schedule_Date__c, programBal);
                 }
                 //calc on Tradeline and Offer
                 calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
@@ -202,8 +167,11 @@ public without sharing class PaymentsCalcService {
                 endOfMonthLowestBalDate = estimateLastPaymentDate;
             }
 
+            System.debug('estimatedMonthBalancesMap->'+estdMonthBalanceMap);
+            System.debug('estimatedMonthBalancesMap-JSON->'+ JSON.serialize(estdMonthBalanceMap));
             //final assignments as per the calc
-            updateProgram.Estimated_Current_Month_Balance__c = endOfMonthLowestBalance;
+            updateProgram.Estimated_Balances_RAW__c = JSON.serialize(estdMonthBalanceMap.values());
+            updateProgram.Estimated_Current_Month_Balance__c = estdMonthBalanceMap.get(01).balance;
             updateProgram.Estimated_lowest_balance_amount__c = endOfMonthLowestBalance;
             updateProgram.Estimated_lowest_balance_date__c = endOfMonthLowestBalDate;
             updateProgram.Estimated_Balance_Calculations_Timestamp__c = System.now();
@@ -268,6 +236,19 @@ public without sharing class PaymentsCalcService {
         }
     }
 
+    public static void putMonth_BalToMap(Map<Integer, EstimatedMonthBalance> estdMonthBalanceMap, Integer monthCount, Date scheduleDate, Decimal programBal) {
+        System.debug('start_monthCount->'+monthCount);
+        if(monthCount <= 60) {
+            if(scheduleDate <= system.today().toStartOfMonth().addMonths(monthCount).addDays(-1)) {
+
+                estdMonthBalanceMap.put(monthCount,new EstimatedMonthBalance(monthCount, scheduleDate, programBal));
+            } else {
+                monthCount += 1;
+                putMonth_BalToMap(estdMonthBalanceMap, monthCount, scheduleDate, programBal);
+            }
+        }
+        System.debug('end_monthCount->'+monthCount);
+    }
     public static PaymentCalcWrapper calcPaidOutstandingForCreditor(Set<Id> tradelineIds) {
 
         PaymentCalcWrapper paymentCalcWrap = new PaymentCalcWrapper();
@@ -475,6 +456,20 @@ public without sharing class PaymentsCalcService {
         return savingCalcSetting;
     }
 
+    //wrapper for Estimated balance calculations
+    public class EstimatedMonthBalance{
+        Integer monthOrder; 
+        Date monthDate;
+        Decimal balance;
+
+        public EstimatedMonthBalance(Integer monthOrderParam, Date monthDateParam, Decimal balanceParam) {
+            this.monthOrder = monthOrderParam;
+            this.monthDate = monthDateParam;
+            this.balance = balanceParam;
+        }
+    }
+
+    //wrapper classes for savings calculations
     public class PaymentCalcWrapper{
         public Map<Id, nu_dse__Program__c> programToUpdateMap = new Map<Id, nu_dse__Program__c>();
         public Map<Id, nu_dse__TradeLine__c> tradelineIdRecMap = new Map<Id, nu_dse__TradeLine__c>();

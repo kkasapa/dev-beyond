@@ -1,5 +1,14 @@
+/*
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+* Class for Updating Metadata - Implements Metadata.DeployCallback. 
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+* @author         Avco Team - Karthik Kasapa <kkasapa@beyondfinance.com>
+* @created        Nov 2019
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+*/
 public class UpdateMetadataUtil implements Metadata.DeployCallback {
     
+    //Implement handleResult method
     public void handleResult(Metadata.DeployResult result, Metadata.DeployCallbackContext context) {
         if (result.status == Metadata.DeployStatus.Succeeded) {
             System.debug(' success : '+ result);
@@ -16,13 +25,11 @@ public class UpdateMetadataUtil implements Metadata.DeployCallback {
         for(String key : fieldWithValuesMap.keySet()){
             Metadata.CustomMetadataValue customField = new Metadata.CustomMetadataValue();
             customField.field = key;
-            system.debug('Iam here before create Custom Field'+customField.field);
             customField.value = fieldWithValuesMap.get(key);
-            system.debug('Iam here before create'+customField.value);
-           
             customMetadata.values.add(customField);
         }
         
+        //Add the Custom Metadata in the DeployContainer using addMetadata method
         Metadata.DeployContainer mdContainer = new Metadata.DeployContainer();
         mdContainer.addMetadata(customMetadata);
         UpdateMetadataUtil callback = new UpdateMetadataUtil();
