@@ -64,10 +64,10 @@ public without sharing class PaymentsCalcService {
             //Map<String, Decimal> estimatedMonthBalancesMap = new Map<String, Decimal>();
             Map<Integer, EstimatedMonthBalance> estdMonthBalanceMap = new Map<Integer, EstimatedMonthBalance>(); 
             //String firstPaymentMonthYear;
-            Integer lastMonthCount = 1;
+            Integer previousMonthCount = 1;
 
-            Decimal estimateLastPaymentBal; // estimated balance as per the last processed payment 
-            Date estimateLastPaymentDate; // estimated date as per the last processed payment
+            Decimal estimatePreviousPaymentBal; // estimated balance as per the previously processed payment 
+            Date estimatePreviousPaymentDate; // estimated date as per the previously processed payment
             Decimal endOfMonthLowestBalance; // lowest balance at the end of the month
             Date endOfMonthLowestBalDate; // date of last payment in the month that has lowest balance at the end
             String paymentMonthIdentifier; // a string identifier for checking the last payment in the month, this id will be same for all payments in a month
@@ -76,10 +76,10 @@ public without sharing class PaymentsCalcService {
                 programBal = program.nu_dse__Trust_Account_Balance__c;
                 // programLowestAmount = program.nu_dse__Trust_Account_Balance__c; // initially the current balance will be the lowest
                 // programLowestDate = system.today(); // start of the calc, lowest amount and date will be current balance and today
-                estimateLastPaymentBal = program.nu_dse__Trust_Account_Balance__c;  // initially the current balance will be the lowest
+                estimatePreviousPaymentBal = program.nu_dse__Trust_Account_Balance__c;  // initially the current balance will be the lowest
             }
             updateProgram.Estimated_Current_Month_Balance__c = programBal;
-            estimateLastPaymentDate = system.today();
+            estimatePreviousPaymentDate = system.today();
             paymentMonthIdentifier = system.today().month() + '-' + system.today().year(); // string UID for checking the last payment of month
             
             for(nu_dse__Payment__c payment : program.nu_dse__Payments__r) {
@@ -107,27 +107,26 @@ public without sharing class PaymentsCalcService {
                     // if the current payment processed is first payment of the month and the last payment is lowest amonge the schedule 
                     // then we are reserving that as lowest month end balance at this point
                     if(payment.nu_dse__Schedule_Date__c.month() +'-'+ payment.nu_dse__Schedule_Date__c.year() != paymentMonthIdentifier
-                        && estimateLastPaymentBal != null 
-                        && (endOfMonthLowestBalance == null || estimateLastPaymentBal < endOfMonthLowestBalance)) {  
+                        && estimatePreviousPaymentBal != null 
+                        && (endOfMonthLowestBalance == null || estimatePreviousPaymentBal < endOfMonthLowestBalance)) {  
                         
-                        endOfMonthLowestBalance = estimateLastPaymentBal;
-                        endOfMonthLowestBalDate = estimateLastPaymentDate;
+                        endOfMonthLowestBalance = estimatePreviousPaymentBal;
+                        endOfMonthLowestBalDate = estimatePreviousPaymentDate;
                         paymentMonthIdentifier = payment.nu_dse__Schedule_Date__c.month() +'-'+ payment.nu_dse__Schedule_Date__c.year();
                     }
                     
-                    estimateLastPaymentBal = programBal;
-                    estimateLastPaymentDate = payment.nu_dse__Schedule_Date__c;
+                    estimatePreviousPaymentBal = programBal;
+                    estimatePreviousPaymentDate = payment.nu_dse__Schedule_Date__c;
 
-                    //assignes values to Map in recursive manner untill 60 months
-                    Integer paymentMonthCount =  system.today().monthsBetween(payment.nu_dse__Schedule_Date__c) + 1; // check if using start/end month works, because if we are at 31 of month we should not count on extra or less. 
-                    for(Integer i = lastMonthCount+1; i < paymentMonthCount; i++) {
+                    Integer paymentMonthCount =  system.today().monthsBetween(payment.nu_dse__Schedule_Date__c) + 1; 
+                    for(Integer i = previousMonthCount+1; i < paymentMonthCount; i++) {
 
-                        EstimatedMonthBalance lastMonthBal = estdMonthBalanceMap.get(lastMonthCount);
-                        estdMonthBalanceMap.put(i, new EstimatedMonthBalance(i, lastMonthBal.monthDate, lastMonthBal.balance));
+                        EstimatedMonthBalance previousMonthBal = estdMonthBalanceMap.get(previousMonthCount);
+                        estdMonthBalanceMap.put(i, new EstimatedMonthBalance(i, previousMonthBal.monthDate, previousMonthBal.balance));
                     }
 
                     estdMonthBalanceMap.put(paymentMonthCount, new EstimatedMonthBalance(paymentMonthCount, payment.nu_dse__Schedule_Date__c, programBal));
-                    lastMonthCount = paymentMonthCount;
+                    previousMonthCount = paymentMonthCount;
                 }
                 //calc on Tradeline and Offer
                 calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
@@ -170,10 +169,10 @@ public without sharing class PaymentsCalcService {
                 updateProgram.Estimated_Month_36_Balance__c = updateProgram.Estimated_Month_30_Balance__c;
             }
             
-            if(estimateLastPaymentBal != null 
-                && (endOfMonthLowestBalance == null || estimateLastPaymentBal < endOfMonthLowestBalance)) {
-                endOfMonthLowestBalance = estimateLastPaymentBal;
-                endOfMonthLowestBalDate = estimateLastPaymentDate;
+            if(estimatePreviousPaymentBal != null 
+                && (endOfMonthLowestBalance == null || estimatePreviousPaymentBal < endOfMonthLowestBalance)) {
+                endOfMonthLowestBalance = estimatePreviousPaymentBal;
+                endOfMonthLowestBalDate = estimatePreviousPaymentDate;
             }
 
             System.debug('estimatedMonthBalancesMap->'+estdMonthBalanceMap);
@@ -258,7 +257,10 @@ public without sharing class PaymentsCalcService {
                                                 AND (nu_dse__Transaction_Status__c = 'Scheduled' 
                                                     OR nu_dse__Transaction_Status__c = 'In Progress' 
                                                     OR nu_dse__Transaction_Status__c = 'Completed' 
-                                                    OR nu_dse__Transaction_Status__c = 'Cleared') 
+                                                    OR nu_dse__Transaction_Status__c = 'Cleared'
+                                                    OR (nu_dse__Transaction_Status__c = 'Tentative' 
+                                                    	AND (nu_dse__Offer__r.nu_dse__Status__c = '03-Offer Approved (Pre-payment setup)' 
+                                                        	OR nu_dse__Offer__r.nu_dse__Status__c = '04-Ready for Payment Setup'))) 
                                             ORDER BY nu_dse__Schedule_Date__c ASC]) {
             calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
         }

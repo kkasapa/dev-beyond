@@ -1,7 +1,7 @@
 @isTest
 public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
     
-    //setting up data for running tests
+    //setting up data for running tests 
     @testSetup static void dataCreator() {
         
         Id accRecordTypeId = Schema.SObjectType.Account.getRecordTypeInfosByName().get('Client').getRecordTypeId();

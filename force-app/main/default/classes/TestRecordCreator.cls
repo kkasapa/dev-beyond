@@ -166,6 +166,13 @@ public with sharing class TestRecordCreator {
         return feeItem;
     }
     
+            public static Alias__c createAlias(Id OriginalCreditor){
+        Alias__c alObj = new Alias__c(
+            Original_creditor__c = OriginalCreditor
+        );
+        return alObj;           
+    }
+    
     public static nu_dse__Group_Task__c createGroupTask(Id relatedToId) {
     
         nu_dse__Group_Task__c groupTaskRec = new nu_dse__Group_Task__c(nu_dse__Related_To__c = relatedToId, nu_dse__Subject__c = 'Test', nu_dse__Description__c = 'Test Description', nu_dse__ActivityDate__c = system.today());

@@ -4,6 +4,10 @@ public class Schedule_ProgramEstimatedBalanceUpdate implements Schedulable {
     Set<Id> filteredProgramIdSet;
     Integer programNumStartIndex, programNumEndIndex;
 
+    public Schedule_ProgramEstimatedBalanceUpdate() {
+
+    }
+    
     public Schedule_ProgramEstimatedBalanceUpdate(Integer startIndex, Integer endIndex) {
 
         if(startIndex != null && endIndex != null && startIndex < endIndex) {

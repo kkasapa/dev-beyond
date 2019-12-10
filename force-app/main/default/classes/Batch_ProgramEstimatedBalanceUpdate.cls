@@ -33,6 +33,9 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
     String processStartTime;
     Integer programNumStartIndex, programNumEndIndex;
 
+    public Batch_ProgramEstimatedBalanceUpdate() {
+
+    }
     
     public Batch_ProgramEstimatedBalanceUpdate(Integer startIndex, Integer endIndex) {
 
@@ -42,7 +45,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
             programNumEndIndex = endIndex;
 
         } else {
-             throw new CustomException('Incorrect program Number StartIndex and EndIndex value');
+             throw new CustomException('Incorrect program Number StartIndex and EndIndex value'); // needs to be changed
         }
     }
     //configurable contructor to run for set of programs
