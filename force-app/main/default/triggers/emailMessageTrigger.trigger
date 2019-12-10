@@ -1,3 +1,4 @@
-trigger emailMessageTrigger on EmailMessage (before insert) {
+trigger emailMessageTrigger on EmailMessage (after insert) {
 
+    new EmailMessageHandler().run();
 }

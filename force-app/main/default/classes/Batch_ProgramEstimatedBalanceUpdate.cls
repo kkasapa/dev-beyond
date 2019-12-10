@@ -31,9 +31,19 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
             totalTradelinesCount, updatedTradelinesCount, failedTradelinesCount,
             totalOffersCount, updatedOffersCount, failedOffersCount;
     String processStartTime;
-    
-    public Batch_ProgramEstimatedBalanceUpdate() {
+    Integer programNumStartIndex, programNumEndIndex;
 
+    
+    public Batch_ProgramEstimatedBalanceUpdate(Integer startIndex, Integer endIndex) {
+
+        if(startIndex != null && endIndex != null && startIndex < endIndex) {
+
+            programNumStartIndex = startIndex;
+            programNumEndIndex = endIndex;
+
+        } else {
+             throw new CustomException('Incorrect program Number StartIndex and EndIndex value');
+        }
     }
     //configurable contructor to run for set of programs
     public Batch_ProgramEstimatedBalanceUpdate(Set<Id> programIdSet) {
@@ -61,12 +71,18 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
             programStatus = new Set<String>(progStatusConfig.Included_Statuses__c.split(',', 0));
         } 
 
+
+
         String queryStr = 'SELECT Id FROM nu_dse__Program__c WHERE nu_dse__Program_Status__c IN :programStatus';
         
         if(programIds != null && programIds.isEmpty() == false) {
             queryStr += ' AND Id IN :programIds';
+        } else {
+
+            queryStr += ' AND Term_Digit__c >= \''+ programNumStartIndex +'\' AND Term_Digit__c <= \'' + programNumEndIndex +'\'';
         }
         queryStr += ' ORDER BY nu_dse__Payment_Frequency__c DESC, nu_dse__Program_Length__c DESC';
+        system.debug('queryStr-->'+queryStr);
         return Database.getQueryLocator(queryStr);
     }
     public void execute(Database.BatchableContext BC, List<nu_dse__Program__c> scope) {

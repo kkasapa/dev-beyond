@@ -64,6 +64,7 @@ public without sharing class PaymentsCalcService {
             //Map<String, Decimal> estimatedMonthBalancesMap = new Map<String, Decimal>();
             Map<Integer, EstimatedMonthBalance> estdMonthBalanceMap = new Map<Integer, EstimatedMonthBalance>(); 
             //String firstPaymentMonthYear;
+            Integer lastMonthCount = 1;
 
             Decimal estimateLastPaymentBal; // estimated balance as per the last processed payment 
             Date estimateLastPaymentDate; // estimated date as per the last processed payment
@@ -118,7 +119,15 @@ public without sharing class PaymentsCalcService {
                     estimateLastPaymentDate = payment.nu_dse__Schedule_Date__c;
 
                     //assignes values to Map in recursive manner untill 60 months
-                    putMonth_BalToMap(estdMonthBalanceMap, 01, payment.nu_dse__Schedule_Date__c, programBal);
+                    Integer paymentMonthCount =  system.today().monthsBetween(payment.nu_dse__Schedule_Date__c) + 1; // check if using start/end month works, because if we are at 31 of month we should not count on extra or less. 
+                    for(Integer i = lastMonthCount+1; i < paymentMonthCount; i++) {
+
+                        EstimatedMonthBalance lastMonthBal = estdMonthBalanceMap.get(lastMonthCount);
+                        estdMonthBalanceMap.put(i, new EstimatedMonthBalance(i, lastMonthBal.monthDate, lastMonthBal.balance));
+                    }
+
+                    estdMonthBalanceMap.put(paymentMonthCount, new EstimatedMonthBalance(paymentMonthCount, payment.nu_dse__Schedule_Date__c, programBal));
+                    lastMonthCount = paymentMonthCount;
                 }
                 //calc on Tradeline and Offer
                 calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
@@ -236,19 +245,6 @@ public without sharing class PaymentsCalcService {
         }
     }
 
-    public static void putMonth_BalToMap(Map<Integer, EstimatedMonthBalance> estdMonthBalanceMap, Integer monthCount, Date scheduleDate, Decimal programBal) {
-        System.debug('start_monthCount->'+monthCount);
-        if(monthCount <= 60) {
-            if(scheduleDate <= system.today().toStartOfMonth().addMonths(monthCount).addDays(-1)) {
-
-                estdMonthBalanceMap.put(monthCount,new EstimatedMonthBalance(monthCount, scheduleDate, programBal));
-            } else {
-                monthCount += 1;
-                putMonth_BalToMap(estdMonthBalanceMap, monthCount, scheduleDate, programBal);
-            }
-        }
-        System.debug('end_monthCount->'+monthCount);
-    }
     public static PaymentCalcWrapper calcPaidOutstandingForCreditor(Set<Id> tradelineIds) {
 
         PaymentCalcWrapper paymentCalcWrap = new PaymentCalcWrapper();
