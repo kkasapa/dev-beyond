@@ -7,7 +7,8 @@
 * @maintainedBy   Peter Le  <ple@beyondfinance.com>
 * @version        1.0
 * @created        2019-10-23
-* @modified       2019-10-28
+* @modified       2019-12-9
+  @description	  Updated updateLoan Method by reducing OR statements comparing Status' to checking Active Lending Client.
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
 public class LoanApplicationHandler extends TriggerHandler {
@@ -31,13 +32,9 @@ public class LoanApplicationHandler extends TriggerHandler {
     
     // Calls Flow to Update Loan Application Record once Loan is Status = 01-Interested || 02-UW Pending || 04-Preapproved
     public void updateLoan(Loan_Application__c newLoanApplication, Loan_Application__c oldLoanApplication){
-        if (((newLoanApplication.Application_Status__c == '01-Interested'
-              || newLoanApplication.Application_Status__c == '02-UW_Pending'
-              || newLoanApplication.Application_Status__c == '04-Preapproved') 
+        if ((newLoanApplication.Active_Lending_Client__c == true
               && newLoanApplication.Application_Status__c != oldLoanApplication.Application_Status__c)
-              || ((newLoanApplication.Application_Status__c == '01-Interested'
-                 || newLoanApplication.Application_Status__c == '02-UW_Pending'
-                 || newLoanApplication.Application_Status__c == '04-Preapproved')
+              || (newLoanApplication.Active_Lending_Client__c == true
                 && newLoanApplication.Re_Calculate_Loan_Operations_Details__c == true)){
                     System.debug('before flow');
                     updateLoanCalcs(newLoanApplication.Id);

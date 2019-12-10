@@ -29,7 +29,7 @@ public class AccountTrigger_Test implements HttpCalloutMock {
         insert progList;
     }
 
-     @isTest
+    @isTest
     public static void testPlatformEventpublish() {
         Test.startTest();
         Test.setMock(HttpCalloutMock.class, new AccountTrigger_Test());
@@ -58,6 +58,26 @@ public class AccountTrigger_Test implements HttpCalloutMock {
         response.setBody('{"SendMessageResponse":{"ResponseMetadata":{"RequestId":"5a237970-f9ad-5a48-a6ec-2cbd2e11fefa"},"SendMessageResult":{"MD5OfMessageAttributes":"98a205eeef15db2f82c491e26907f91e","MD5OfMessageBody":"786329b34bbe53ab40a54a19cd597f2d","MessageId":"1a757e5d-b424-4b0c-bb0b-efcaeb0969e0","SequenceNumber":null}}}');
         response.setStatusCode(200);
         return response; 
+    }
+    
+    @isTest
+    public static void updateAlias() {
+        Test.startTest();
+        Id clientAccountRecId = Schema.SObjectType.Account.getRecordTypeInfosByName().get('Creditor').getRecordTypeId();
+        Account parentAct = TestRecordCreator.createCreditorAccount(clientAccountRecId);
+        insert parentAct;
+        Account ChildAct = TestRecordCreator.createCreditorAccount(clientAccountRecId);
+        insert ChildAct;
+        
+        Alias__c alObj = new Alias__c(
+            Original_creditor__c = ChildAct.Id
+        );
+        insert alObj;
+        
+        ChildAct.ParentId = parentAct.Id;
+        update ChildAct;
+        
+        Test.stopTest();
     }
 
 }

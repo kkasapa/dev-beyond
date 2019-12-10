@@ -9,7 +9,7 @@
 * @maintainedBy   Ashwin Bretto   <abretto@selastech.com>
 * @version        1.0
 * @created        2019-11-08
-* @modified       2019-11-08
+* @modified       2019-12-10
 * @logic          Program:
                   Balance = sum of all drafts(deposits.nu_dse__Amount) in the month - sum of all settlements(withrawals.nu_dse__Total_Amount__c) in the month - sum of all Fee(Fee withdrawals.nu_dse__Total_Amount__c) 
                   Tradeline:
@@ -26,17 +26,25 @@
 
 public without sharing class PaymentsCalcService {
 
-    //public static Set<String> programStatus = new Set<String>{'New Client', 'Active'};
-    public static Date futureEstimateDate = system.today().toStartOfMonth().addMonths(36).addDays(-1);
-
     public static Id draftRecordTypeId = getPaymentRecordTypeId('Draft'); // recordType Id for draft
     public static Id feeRecordTypeId = getPaymentRecordTypeId('Fee');  // recordType Id for fee
     public static Id settlementRecordTypeId = getPaymentRecordTypeId('Settlement');  // recordType Id for settlement
 
     public static PaymentCalcWrapper calcProgramEstimatedBalance(Set<Id> programIds) {
 
-        PaymentCalcWrapper paymentCalcWrap = new PaymentCalcWrapper();
+        PaymentCalcWrapper paymentCalcWrap = new PaymentCalcWrapper(); //wrapper instance for holding the calc instances and can be processed later in seperate DML
         Set<Id> recordTypeIds = new Set<Id> {draftRecordTypeId, settlementRecordTypeId, feeRecordTypeId};
+        // Map for month count and Program field name, for assigning values to fields based on the month
+        Map<Integer, String> monthCountFieldNameMap = new Map<Integer, String>{1 => 'Estimated_Current_Month_Balance__c', 2 => 'Estimated_Month_2_Balance__c',
+            3 => 'Estimated_Month_3_Balance__c', 4 => 'Estimated_Month_6_Balance__c', 5 => 'Estimated_Month_6_Balance__c', 6 => 'Estimated_Month_6_Balance__c', 
+            7 => 'Estimated_Month_9_Balance__c', 8 => 'Estimated_Month_9_Balance__c', 9 => 'Estimated_Month_9_Balance__c', 10 => 'Estimated_Month_12_Balance__c',
+            11 => 'Estimated_Month_12_Balance__c', 12 => 'Estimated_Month_12_Balance__c', 13 => 'Estimated_Month_18_Balance__c', 14 => 'Estimated_Month_18_Balance__c',
+            15 => 'Estimated_Month_18_Balance__c', 16 => 'Estimated_Month_18_Balance__c', 17 => 'Estimated_Month_18_Balance__c', 18 => 'Estimated_Month_18_Balance__c',
+            19 => 'Estimated_Month_24_Balance__c', 20 => 'Estimated_Month_24_Balance__c', 21 => 'Estimated_Month_24_Balance__c', 22 => 'Estimated_Month_24_Balance__c', 
+            23 => 'Estimated_Month_24_Balance__c', 24 => 'Estimated_Month_24_Balance__c', 25 => 'Estimated_Month_30_Balance__c', 26 => 'Estimated_Month_30_Balance__c', 
+            27 => 'Estimated_Month_30_Balance__c', 28 => 'Estimated_Month_30_Balance__c', 29 => 'Estimated_Month_30_Balance__c', 30 => 'Estimated_Month_30_Balance__c', 
+            31 => 'Estimated_Month_36_Balance__c', 32 => 'Estimated_Month_36_Balance__c', 33 => 'Estimated_Month_36_Balance__c', 34 => 'Estimated_Month_36_Balance__c', 
+            35 => 'Estimated_Month_36_Balance__c', 36 => 'Estimated_Month_36_Balance__c'};
 
         for(nu_dse__Program__c program : [SELECT Id, nu_dse__Trust_Account_Balance__c, 
                                             (SELECT Id, nu_dse__Total_Amount__c, nu_dse__Amount__c, nu_dse__Schedule_Date__c, 
@@ -51,34 +59,31 @@ public without sharing class PaymentsCalcService {
                                             ORDER BY nu_dse__Schedule_Date__c ASC)
                                         FROM nu_dse__Program__c WHERE Id IN :programIds]) {
 
-            nu_dse__Program__c updateProgram = new nu_dse__Program__c(Id = program.Id);
+            //clearing out fields to hold new values, if payments decreases extra fields need to be cleared out                                    
+            nu_dse__Program__c updateProgram = new nu_dse__Program__c(Id = program.Id, Estimated_Current_Month_Balance__c = null, Estimated_Month_2_Balance__c = null,
+                Estimated_Month_3_Balance__c = null, Estimated_Month_6_Balance__c = null, Estimated_Month_9_Balance__c = null, Estimated_Month_12_Balance__c = null,
+                Estimated_Month_18_Balance__c = null, Estimated_Month_24_Balance__c = null, Estimated_Month_30_Balance__c = null, Estimated_Month_36_Balance__c = null);
 
             if(paymentCalcWrap.programToUpdateMap.containskey(updateProgram.Id) == true) {
                 updateProgram = paymentCalcWrap.programToUpdateMap.get(updateProgram.Id);
             }
-
-            Decimal programBal = 0;
-            // Decimal programLowestAmount;
-            //Date programLowestDate;
             
-            //Map<String, Decimal> estimatedMonthBalancesMap = new Map<String, Decimal>();
-            Map<Integer, EstimatedMonthBalance> estdMonthBalanceMap = new Map<Integer, EstimatedMonthBalance>(); 
-            //String firstPaymentMonthYear;
-
-            Decimal estimateLastPaymentBal; // estimated balance as per the last processed payment 
-            Date estimateLastPaymentDate; // estimated date as per the last processed payment
+            Map<Integer, EstimatedMonthBalance> estdMonthBalanceMap = new Map<Integer, EstimatedMonthBalance>(); //Map to be maintained for month and appropriate balance
+            Decimal programBal = 0; //balance for each program, aggregated on each payment iteration
             Decimal endOfMonthLowestBalance; // lowest balance at the end of the month
+            Decimal estimatePreviousPaymentBal; // estimated balance as per the previously processed payment 
+            Integer previousMonthCount = 1; // to keep track of the previous month value if there is any missing month in the middle           
+            Date estimatePreviousPaymentDate; // estimated date as per the previously processed payment 
             Date endOfMonthLowestBalDate; // date of last payment in the month that has lowest balance at the end
             String paymentMonthIdentifier; // a string identifier for checking the last payment in the month, this id will be same for all payments in a month
             
             if(program.nu_dse__Trust_Account_Balance__c != null) {
-                programBal = program.nu_dse__Trust_Account_Balance__c;
-                // programLowestAmount = program.nu_dse__Trust_Account_Balance__c; // initially the current balance will be the lowest
-                // programLowestDate = system.today(); // start of the calc, lowest amount and date will be current balance and today
-                estimateLastPaymentBal = program.nu_dse__Trust_Account_Balance__c;  // initially the current balance will be the lowest
+                programBal = program.nu_dse__Trust_Account_Balance__c;  // initially the current balance will be assigned as balance
+                estimatePreviousPaymentBal = program.nu_dse__Trust_Account_Balance__c;  // initially the current balance will be the lowest
             }
-            updateProgram.Estimated_Current_Month_Balance__c = programBal;
-            estimateLastPaymentDate = system.today();
+            updateProgram.Estimated_Current_Month_Balance__c = programBal; // if no other payments are avaialable for current month, current balance will be taken 
+            estdMonthBalanceMap.put(1, new EstimatedMonthBalance(1, system.today(), programBal));
+            estimatePreviousPaymentDate = system.today();
             paymentMonthIdentifier = system.today().month() + '-' + system.today().year(); // string UID for checking the last payment of month
             
             for(nu_dse__Payment__c payment : program.nu_dse__Payments__r) {
@@ -97,265 +102,46 @@ public without sharing class PaymentsCalcService {
                         programBal -= payment.nu_dse__Total_Amount__c;
                     }
 
-                    /*if(programLowestAmount == null || programLowestAmount > programBal) {
-
-                        programLowestAmount = programBal;
-                        programLowestDate = payment.nu_dse__Schedule_Date__c;
-                    }*/
-                    
-                    // if the current payment processed is first payment of the month and the last payment is lowest amonge the schedule 
+                    // if the current payment processed is first payment of the month and the previous payment is lowest amonge the schedule 
                     // then we are reserving that as lowest month end balance at this point
                     if(payment.nu_dse__Schedule_Date__c.month() +'-'+ payment.nu_dse__Schedule_Date__c.year() != paymentMonthIdentifier
-                        && estimateLastPaymentBal != null 
-                        && (endOfMonthLowestBalance == null || estimateLastPaymentBal < endOfMonthLowestBalance)) {  
+                        && estimatePreviousPaymentBal != null 
+                        && (endOfMonthLowestBalance == null || estimatePreviousPaymentBal < endOfMonthLowestBalance)) {  
                         
-                        endOfMonthLowestBalance = estimateLastPaymentBal;
-                        endOfMonthLowestBalDate = estimateLastPaymentDate;
+                        endOfMonthLowestBalance = estimatePreviousPaymentBal;
+                        endOfMonthLowestBalDate = estimatePreviousPaymentDate;
                         paymentMonthIdentifier = payment.nu_dse__Schedule_Date__c.month() +'-'+ payment.nu_dse__Schedule_Date__c.year();
                     }
                     
-                    estimateLastPaymentBal = programBal;
-                    estimateLastPaymentDate = payment.nu_dse__Schedule_Date__c;
+                    estimatePreviousPaymentBal = programBal;
+                    estimatePreviousPaymentDate = payment.nu_dse__Schedule_Date__c;
 
-                    //if(payment.nu_dse__Schedule_Date__c <= futureEstimateDate) {
-                        
-                        if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(1).addDays(-1)) {
+                    //assignment to fields and raw data map for each month
+                    Integer paymentMonthCount =  system.today().monthsBetween(payment.nu_dse__Schedule_Date__c) + 1; 
+                    for(Integer i = previousMonthCount+1; i < paymentMonthCount; i++) {
 
-                            estdMonthBalanceMap.put(01,new EstimatedMonthBalance(01, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(2).addDays(-1)) {
+                        EstimatedMonthBalance previousMonthBal = estdMonthBalanceMap.get(previousMonthCount);
+                        estdMonthBalanceMap.put(i, new EstimatedMonthBalance(i, previousMonthBal.monthDate, previousMonthBal.balance));
 
-                            estdMonthBalanceMap.put(02,new EstimatedMonthBalance(02, payment.nu_dse__Schedule_Date__c, programBal));
-                            updateProgram.Estimated_Month_2_Balance__c = programBal;                             
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(3).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(03,new EstimatedMonthBalance(03, payment.nu_dse__Schedule_Date__c, programBal));
-                            updateProgram.Estimated_Month_3_Balance__c = programBal;
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(4).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(04,new EstimatedMonthBalance(04, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(5).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(05,new EstimatedMonthBalance(05, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(6).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(06,new EstimatedMonthBalance(06, payment.nu_dse__Schedule_Date__c, programBal));
-                            updateProgram.Estimated_Month_6_Balance__c = programBal;
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(7).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(07,new EstimatedMonthBalance(07, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(8).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(08,new EstimatedMonthBalance(08, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(9).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(09,new EstimatedMonthBalance(09, payment.nu_dse__Schedule_Date__c, programBal));
-                            updateProgram.Estimated_Month_9_Balance__c = programBal;
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(10).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(10,new EstimatedMonthBalance(10, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(11).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(11,new EstimatedMonthBalance(11, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(12).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(12,new EstimatedMonthBalance(12, payment.nu_dse__Schedule_Date__c, programBal));
-                            updateProgram.Estimated_Month_12_Balance__c = programBal;
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(13).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(13,new EstimatedMonthBalance(13, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(14).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(14,new EstimatedMonthBalance(14, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(15).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(15,new EstimatedMonthBalance(15, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(16).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(16,new EstimatedMonthBalance(16, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(17).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(17,new EstimatedMonthBalance(17, payment.nu_dse__Schedule_Date__c, programBal));
-                            updateProgram.Estimated_Month_18_Balance__c = programBal;
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(18).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(18,new EstimatedMonthBalance(18, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(19).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(19,new EstimatedMonthBalance(19, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(20).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(20,new EstimatedMonthBalance(20, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(21).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(21,new EstimatedMonthBalance(21, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(22).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(22,new EstimatedMonthBalance(22, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(23).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(23,new EstimatedMonthBalance(23, payment.nu_dse__Schedule_Date__c, programBal));
-                            updateProgram.Estimated_Month_24_Balance__c = programBal;
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(24).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(24,new EstimatedMonthBalance(24, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(25).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(25,new EstimatedMonthBalance(25, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(26).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(26,new EstimatedMonthBalance(26, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(27).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(27,new EstimatedMonthBalance(27, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(28).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(28,new EstimatedMonthBalance(28, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(29).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(29,new EstimatedMonthBalance(29, payment.nu_dse__Schedule_Date__c, programBal));
-                            updateProgram.Estimated_Month_30_Balance__c = programBal;
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(30).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(30,new EstimatedMonthBalance(30, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(31).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(31,new EstimatedMonthBalance(31, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(32).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(32,new EstimatedMonthBalance(32, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(33).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(33,new EstimatedMonthBalance(33, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(34).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(34,new EstimatedMonthBalance(34, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(35).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(35,new EstimatedMonthBalance(35, payment.nu_dse__Schedule_Date__c, programBal));
-                            updateProgram.Estimated_Month_36_Balance__c = programBal;
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(36).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(36,new EstimatedMonthBalance(36, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(37).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(37,new EstimatedMonthBalance(37, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(38).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(38,new EstimatedMonthBalance(38, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(39).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(39,new EstimatedMonthBalance(39, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(40).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(40,new EstimatedMonthBalance(40, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(41).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(41,new EstimatedMonthBalance(41, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(42).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(42,new EstimatedMonthBalance(42, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(43).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(43,new EstimatedMonthBalance(43, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(44).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(44,new EstimatedMonthBalance(44, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(45).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(45,new EstimatedMonthBalance(45, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(46).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(46,new EstimatedMonthBalance(46, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(47).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(47,new EstimatedMonthBalance(47, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(48).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(48,new EstimatedMonthBalance(48, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(49).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(49,new EstimatedMonthBalance(49, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(50).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(50,new EstimatedMonthBalance(50, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(51).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(51,new EstimatedMonthBalance(51, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(52).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(52,new EstimatedMonthBalance(52, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(53).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(53,new EstimatedMonthBalance(53, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(54).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(54,new EstimatedMonthBalance(54, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(55).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(55,new EstimatedMonthBalance(55, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(56).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(56,new EstimatedMonthBalance(56, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(57).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(57,new EstimatedMonthBalance(57, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(58).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(58,new EstimatedMonthBalance(58, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(59).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(59,new EstimatedMonthBalance(59, payment.nu_dse__Schedule_Date__c, programBal));
-                        } else if(payment.nu_dse__Schedule_Date__c <= system.today().toStartOfMonth().addMonths(60).addDays(-1)) {
-
-                            estdMonthBalanceMap.put(60,new EstimatedMonthBalance(60, payment.nu_dse__Schedule_Date__c, programBal));
+                        if(monthCountFieldNameMap.containsKey(i) == true) {
+                            updateProgram.put(monthCountFieldNameMap.get(i),previousMonthBal.balance);
                         }
-                    //}
+                    }
+
+                    estdMonthBalanceMap.put(paymentMonthCount, new EstimatedMonthBalance(paymentMonthCount, payment.nu_dse__Schedule_Date__c, programBal));
+                    if(monthCountFieldNameMap.containsKey(paymentMonthCount) == true) {
+                        updateProgram.put(monthCountFieldNameMap.get(paymentMonthCount),programBal);
+                    }
+                    previousMonthCount = paymentMonthCount;
                 }
                 //calc on Tradeline and Offer
                 calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
             }
 
-            if(updateProgram.Estimated_Month_2_Balance__c == null 
-                && updateProgram.Estimated_Current_Month_Balance__c != null) {
-                updateProgram.Estimated_Month_2_Balance__c = updateProgram.Estimated_Current_Month_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_3_Balance__c == null 
-                && updateProgram.Estimated_Month_2_Balance__c != null) {
-                updateProgram.Estimated_Month_3_Balance__c = updateProgram.Estimated_Month_2_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_6_Balance__c == null 
-                && updateProgram.Estimated_Month_3_Balance__c != null) {
-                updateProgram.Estimated_Month_6_Balance__c = updateProgram.Estimated_Month_3_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_9_Balance__c == null 
-                && updateProgram.Estimated_Month_6_Balance__c != null) {
-                updateProgram.Estimated_Month_9_Balance__c = updateProgram.Estimated_Month_6_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_12_Balance__c == null 
-                && updateProgram.Estimated_Month_9_Balance__c != null) {
-                updateProgram.Estimated_Month_12_Balance__c = updateProgram.Estimated_Month_9_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_18_Balance__c == null 
-                && updateProgram.Estimated_Month_12_Balance__c != null) {
-                updateProgram.Estimated_Month_18_Balance__c = updateProgram.Estimated_Month_12_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_24_Balance__c == null 
-                && updateProgram.Estimated_Month_18_Balance__c != null) {
-                updateProgram.Estimated_Month_24_Balance__c = updateProgram.Estimated_Month_18_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_30_Balance__c == null 
-                && updateProgram.Estimated_Month_24_Balance__c != null) {
-                updateProgram.Estimated_Month_30_Balance__c = updateProgram.Estimated_Month_24_Balance__c;
-            }
-            if(updateProgram.Estimated_Month_36_Balance__c == null 
-                && updateProgram.Estimated_Month_30_Balance__c != null) {
-                updateProgram.Estimated_Month_36_Balance__c = updateProgram.Estimated_Month_30_Balance__c;
-            }
-            
-            if(estimateLastPaymentBal != null 
-                && (endOfMonthLowestBalance == null || estimateLastPaymentBal < endOfMonthLowestBalance)) {
-                endOfMonthLowestBalance = estimateLastPaymentBal;
-                endOfMonthLowestBalDate = estimateLastPaymentDate;
+            if(estimatePreviousPaymentBal != null 
+                && (endOfMonthLowestBalance == null || estimatePreviousPaymentBal < endOfMonthLowestBalance)) {
+                endOfMonthLowestBalance = estimatePreviousPaymentBal;
+                endOfMonthLowestBalDate = estimatePreviousPaymentDate;
             }
 
             System.debug('estimatedMonthBalancesMap->'+estdMonthBalanceMap);
@@ -367,6 +153,7 @@ public without sharing class PaymentsCalcService {
             updateProgram.Estimated_lowest_balance_date__c = endOfMonthLowestBalDate;
             updateProgram.Estimated_Balance_Calculations_Timestamp__c = System.now();
             paymentCalcWrap.programToUpdateMap.put(updateProgram.Id, updateProgram);
+            System.debug('updateProgram->'+updateProgram);
         }
         return paymentCalcWrap;
     } 
@@ -381,10 +168,12 @@ public without sharing class PaymentsCalcService {
                     && payment.nu_dse__Payment_Type__c == 'Withdrawal'))
             && payment.nu_dse__Offer__r.nu_dse__TradeLine__c != null) {
             
+            //clearing out exsting values from the instances for refreashing the tradeline calc 
             nu_dse__TradeLine__c tradeLineInst = new nu_dse__TradeLine__c(Id = payment.nu_dse__Offer__r.nu_dse__TradeLine__c, 
                 Creditor_Payments_Made__c = 0, Creditor_Payments_Outstanding__c = 0, 
                 Fees_Collected__c = 0, Fees_Outstanding__c = 0);
-
+            
+            //clearing out exsting values from the instances for refreashing the Offer calc
             nu_dse__Offer__c offerInst = new nu_dse__Offer__c(Id = payment.nu_dse__Offer__c, 
                 Creditor_Payments_Made__c = 0, Creditor_Payments_Outstanding__c = 0, 
                 Fees_Collected__c = 0, Fees_Outstanding__c = 0);
@@ -397,7 +186,7 @@ public without sharing class PaymentsCalcService {
                 offerInst = paymentCalcWrap.offerIdRecMap.get(offerInst.Id);
             }
 
-            if(payment.RecordTypeId == feeRecordTypeId) {
+            if(payment.RecordTypeId == feeRecordTypeId) { //accumulation of Fee Paid/Outstanding
                 
                 if (payment.nu_dse__Transaction_Status__c == 'Completed'
                     || payment.nu_dse__Transaction_Status__c == 'Cleared') {
@@ -407,8 +196,7 @@ public without sharing class PaymentsCalcService {
                     tradeLineInst.Fees_Outstanding__c += payment.nu_dse__Total_Amount__c;
                     offerInst.Fees_Outstanding__c += payment.nu_dse__Total_Amount__c;
                 }
-
-            } else {
+            } else { //accumulation of Creditor Paid/Outstanding
                 
                 if (payment.nu_dse__Transaction_Status__c == 'Completed'
                     || payment.nu_dse__Transaction_Status__c == 'Cleared') {
@@ -419,9 +207,10 @@ public without sharing class PaymentsCalcService {
                     offerInst.Creditor_Payments_Outstanding__c += payment.nu_dse__Total_Amount__c;
                 }
             }
-            tradeLineInst.Creditor_Fee_Payments_Calculated_on__c = System.now();
+            //timestamp of calc
+            tradeLineInst.Creditor_Fee_Payments_Calculated_on__c = System.now(); 
             offerInst.Creditor_Fee_Payments_Calculated_on__c = System.now();
-            
+
             paymentCalcWrap.tradelineIdRecMap.put(tradeLineInst.Id, tradeLineInst);
             paymentCalcWrap.offerIdRecMap.put(offerInst.Id, offerInst);
         }
@@ -440,7 +229,10 @@ public without sharing class PaymentsCalcService {
                                                 AND (nu_dse__Transaction_Status__c = 'Scheduled' 
                                                     OR nu_dse__Transaction_Status__c = 'In Progress' 
                                                     OR nu_dse__Transaction_Status__c = 'Completed' 
-                                                    OR nu_dse__Transaction_Status__c = 'Cleared') 
+                                                    OR nu_dse__Transaction_Status__c = 'Cleared'
+                                                    OR (nu_dse__Transaction_Status__c = 'Tentative' 
+                                                    	AND (nu_dse__Offer__r.nu_dse__Status__c = '03-Offer Approved (Pre-payment setup)' 
+                                                        	OR nu_dse__Offer__r.nu_dse__Status__c = '04-Ready for Payment Setup'))) 
                                             ORDER BY nu_dse__Schedule_Date__c ASC]) {
             calcPaidOutstandingForCreditorPayments(payment, paymentCalcWrap);
         }
