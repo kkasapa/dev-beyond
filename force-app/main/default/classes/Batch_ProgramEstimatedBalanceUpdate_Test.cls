@@ -209,9 +209,9 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate_Test {
 
         Test.startTest();
             // executing the batch to calculate the estimated balance of 2,3,6,9,12 months
-            Database.executeBatch(new Batch_ProgramEstimatedBalanceUpdate(000,499));
+            Database.executeBatch(new Batch_ProgramEstimatedBalanceUpdate(000,999));
 
-            Schedule_ProgramEstimatedBalanceUpdate schedulerInst = new Schedule_ProgramEstimatedBalanceUpdate(000,499);
+            Schedule_ProgramEstimatedBalanceUpdate schedulerInst = new Schedule_ProgramEstimatedBalanceUpdate(000,999);
             schedulerInst.batchSize = 100;
             String schCronExp = '0 0 23 * * ?'; 
             system.schedule('Test Schedule ProgramEstimatedBalanceUpdateBatch', schCronExp, schedulerInst); 

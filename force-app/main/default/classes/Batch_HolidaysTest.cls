@@ -1,6 +1,6 @@
 /*
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
-* This test class will check the functionality of UpdateMetadataUtil and Schedule_Batch_Holidays
+* This test class will check the functionality of UpdateThreeBusinessdays and Schedule_Batch_Holidays
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 * @author         Avco Team - Karthik Kasapa <kkasapa@beyondfinance.com>
 * @created        Nov 2019

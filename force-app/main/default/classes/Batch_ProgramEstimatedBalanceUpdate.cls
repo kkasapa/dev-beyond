@@ -34,22 +34,23 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
     Integer programNumStartIndex, programNumEndIndex;
 
     public Batch_ProgramEstimatedBalanceUpdate() {
-
+        //empty contructor can be invoked to run the job for whole data set
     }
     
+    //contructor for segregating the data set
+    //startIndex and endIndex are tracked based on Term_Digit field in Program. 
     public Batch_ProgramEstimatedBalanceUpdate(Integer startIndex, Integer endIndex) {
 
         if(startIndex != null && endIndex != null && startIndex < endIndex) {
-
             programNumStartIndex = startIndex;
             programNumEndIndex = endIndex;
-
         } else {
-             throw new CustomException('Incorrect program Number StartIndex and EndIndex value'); // needs to be changed
+             throw new CustomException('Please provide a valid Start and End index. End Index should be greater than start index'); 
         }
     }
     //configurable contructor to run for set of programs
     public Batch_ProgramEstimatedBalanceUpdate(Set<Id> programIdSet) {
+
         programIds = new Set<Id>();
         if(programIdSet != null && programIdSet.isEmpty() == false) {
             programIds = programIdSet;
@@ -63,7 +64,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
         totalOffersCount = 0; updatedOffersCount = 0; failedOffersCount = 0;
         processStartTime = system.now().format();
 
-        Set<String> programStatus = new Set<String>{'New Client', 'Active'}; // by default, program status with New Client, Active will be processed
+        Set<String> programStatus = new Set<String>{'New Client', 'Active' }; // by default, program status with New Client, Active will be processed
         //custom metadata type for having Program status to be included for calculations
         Program_Status_Configuration__mdt progStatusConfig = [SELECT Id, MasterLabel, Included_Statuses__c 
                                     FROM Program_Status_Configuration__mdt 
@@ -73,8 +74,6 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
             && String.isNotBlank(progStatusConfig.Included_Statuses__c)) {
             programStatus = new Set<String>(progStatusConfig.Included_Statuses__c.split(',', 0));
         } 
-
-
 
         String queryStr = 'SELECT Id FROM nu_dse__Program__c WHERE nu_dse__Program_Status__c IN :programStatus';
         
@@ -87,19 +86,21 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
         system.debug('queryStr-->'+queryStr);
         return Database.getQueryLocator(queryStr);
     }
+
     public void execute(Database.BatchableContext BC, List<nu_dse__Program__c> scope) {
         
         try {
             
             Set<Id> recordTypeIds = new Set<Id> {draftRecordTypeId, settlementRecordTypeId, feeRecordTypeId};
-            Date futureEstimateDate = system.today().toStartOfMonth().addMonths(36).addDays(-1); 
             
             Map<Id,nu_dse__Program__c> programIdsMap = new Map<Id,nu_dse__Program__c>(scope);
 
             //logic from the payment calc service is being referred. logic mvoved to service on 11/10/19
-            PaymentsCalcService.futureEstimateDate = futureEstimateDate;
             PaymentsCalcService.PaymentCalcWrapper paymentCalcWrap = PaymentsCalcService.calcProgramEstimatedBalance(programIdsMap.keySet());
 
+            // after performing the calc from the service, DML happens here.ApexPages
+            // no of processed/success/failed records will be tracked here 
+            // failures will be tracked as error logs
             List<nu_dse__Error_Log__c> errLogs = new List<nu_dse__Error_Log__c>();
             dmlResultWrapper programDmlResult = dmlRecords(paymentCalcWrap.programToUpdateMap.values());
             successProgramRecordsCount += programDmlResult.successRecordsCount;
@@ -121,12 +122,14 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
             insert errLogs;
 
         } catch(Exception e) {
-
-            nu_dse__Error_Log__c errorLog = new nu_dse__Error_Log__c(nu_dse__Message__c = e.getMessage(), nu_dse__Stack_Trace__c = e.getStackTraceString(), nu_dse__User_Context__c = UserInfo.getName(), nu_dse__Class_Method__c = 'Batch_ProgramEstimatedBalanceUpdate.Execute');
-            
+            // handling exception by logging a error log record
+            nu_dse__Error_Log__c errorLog = new nu_dse__Error_Log__c(nu_dse__Message__c = e.getMessage(), nu_dse__Stack_Trace__c = e.getStackTraceString(), nu_dse__User_Context__c = UserInfo.getName(), nu_dse__Class_Method__c = 'Batch_ProgramEstimatedBalanceUpdate.Execute'); 
             insert errorLog;
         }
     }
+
+    // task instance will be created and assinged to an Admin based on CMD.
+    // task contains the basic log of the batch run
     public void finish(Database.BatchableContext BC) {
         
         Default_Task_Assignments_to_User__mdt taskAssignDefault = [SELECT Task_Assignement_User_Id__c 
@@ -160,6 +163,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
         }
     } 
 
+    // re-useable method for dml
     public dmlResultWrapper dmlRecords(List<Sobject> recordsToUpdateList) {
 
         dmlResultWrapper recordsDmlResult = new dmlResultWrapper();
@@ -190,7 +194,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
         return recordsDmlResult;
     }
 
-    public class dmlResultWrapper {
+    public class DmlResultWrapper {
 
         public Integer failedRecordsCount;
         public Integer successRecordsCount;
