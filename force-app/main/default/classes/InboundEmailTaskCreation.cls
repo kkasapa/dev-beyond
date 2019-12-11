@@ -20,21 +20,38 @@ global class InboundEmailTaskCreation implements Messaging.InboundEmailHandler {
         myPlainText = email.plainTextBody;
 
         try {
-            // Query the related person Account using from email address
-            Account relatedAcc = [SELECT Id, PersonEmail FROM Account
-                                 WHERE PersonEmail = :email.fromAddress
-                                LIMIT 1];
 
-            if(relatedAcc != null) {
+            Id relatedAccId, defaultAccId;
+            // Query the related person Account using from email address
+            List<Account> relatedAccList = [SELECT Id, PersonEmail FROM Account
+                                        WHERE PersonEmail = :email.fromAddress OR LastName = 'Email Task Default Account' 
+                                        ORDER BY LastmodifiedDate DESC];
+
+            for (Account acc: relatedAccList) {
+
+                if(acc.PersonEmail == email.fromAddress) {
+                    relatedAccId = acc.Id;
+                    break;
+                } else if(defaultAccId == null){
+                    defaultAccId = acc.Id;
+                }
+            }
+            if(relatedAccList.isEmpty() == false) {
                 
                 // Create the task and attach with realted person Account
 
                 Task newTask = new Task(Description =  myPlainText, Priority = 'Normal', Status = 'Inbound Email',
-                    Subject = email.subject, whatId =  relatedAcc.Id);
+                    Subject = email.subject);
+                newTask.whatId =  relatedAccId != null ? relatedAccId : defaultAccId;
                 insert newTask;    
                 System.debug('New Task Object: ' + newTask );  
-            } 
-        
+            
+            } else {
+
+                throw new CustomException('Email Task Default Account is not available. Please create Account with Last name as Email Task Default Account.');
+            }
+            result.success = true;
+
         } catch (Exception e) {
             
             // Exception created as error log
@@ -43,8 +60,9 @@ global class InboundEmailTaskCreation implements Messaging.InboundEmailHandler {
                     nu_dse__Message__c = e.getMessage());
 
             insert errLog;
+            result.success = false;
         }
-        result.success = true;
+        
         return result;
     }
 }

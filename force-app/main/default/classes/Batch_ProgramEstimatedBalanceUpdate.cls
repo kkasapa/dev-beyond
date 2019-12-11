@@ -80,8 +80,7 @@ public with sharing class Batch_ProgramEstimatedBalanceUpdate implements Databas
         
         if(programIds != null && programIds.isEmpty() == false) {
             queryStr += ' AND Id IN :programIds';
-        } else {
-
+        } else if(programNumStartIndex != null && programNumEndIndex != null){
             queryStr += ' AND Term_Digit__c >= \''+ programNumStartIndex +'\' AND Term_Digit__c <= \'' + programNumEndIndex +'\'';
         }
         queryStr += ' ORDER BY nu_dse__Payment_Frequency__c DESC, nu_dse__Program_Length__c DESC';
