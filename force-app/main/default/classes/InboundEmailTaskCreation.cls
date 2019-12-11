@@ -25,13 +25,14 @@ global class InboundEmailTaskCreation implements Messaging.InboundEmailHandler {
             // Query the related person Account using from email address
             List<Account> relatedAccList = [SELECT Id, PersonEmail FROM Account
                                         WHERE PersonEmail = :email.fromAddress OR LastName = 'Email Task Default Account' 
-                                        LIMIT 2];
+                                        ORDER BY LastmodifiedDate DESC];
 
             for (Account acc: relatedAccList) {
 
                 if(acc.PersonEmail == email.fromAddress) {
                     relatedAccId = acc.Id;
-                } else {
+                    break;
+                } else if(defaultAccId == null){
                     defaultAccId = acc.Id;
                 }
             }
