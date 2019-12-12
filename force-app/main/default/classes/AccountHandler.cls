@@ -40,6 +40,19 @@ public class AccountHandler extends TriggerHandler {
             updateAliases(setOfUpdatedActs);    
         }
     }
+//Digu 
+/**
+    public override void beforeInsert(){
+        Set<String> setName = New Set<String>();
+        for(Account Acc:newAccountMap.values()){
+            setName.add(acc.name);
+        }
+        if(setName.size()>0){
+            List<Account> LstAcc =[SELECT Id,Name From Account where Name In:setName];
+        }
+        
+    }
+**/
 
     //filters Accounts that have changes in Applicant/Co-Applicant that are to be synced with BLP
     public void createBLP_BusList(Account newAccount, Account oldAccount) {

@@ -18,6 +18,7 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
     
         String myPlainText= '';
         myPlainText = email.plainTextBody;
+        system.debug('email-->'+email);
 
         try {
             
@@ -29,16 +30,25 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
                                             ORDER BY LastmodifiedDate DESC LIMIT 1];
 
             Compliance_Request__c complainceReq = new Compliance_Request__c();
-            String emailStr = JSON.serialize(email);
-            Map<String, Object> emailMap = (Map<String, Object>) JSON.deserialize(emailStr, Map<String, Object>.class);
-
-            for(nu_dse__Field_mapping__c fieldMapping : fieldMappingList) {
-
-                if(fieldMapping.nu_dse__setDefaultValue__c == true) {
-                    complainceReq.put(fieldMapping.nu_dse__Target_Field__c, fieldMapping.nu_dse__Default_Value__c);
-                } else if(emailMap.get('plainTextBody') != null){
-                   // complainceReq.put(fieldMapping.nu_dse__Target_Field__c, email.get(fieldMapping.nu_dse__Source_Field__c));
+            //Subject__c = email.subject, Description__c = email.plainTextBody,
+              //  Email_Address__c = email.fromAddress, Name__c = email.fromName, Escalation_Timestamp__c = system.now());
+            String emailJsonStr = JSON.serialize(email);
+            Map<String, Object> emailObjMap = (Map<String, Object>) JSON.deserializeUntyped(emailJsonStr);
+            
+            system.debug('emailObjMap-->'+emailObjMap);
+            if(fieldMappingList != null && fieldMappingList.isEmpty() == false) {
+                
+                for(nu_dse__Field_mapping__c fieldMapping : fieldMappingList) {
+    
+                    if(fieldMapping.nu_dse__setDefaultValue__c == true) {
+                        complainceReq.put(fieldMapping.nu_dse__Target_Field__c, fieldMapping.nu_dse__Default_Value__c);
+                    } else if(emailObjMap.containskey(fieldMapping.nu_dse__Source_Field__c) && emailObjMap.get(fieldMapping.nu_dse__Source_Field__c) != null){
+                        complainceReq.put(fieldMapping.nu_dse__Target_Field__c, String.valueof(emailObjMap.get(fieldMapping.nu_dse__Source_Field__c)));
+                    }
                 }
+            } else {
+                
+                throw new CustomException('Mapping records not available. Please create Data and field mappings.');
             }
 
             if(relatedConList.isEmpty() == false) {
@@ -63,6 +73,7 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
                     throw new CustomException('Invalid Contact Id for task assignment. Please check Custom metadata record with Developer Name \'Complaince_Request_Email\'');
                 }
             }
+            insert complainceReq;
             result.success = true;
 
         } catch (Exception e) {
