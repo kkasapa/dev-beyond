@@ -77,6 +77,8 @@ public class TradelineHandler extends TriggerHandler {
             collectSavingCalcTradelines(newTradeline, oldTLMap.get(newTradeline.Id));
             //on updates on saving calc field, rolling up to Program.
             collectsavingCalcUpdates(newTradeline, oldTLMap.get(newTradeline.Id));
+            //Runs Loan Update Calculations if TL Fees/Payments Outstanding/Collected is updated
+            loanAppCalcUpdate(newTradeline, oldTLMap.get(newTradeline.Id));
         }
 
         if(savignCalcTradelineIds.isEmpty() == false) {
