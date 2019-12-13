@@ -11,6 +11,6 @@
 * @systemLayer    Trigger
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
-trigger accountTrigger on Account (after insert, after update) {
+trigger accountTrigger on Account (before insert, after insert, after update) {
     new AccountHandler().run();
 }

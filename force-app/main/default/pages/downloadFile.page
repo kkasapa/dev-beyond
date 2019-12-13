@@ -16,6 +16,7 @@
     var params = {Bucket: '{!bucketName}', Key: y};
     s23.getSignedUrl('getObject', params, function (err, url) {
         window.open(url,"_self");
+        console.log(url);
     });
     </script>
 </apex:page>

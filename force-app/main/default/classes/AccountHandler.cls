@@ -40,6 +40,32 @@ public class AccountHandler extends TriggerHandler {
             updateAliases(setOfUpdatedActs);    
         }
     }
+//Digu 
+
+    public override void beforeInsert(){
+        system.debug('I am here');
+        Set<String> setName = New Set<String>();
+        //system.debug('New Map Values'+newAccountMap.values());
+        for(Account Acc: (List<Account>)Trigger.new){
+            setName.add(acc.name);
+        }
+        if(setName.size()>0){
+            List<Account> LstAcc =[SELECT Id,Name From Account where Name In:setName];
+            Map<String,account> AccMap = New Map<String,account>();
+            for(Account AccN:LstAcc){
+                AccMap.put(AccN.name,AccN);
+            }
+            for(Account Acc: (List<Account>)Trigger.new ){
+                if(AccMap.containsKey(Acc.name)){
+                    system.debug('Duplicate'+AccMap.containsKey(Acc.name));
+                    Acc.name.addError('Name Already exists, please check once');
+                }
+                
+            }
+        }
+        
+    }
+
 
     //filters Accounts that have changes in Applicant/Co-Applicant that are to be synced with BLP
     public void createBLP_BusList(Account newAccount, Account oldAccount) {
