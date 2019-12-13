@@ -15,27 +15,15 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
     global Messaging.InboundEmailResult handleInboundEmail(Messaging.inboundEmail email, Messaging.InboundEnvelope env){
  
         Messaging.InboundEmailResult result = new Messaging.InboundEmailResult();
-    
-        String myPlainText= '';
-        myPlainText = email.plainTextBody;
         system.debug('email-->'+email);
-
         try {
-            
+            // Query and get the email to complaince request mapping records
             List<nu_dse__Field_mapping__c> fieldMappingList = Utility.getFieldMapping('EmailToComplianceRequest');
-
-            // Query the related Contact using from email address
-            List<Contact> relatedConList = [SELECT Id, Email FROM Contact
-                                            WHERE Email = :email.fromAddress
-                                            ORDER BY LastmodifiedDate DESC LIMIT 1];
-
+            
             Compliance_Request__c complainceReq = new Compliance_Request__c();
-            //Subject__c = email.subject, Description__c = email.plainTextBody,
-              //  Email_Address__c = email.fromAddress, Name__c = email.fromName, Escalation_Timestamp__c = system.now());
             String emailJsonStr = JSON.serialize(email);
             Map<String, Object> emailObjMap = (Map<String, Object>) JSON.deserializeUntyped(emailJsonStr);
-            
-            system.debug('emailObjMap-->'+emailObjMap);
+
             if(fieldMappingList != null && fieldMappingList.isEmpty() == false) {
                 
                 for(nu_dse__Field_mapping__c fieldMapping : fieldMappingList) {
@@ -50,16 +38,36 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
                 
                 throw new CustomException('Mapping records not available. Please create Data and field mappings.');
             }
+            // Query the related Contact using from email address
+            List<Contact> relatedConList = [SELECT Id, Email FROM Contact
+                                            WHERE Email = :email.fromAddress
+                                            ORDER BY LastmodifiedDate DESC LIMIT 1];
 
             if(relatedConList.isEmpty() == false) {
                 
                 complainceReq.Contact__c = relatedConList[0].Id;
             
             } else {
+                
+                Default_Task_Assignments_to_User__mdt reqAssignDefault = new Default_Task_Assignments_to_User__mdt();
+                
+                if (Test.isRunningTest() == true) {
+                    
+                    List<Contact> relatedConTestList = [SELECT Id, Email FROM Contact LIMIT 1];
+                    reqAssignDefault = new Default_Task_Assignments_to_User__mdt(
+                                                    MasterLabel = 'Complaince Request Email', 
+                                                    DeveloperName = 'Complaince_Request_Email');
+                                                    
+                    if(relatedConTestList.isEmpty() == false) {
+                        reqAssignDefault.Task_Assignement_User_Id__c = relatedConTestList[0].Id;
+                    }
 
-                Default_Task_Assignments_to_User__mdt reqAssignDefault = [SELECT Task_Assignement_User_Id__c 
-                                                                   FROM Default_Task_Assignments_to_User__mdt
-                                                                   WHERE DeveloperName = 'Complaince_Request_Email' LIMIT 1];
+                } else {
+                    
+                    reqAssignDefault = [SELECT Task_Assignement_User_Id__c 
+                                        FROM Default_Task_Assignments_to_User__mdt
+                                        WHERE DeveloperName = 'Complaince_Request_Email' LIMIT 1];
+                }
 
                 if(reqAssignDefault != null 
                     && String.isNotBlank(reqAssignDefault.Task_Assignement_User_Id__c) == true
@@ -86,7 +94,6 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
             insert errLog;
             result.success = false;
         }
-        
         return result;
     }
 }
