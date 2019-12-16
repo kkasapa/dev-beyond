@@ -1,0 +1,17 @@
+<apex:page standardController="nu_dse__Program__c">
+    <apex:includeLightning />
+    <div id="container">
+    </div>
+
+    <script>
+        $Lightning.use("c:estimatedBalanceFieldApp", function(){
+            $Lightning.createComponent(
+            "c:estimatedBalanceFieldLayout",
+            {},
+            "container",
+            function(cmp){
+               console.log("component created");
+            });
+        });
+    </script>
+</apex:page>
