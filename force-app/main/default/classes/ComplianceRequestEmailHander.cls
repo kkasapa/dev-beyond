@@ -17,21 +17,21 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
         Messaging.InboundEmailResult result = new Messaging.InboundEmailResult();
         system.debug('email-->'+email);
         try {
-            // Query and get the email to complaince request mapping records
+            // Query and get the email to compliance request mapping records
             List<nu_dse__Field_mapping__c> fieldMappingList = Utility.getFieldMapping('EmailToComplianceRequest');
             
-            Compliance_Request__c complainceReq = new Compliance_Request__c();
+            Compliance_Request__c complianceReq = new Compliance_Request__c();
             String emailJsonStr = JSON.serialize(email);
             Map<String, Object> emailObjMap = (Map<String, Object>) JSON.deserializeUntyped(emailJsonStr);
-
+            // Assign the compliance request record values based on mappings 
             if(fieldMappingList != null && fieldMappingList.isEmpty() == false) {
                 
                 for(nu_dse__Field_mapping__c fieldMapping : fieldMappingList) {
     
                     if(fieldMapping.nu_dse__setDefaultValue__c == true) {
-                        complainceReq.put(fieldMapping.nu_dse__Target_Field__c, fieldMapping.nu_dse__Default_Value__c);
+                        complianceReq.put(fieldMapping.nu_dse__Target_Field__c, fieldMapping.nu_dse__Default_Value__c);
                     } else if(emailObjMap.containskey(fieldMapping.nu_dse__Source_Field__c) && emailObjMap.get(fieldMapping.nu_dse__Source_Field__c) != null){
-                        complainceReq.put(fieldMapping.nu_dse__Target_Field__c, String.valueof(emailObjMap.get(fieldMapping.nu_dse__Source_Field__c)));
+                        complianceReq.put(fieldMapping.nu_dse__Target_Field__c, String.valueof(emailObjMap.get(fieldMapping.nu_dse__Source_Field__c)));
                     }
                 }
             } else {
@@ -45,7 +45,7 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
 
             if(relatedConList.isEmpty() == false) {
                 
-                complainceReq.Contact__c = relatedConList[0].Id;
+                complianceReq.Contact__c = relatedConList[0].Id;
             
             } else {
                 
@@ -55,18 +55,18 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
                     
                     List<Contact> relatedConTestList = [SELECT Id, Email FROM Contact LIMIT 1];
                     reqAssignDefault = new Default_Task_Assignments_to_User__mdt(
-                                                    MasterLabel = 'Complaince Request Email', 
-                                                    DeveloperName = 'Complaince_Request_Email');
+                                                    MasterLabel = 'Compliance Request Email', 
+                                                    DeveloperName = 'Compliance_Request_Email');
                                                     
                     if(relatedConTestList.isEmpty() == false) {
                         reqAssignDefault.Task_Assignement_User_Id__c = relatedConTestList[0].Id;
                     }
 
                 } else {
-                    
+                    // Query the Meta data for default contact Id
                     reqAssignDefault = [SELECT Task_Assignement_User_Id__c 
                                         FROM Default_Task_Assignments_to_User__mdt
-                                        WHERE DeveloperName = 'Complaince_Request_Email' LIMIT 1];
+                                        WHERE DeveloperName = 'Compliance_Request_Email' LIMIT 1];
                 }
 
                 if(reqAssignDefault != null 
@@ -75,14 +75,32 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
                         || reqAssignDefault.Task_Assignement_User_Id__c.length() == 18)
                     && Id.valueOf(reqAssignDefault.Task_Assignement_User_Id__c).getSobjectType().getDescribe().getName() == 'Contact') {
                     
-                    complainceReq.Contact__c = reqAssignDefault.Task_Assignement_User_Id__c;
+                    complianceReq.Contact__c = reqAssignDefault.Task_Assignement_User_Id__c;
 
                 } else {
                     throw new CustomException('Invalid Contact Id for task assignment. Please check Custom metadata record with Developer Name \'Complaince_Request_Email\'');
                 }
             }
-            insert complainceReq;
+            insert complianceReq;
             result.success = true;
+
+            /*if(email != null) {
+
+                EmailMessage emailRec = new EmailMessage(FromAddress = email.fromAddress, FromName = email.fromName,
+                    HtmlBody = email.htmlBody, Incoming = true, MessageDate = system.now(), Subject = email.subject,
+                    TextBody = email.plainTextBody);
+                
+                String toAddresses = '';
+                if(email.toAddresses != null) {
+                    for(String toAdd : email.toAddresses) {
+                        
+                        toAddresses += toAdd + ', ';
+                    }
+                    toAddresses.removeEnd(', ');
+                }
+                emailRec.ToAddress = toAddresses;
+            }*/
+            
 
         } catch (Exception e) {
             

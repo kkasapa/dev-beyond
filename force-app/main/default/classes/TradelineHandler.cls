@@ -30,17 +30,25 @@ public class TradelineHandler extends TriggerHandler {
     // List<nu_dse__Offer__c> offersToUpdate = new List<nu_dse__Offer__c>();
     List<nu_dse__TradeLine__c> TradelinesToUpdate = new List<nu_dse__TradeLine__c>();
     Map<Id, nu_dse__Program__c> programsToUpdate = new Map<Id,nu_dse__Program__c>();
+    Set<Id> dicoverUpdateProgramIds = new Set<Id>();
     
     public override void afterInsert() {
     
         for (nu_dse__TradeLine__c newTradeline : (List<nu_dse__TradeLine__c>) trigger.new) {
             
             collectSavingCalcTradelines(newTradeline, null);
+
+            collectProgramIdsforDiscoverUpdate(newTradeline, null);
         }
         
         if(savignCalcTradelineIds.isEmpty() == false) {
 
             calculateSavings(savignCalcTradelineIds);
+        }
+
+        if(dicoverUpdateProgramIds.isEmpty() == false) {
+
+            updateProgramDiscoverUpdate();
         }
     }
     
@@ -112,6 +120,19 @@ public class TradelineHandler extends TriggerHandler {
         }
     }
 
+    public void collectProgramIdsforDiscoverUpdate(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
+        
+        if(newTradeline.nu_dse__Program__c != null
+            && (newTradeline.nu_dse__Original_Creditor__c != null || newTradeline.nu_dse__New_Creditor__c != null)
+            && (Trigger.isInsert 
+                || (newTradeline.nu_dse__Program__c != oldTradeline.nu_dse__Program__c
+                    || newTradeline.nu_dse__Original_Creditor__c != oldTradeline.nu_dse__Original_Creditor__c
+                    || newTradeline.nu_dse__New_Creditor__c != oldTradeline.nu_dse__New_Creditor__c))) {
+            
+            dicoverUpdateProgramIds.add(newTradeline.nu_dse__Program__c);
+        }
+    }
+
     public void collectSavingCalcTradelines(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
 
         if((newTradeline.nu_dse__Current_Balance__c  != null || newTradeline.nu_dse__Original_Debt__c != null
@@ -137,6 +158,33 @@ public class TradelineHandler extends TriggerHandler {
                 || newTradeline.nu_dse__Include_In_The_Program__c != oldTradeline.nu_dse__Include_In_The_Program__c ))) {
 
             savingCalcUpdateProgramIds.add(newTradeline.nu_dse__Program__c);
+        }
+    }
+
+    public void updateProgramDiscoverUpdate() {
+
+        for(nu_dse__TradeLine__c newTradeLine : [SELECT Id, nu_dse__Include_In_The_Program__c, nu_dse__Original_Creditor__c, 
+                                                    nu_dse__Program__c, nu_dse__Original_Creditor__r.Name, 
+                                                    nu_dse__New_Creditor__c, nu_dse__New_Creditor__r.name 
+                                                 FROM nu_dse__TradeLine__c 
+                                                 WHERE nu_dse__Program__c IN :dicoverUpdateProgramIds]) {
+            
+            if((newTradeLine.nu_dse__Original_Creditor__c != null && newTradeLine.nu_dse__Original_Creditor__r.Name == 'Discover') || 
+                (newTradeLine.nu_dse__New_Creditor__c != null && newTradeLine.nu_dse__New_Creditor__r.Name == 'Discover')){
+                
+                nu_dse__Program__c updateProgram = new nu_dse__Program__c(Id = newTradeLine.nu_dse__Program__c, Discover_Included__c = false);
+                
+                if(programsToUpdate.containskey(updateProgram.Id)) {
+                    updateProgram = programsToUpdate.get(updateProgram.Id);
+                }
+
+                if(newTradeLine.nu_dse__Include_In_The_Program__c == true
+                    && updateProgram.Discover_Included__c == false){
+                    updateProgram.Discover_Included__c = true;
+                } else {
+                    updateProgram.Discover_Included__c = false;
+                }
+            }
         }
     }
 
