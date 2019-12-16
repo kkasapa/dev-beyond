@@ -11,8 +11,8 @@ public class AWSTriggerHandler extends IntegrationUtilityClass {
         //mCC.startRequestInParallel();
         
       //System.enqueJob(new FirstRequest(recordId,uName));
-        //FirstRequest.firstLevelRequest( recordId,uName);
-       // SecondRequest.secondLevelRequest( recordId,uName);
+       // FirstRequest.firstLevelRequest( recordId,uName);
+       //SecondRequest.secondLevelRequest( recordId,uName);
         
     }
     

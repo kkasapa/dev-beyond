@@ -8,24 +8,15 @@ public class AWS_DocumentHandler extends TriggerHandler {
         this.newAWSDocumentMap = (Map<Id, AWS_Document__c>) Trigger.newMap;
         this.oldAWSDocumentMap = (Map<Id, AWS_Document__c>) Trigger.oldMap;
         afterInsertAWSMap = new Map<id,String>();
-    }
-   /* 
-    public override void beforeInsert() {
-        if(Switch__c.getValues('Swith Off').Turn_Off__c == true){       
-            system.debug('I am Fired');        
-            if(trigger.isInsert){
-                AWSSplitPDFService Aws = New AWSSplitPDFService();           
-            }
-        }    
-    }
-    */
-    
+    }    
     public override void afterInsert() {
         string uName = userinfo.getName();
         for(AWS_Document__c awsRecord : newAWSDocumentMap.values()){
             if(Switch__c.getValues('Swith Off').Turn_Off__c == true && !awsRecord.createdFromAWS__c  && AWS_PDF_Split__c.getValues('Enrollment-Agreement').AWS_PDF_Name_Start__c ==  'AUTHORIZATION-SPAA-Enrollment-Agreement'){
                 system.debug('In AWS Doc Handler');                 
-                AWSTriggerHandler.splitPdf(awsRecord.id,uName);               
+                //AWSTriggerHandler.splitPdf(awsRecord.id,uName);
+                FirstRequest fr = new FirstRequest(awsRecord.id,uName);
+                ID jobID = System.enqueueJob(fr);               
             }
         }         
     }
