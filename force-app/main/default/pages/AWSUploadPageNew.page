@@ -49,16 +49,7 @@
         
         
         <apex:pageBlockSection id="pageBlockSectionId" title="Select the file for upload" columns="1">
-            <!---
-            <apex:pageBlockSectionItem >
-                
-               <!---<apex:outputPanel rendered="{!isPortalUser == false}"></apex:outputpanel> 
-                    <apex:outputlabel value="Is Private:"/>
-                    <input type="checkbox" checked="true" id="isPrivateCheckbox" />
-                
-            </apex:pageBlockSectionItem>
-            <br />
-            --->
+
             <apex:pageBlockSectionItem id="pageBkSecFile">
                 
                 <apex:outputLabel value="File to upload" />
@@ -69,7 +60,7 @@
             
             <apex:pageBlockSectionItem id="pageBkSecFileNameId">
                 <apex:outputLabel value="Destination File Name" for="objName" />
-                <apex:inputField value="{!awsDocument.Name}"
+                <apex:inputField value="{!awsDocument.File_Name__c}"
                                      id="objName" required="true"  styleclass="form-field fileName" />
             </apex:pageBlockSectionItem>
             <br />
@@ -83,7 +74,7 @@
             
             <apex:pageBlockSectionItem >
                 <div class="progress" align="center" >
-                    <div class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"  id="Upload1" style="width:0%">
+                    <div class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"  id="Uploadprogress" style="width:0%">
                         <span class="sr-only">20% Complete</span>
                     </div>
                 </div>
@@ -102,181 +93,169 @@
 <!-- Aws S3 Upload code -->
 <script>
       
-      var fileSize;
-      var pageMessage = document.getElementById('pageMessageId');
-      pageMessage.style.display = "none";
-      
-      var parentId = '{!$CurrentPage.parameters.id}';
-      var fileName;
-      var docFileName;
-      /*
-      function fileSelected(){
-          
-          callMethod1();
-      }
-      */
-      var docName = '';
-      var doctype = '';
-      /*
-      function assginValues_Folder(docNameString, docTypeString) {
-          
-          docName = docNameString;
-          doctype = docTypeString;
-      }    
-      */
-      
-      function createrecordsFn(){
-          
-          console.log('fileName-->',fileName);
-          //var communityUser = document.getElementById('isPrivateCheckbox');
-          //var isPrivateChecked = false;
-          /*
-          if(communityUser && communityUser.checked) {
-          
-              isPrivateChecked = true;
-          }
-          */
-          
-          console.log('****objectName-->', document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecFileNameId.objName}").value);
-          console.log('****objectCategory-->', document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecCategoryId.objCategory}").value);
-          
-          var objectName = document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecFileNameId.objName}").value;
-          var objectCategory = document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecCategoryId.objCategory}").value;
-          var size = fileSize;
-          //console.log('**** checkbox', isPrivateChecked);
-          Visualforce.remoting.Manager.invokeAction(
-            '{!$RemoteAction.AwsPageUploadNew.createDocLibraryNew}',
-            parentId, fileName, objectName, objectCategory, size,
-            function(result, event){
-                console.log('**** result', result);
-                console.log('*** event', event);
-                
-                if (event.status) {
-                    
-                    if (result) {
-                        
-                        console.log('**** result', result);
-                        
-                        var pageMessage = document.getElementById('pageMessageId');
-                        pageMessage.style.display = "block";
-                        refreshAFterUpload(result);
-                    
-                    }
-                    
-                } else if (event.type === 'exception') {
-                    
-                    var pageMessage = document.getElementById('pageMessageId');
-                    pageMessage.style.display = "block";
-                    refreshAFterUpload();
-                    
-                } else {
-                    //document.getElementById("responseErrors").innerHTML = event.message;
-                }
-            }, 
-            {escape: true}
-          );
-          console.log('Refresh');
-          
-    }
-      
-      
-    AWS.config.update(
+  var fileSize;
+  var pageMessage = document.getElementById('pageMessageId');
+  pageMessage.style.display = "none";
+  
+  var parentId = '{!$CurrentPage.parameters.id}';
+  var fileName;
+  var docFileName;
+
+  var docName = '';
+  var doctype = '';
+  
+  AWS.config.update(
     {
-        accessKeyId: '{!awsCredentialWrapperInstance.accessKey}',
-        secretAccessKey: '{!awsCredentialWrapperInstance.secretValue}',
-        region_config: '{!awsCredentialWrapperInstance.regionConfig}'
-    });
-        
+    accessKeyId: '{!awsCredentialWrapperInstance.accessKey}',
+    secretAccessKey: '{!awsCredentialWrapperInstance.secretValue}',
+    region_config: '{!awsCredentialWrapperInstance.regionConfig}'
+    }
+  );
+
+
+  function folderCreation(){
+    var s3Client = new AWS.S3();
+
+    var folderName = 'Program/'+'{!parentName}'+'/';
+    //console.log('**folderName-->',folderName);
+    //var folderName = parentId+'/';
+    //var folderparams = { Bucket: 'prod-salesforce-upload', Key: folderName, ACL: 'public-read', Body:'body does not matter' };
+    var folderparams = { Bucket: '{!awsCredentialWrapperInstance.bucket}', Key: folderName, ACL: '{!awsCredentialWrapperInstance.acl}', Body:'body does not matter' };
+
+    s3Client.upload(folderparams, 
+      function (err, data) {
+        if (err) {
+          alert("Error creating the folder: "+err);
+        } else {
+          alert("Successfully created a folder on S3");
+        }
+      }
+    );
+  }
+
+  function createrecordsFn(){
+    //console.log('fileName-->',fileName);
+    //console.log('****objectName-->', document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecFileNameId.objName}").value);
+    //console.log('****objectCategory-->', document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecCategoryId.objCategory}").value);
+
+    var objectName = document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecFileNameId.objName}").value;
+    var objectCategory = document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecCategoryId.objCategory}").value;
+    var size = fileSize;
+    //console.log('**** checkbox', isPrivateChecked);
+    Visualforce.remoting.Manager.invokeAction(
+                          '{!$RemoteAction.AwsPageUploadNew.createDocLibraryNew}',
+                          parentId, fileName, objectName, objectCategory, size,
+                          function(result, event){
+                            //console.log('**** result', result);
+                            //console.log('*** event', event);
+                            if (event.status) {
+                              //console.log('**** event.status', event.status);
+                              if (result) {
+                                //console.log('**** result', result);
+                                var pageMessage = document.getElementById('pageMessageId');
+                                pageMessage.style.display = "block";
+                                refreshAFterUpload(result);
+                              }
+                            } else if (event.type === 'exception') {
+                              var pageMessage = document.getElementById('pageMessageId');
+                              pageMessage.style.display = "block";
+                              refreshAFterUpload();
+                              } 
+                            else {
+                              document.getElementById("responseErrors").innerHTML = event.message;
+                            }
+                          }, 
+                          {escape: true});
+    console.log('Refresh');
+  }
+
+  function uploadDocument() {
+
+    //console.log('**** btn clicked');
+    event.preventDefault();
+
     var FolderCreated = '{!FolderCreated}';
     if(!FolderCreated)
-    folderCreation();
+      folderCreation();
 
-    function uploadDocument() {
-    
-    console.log('**** btn clicked');
-    event.preventDefault();
-    
-    var bucket = new AWS.S3({params: {Bucket: 'prod-salesforce-upload'}}); 
-    
+    //var bucket = new AWS.S3({params: {Bucket: 'prod-salesforce-upload'}}); 
+    var bucket = new AWS.S3({params: {Bucket: '{!awsCredentialWrapperInstance.bucket}'}});
+    /*var bucket = new AWS.S3(
+                    {params: 
+                      {Bucket: '{!awsCredentialWrapperInstance.bucket}'},
+                      {ACL: '{!awsCredentialWrapperInstance.acl}'}
+                    }
+                  );
+    */
     var fileChooser = document.getElementById('file');
+    var file_name_temp = document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecFileNameId.objName}").value;
     var file = fileChooser.files[0];
     docFileName = fileChooser.files[0];
     if (file) {
-    
-    console.log('**parentId-->',parentId);
-    console.log('**file-->',file);
-    fileSize = file.size;
-    fileName = '{!parentName}'+'-'+file.name;
-    fileName = 'Program/'+'{!parentName}'+'/'+fileName;
-    //fileName = '{!parentName}';
-    console.log('**fileName',fileName);
-    console.log('**file-->',file.type);
-    
-    var params = {Key:fileName, ContentType: file.type, Body: file};
-    bucket.upload(params).on('httpUploadProgress', function(evt) {
-            console.log("Uploaded :: " + parseInt((evt.loaded * 100) / evt.total)+'%');
-            var per=parseInt((evt.loaded * 100) / evt.total)+'%';
-            document.getElementById("Upload1").style.width=per ;
-      
-        }).send(function(err, data) {
-          console.log('**** err', err);
-          console.log('*** a=data', data);
-            if(!err) {
-              // alert("File uploaded Successfully");
-               //createrecords1(fileName);
-               createrecordsFn();
-               rerender();
-            } else {
-                
-                console.log('*** show message called');
-                showMessage_Toast(err, 'error');
-            }                         
-              
-            });
-            
-    }
-        return false;
-    }
-    
-    function folderCreation(){
-        var s3Client = new AWS.S3();
-        
-        var folderName = 'Program/'+'{!parentName}'+'/';
-        console.log('**folderName-->',folderName);
-        //var folderName = parentId+'/';
-        var folderparams = { Bucket: 'prod-salesforce-upload', Key: folderName, ACL: 'public-read', Body:'body does not matter' };
-        s3Client.upload(folderparams, function (err, data) {
-            if (err) {
-            alert("Error creating the folder: "+err);
-            } else {
-               alert("Successfully created a folder on S3");
-            }
-        });
-    }
-    
-    function closemodal() {
-        
-        console.log('***** before closer modal');
-        window.parent.dialogClose();
-        //window.parent.closeDialog();
-        console.log('entered console')
-    }
-    
-    function getFileDetails() {
-        
-        console.log('x-->',document.getElementById("file"))
-        var x = document.getElementById("file").value;
-        console.log('x-->',x);
-        x = x.replace('C:\\fakepath\\', '');
-        
-        document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecFileNameId.objName}").value = x;
-    }
-    
-    function redirectToParentRecord() {
-    
-        redirectToParent();
-    }
-</script>
-<!-- Aws S3 upload ends -->
+      //console.log('**parentId-->',parentId);
+      //console.log('**file-->',file);
+      fileSize = file.size;
+      //fileName = '{!parentName}'+'-'+file.name;
+      fileName = '{!parentName}'+'-'+file_name_temp;
+      fileName = 'Program/'+'{!parentName}'+'/'+fileName;
+      //fileName = '{!parentName}';
+      //console.log('**fileName',fileName);
+      //console.log('**file-->',file.type);
 
+      var params = {Key:fileName, ContentType: file.type, Body: file};
+      //var params = {Key:fileName, ContentType: file.type, Body: file, ACL: '{!awsCredentialWrapperInstance.acl}'};
+
+      bucket
+        .upload(params)
+        .on(
+          'httpUploadProgress', 
+          function(evt) {
+            //console.log("Uploaded :: " + parseInt((evt.loaded * 100) / evt.total)+'%');
+            var per=parseInt((evt.loaded * 100) / evt.total)+'%';
+            document.getElementById("Uploadprogress").style.width=per ;
+          }
+        )
+        .send(function(err, data) {
+          console.log('**** send function err', err);
+          console.log('*** a=data', data);
+          if(!err) {
+            // alert("File uploaded Successfully");
+            //createrecords1(fileName);
+            console.log('*** Not Error upload Successfully', err);
+            createrecordsFn();
+            rerender();
+          } else {
+            console.log('*** show error message called', err);
+            //showMessage_Toast(err, 'error');
+          }                         
+        }
+      );
+    }else {
+      return false;
+    }
+  }
+
+  function closemodal() {
+
+    console.log('***** before closer modal');
+    window.parent.dialogClose();
+    //window.parent.closeDialog();
+    console.log('entered console');
+  }
+
+  function getFileDetails() {
+
+    //console.log('x-->',document.getElementById("file"));
+    var x = document.getElementById("file").value;
+    //console.log('x-->',x);
+    x = x.replace('C:\\fakepath\\', '');
+
+    document.getElementById("{!$Component.formId.pageBlockId.pageBlockSectionId.pageBkSecFileNameId.objName}").value = x;
+  }
+
+  function redirectToParentRecord() {
+    redirectToParent();
+  }
+ </script>
+<!-- Aws S3 upload ends -->
 </apex:page>

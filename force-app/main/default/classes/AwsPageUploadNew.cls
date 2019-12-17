@@ -1,40 +1,35 @@
 global with sharing class AwsPageUploadNew {   
     
-    public Attachment att{get;set;}
-    public list<string> settings{get;set;}
-    public string objName{get;set;}
+    //public Attachment att{get;set;}
+    //public list<string> settings{get;set;}
+    //public string objName{get;set;}
+    //public string selectedfodler{get;set;} 
+    //public string selectedFile{get;set;}
+    //public string filename{get;set;}
+    //public boolean showuploadmodal{get;set;}
+    //public String documentName{get;set;}
+    //public String documenttype{get;set;}
+    //public String objectId{get; set;}
+    //public String nameSpacePrefix_sObject {get; set;}
+    //public Id documentId {get; set;}
+    //public Boolean isPrivate {get; set;}
+    //public Boolean isPortalUser {get; set;}
+    //List<Profile> profileList = new List<Profile>();
+
     public Id parentId{get;set;}
-    public string selectedfodler{get;set;} 
-    public string selectedFile{get;set;}
-    public string filename{get;set;}
-    public boolean showuploadmodal{get;set;}
-    public String documentName{get;set;}
-    public String documenttype{get;set;}
     public Static boolean Uploaded{get;set;}
     public boolean FolderCreated{get;set;}
-    public String objectId{get; set;}
-    
-    public nu_dse__Program__c  program{get;set;}
     public nu_dse__Program__c programInstance {get;set;} 
-    public AWSCredentialsWrapper awsCredentialWrapperInstance {get; set;}
+    public AWSCredentialsWrapper awsCredentialWrapperInstance {get; set;}   
+    public Boolean isError {get; set;}              //Added for page Message
+    public String parentName {get; set;}             //Added on 25 may 2018
+    public String returnURL;                         //Added on 25 may 2018
+    public AWS_Document__c awsDocument {get; set;}  //Added on 25 may 2018    
+    public nu_dse__Program__c  program{get;set;}
     
-    public String nameSpacePrefix_sObject {get; set;}
-    
-    public Id documentId {get; set;}
-    public Boolean isPrivate {get; set;}
-    
-    public Boolean isPortalUser {get; set;}
-    List<Profile> profileList = new List<Profile>();
     public AWS_Credentials_Settings__c credentials;
-    public String errorString;
-    
-    //Added for page Message
-    public Boolean isError {get; set;}
-    
-    //Added on 25 may 2018
-    public String parentName {get; set;}
-    public String returnURL;
-    public AWS_Document__c awsDocument {get; set;}
+    public String errorString; 
+
     
     //public Document_Library__c documentLibrary { get;set;}
     //public list<Document_Library__c> docLibAWSList{get;set;}
@@ -49,19 +44,29 @@ global with sharing class AwsPageUploadNew {
             
             programInstance = (nu_dse__Program__c)controller.getRecord();
             parentId = programInstance.Id; 
-            
+            //parentName = programInstance.Name;
+
+            if (parentId != null) {
+                List<nu_dse__Program__c> programList = [SELECT Id, Name FROM nu_dse__Program__c WHERE Id = :parentId];
+
+                if (programList.isEmpty() == False) {
+                    program = programList[0];
+                }
+                parentName = program.Name;
+            }
+
             Uploaded = false;
             FolderCreated = false;
-            selectedfodler = 'null';
-            selectedFile = '';
-            showuploadmodal = false;
+            //selectedfodler = 'null';
+            //selectedFile = '';
+            //showuploadmodal = false;
             //documentLibrary = new Document_Library__c();
             //documentLibrary.IsPrivate__c  = true; 
             //settings = new list<string>();
             //Schema.DescribeFieldResult fieldResult = Document_Library__c.Folder__c.getDescribe();
             //List<Schema.PicklistEntry> ple = fieldResult.getPicklistValues();
             
-            isPortalUser = FALSE;
+            //isPortalUser = FALSE;
             
             credentials = AWS_Credentials_Settings__c.getInstance();
             errorString = '';
@@ -91,6 +96,7 @@ global with sharing class AwsPageUploadNew {
             
             awsCredentialWrapperInstance.regionConfig = 'us-east-1';
             awsCredentialWrapperInstance.bucket = credentials.Bucket_Name__c;
+            awsCredentialWrapperInstance.acl = credentials.ACL__c;
             
             if (String.isBlank(errorString) == False) {
                 
@@ -102,25 +108,8 @@ global with sharing class AwsPageUploadNew {
                 settings.add(pickListVal.getLabel());
             }     
             */
-            
-            if (parentId != null) {
-                
-                List<nu_dse__Program__c> programList = [SELECT Id, Name FROM nu_dse__Program__c WHERE Id = :parentId];
-                
-                if (programList.isEmpty() == False) {
-                    
-                    program = programList[0];
-                }
-                parentName = program.Name;
-                
-                //FolderCreated = program.Folder_Created__c;
-                //documentLibrary.Program__c  =  parentId;
-                
-                //Added for table creation.
-                //getDocumentsList(parentId); Commented on june 21 2018
-            }
-            
-            att = new Attachment();
+          
+            //att = new Attachment();
             
         } catch (Exception e) {
             
@@ -130,11 +119,11 @@ global with sharing class AwsPageUploadNew {
         }
     }
     
-    public void openUploadModal() {
+/*    public void openUploadModal() {
        
        showuploadmodal = true;
     }
-    
+ */   
     @RemoteAction
     global static String createDocLibraryNew(String parent_Id,String file_name, String fileNameTosave, String objectCategory, String filesize) {
         
@@ -199,6 +188,7 @@ global with sharing class AwsPageUploadNew {
         public String secretValue {get; set;}
         public String regionConfig {get; set;}
         public String bucket {get;set;}
+        public String acl {get;set;}
     }
     
     

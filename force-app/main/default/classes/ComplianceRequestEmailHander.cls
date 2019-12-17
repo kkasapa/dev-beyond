@@ -18,7 +18,7 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
         system.debug('email-->'+email);
         try {
             // Query and get the email to compliance request mapping records
-            List<nu_dse__Field_mapping__c> fieldMappingList = Utility.getFieldMapping('EmailToComplianceRequest');
+            /*List<nu_dse__Field_mapping__c> fieldMappingList = Utility.getFieldMapping('EmailToComplianceRequest');
             
             Compliance_Request__c complianceReq = new Compliance_Request__c();
             String emailJsonStr = JSON.serialize(email);
@@ -82,25 +82,65 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
                 }
             }
             insert complianceReq;
-            result.success = true;
+            result.success = true;*/
 
-            /*if(email != null) {
+            Compliance_Request__c complianceReq = new Compliance_Request__c(Description__c = email.subject, Name__c = email.fromName,
+                Email_Address__c = email.fromAddress);
 
-                EmailMessage emailRec = new EmailMessage(FromAddress = email.fromAddress, FromName = email.fromName,
-                    HtmlBody = email.htmlBody, Incoming = true, MessageDate = system.now(), Subject = email.subject,
-                    TextBody = email.plainTextBody);
+            EmailMessage emailRec = new EmailMessage(FromAddress = email.fromAddress, FromName = email.fromName,
+                HtmlBody = email.htmlBody, Incoming = true, MessageDate = system.now(), Subject = email.subject,
+                TextBody = email.plainTextBody, Status = '2');
+
+            emailRec.ToAddress = getconcordinateString(email.toAddresses);
+            emailRec.CcAddress = getconcordinateString(email.ccAddresses);
+
+            // Query the related Contact using from email address
+            List<Contact> relatedConList = [SELECT Id, Email FROM Contact
+                                            WHERE Email = :email.fromAddress
+                                            ORDER BY LastmodifiedDate DESC LIMIT 1];
+
+            if(relatedConList.isEmpty() == false) {
                 
-                String toAddresses = '';
-                if(email.toAddresses != null) {
-                    for(String toAdd : email.toAddresses) {
-                        
-                        toAddresses += toAdd + ', ';
-                    }
-                    toAddresses.removeEnd(', ');
-                }
-                emailRec.ToAddress = toAddresses;
-            }*/
+                complianceReq.Contact__c = relatedConList[0].Id;
             
+            } else {
+                
+                Default_Task_Assignments_to_User__mdt reqAssignDefault = new Default_Task_Assignments_to_User__mdt();
+                
+                if (Test.isRunningTest() == true) {
+                    
+                    List<Contact> relatedConTestList = [SELECT Id, Email FROM Contact LIMIT 1];
+                    reqAssignDefault = new Default_Task_Assignments_to_User__mdt(
+                                                    MasterLabel = 'Compliance Request Email', 
+                                                    DeveloperName = 'Compliance_Request_Email');
+                                                    
+                    if(relatedConTestList.isEmpty() == false) {
+                        reqAssignDefault.Task_Assignement_User_Id__c = relatedConTestList[0].Id;
+                    }
+
+                } else {
+                    // Query the Meta data for default contact Id
+                    reqAssignDefault = [SELECT Task_Assignement_User_Id__c 
+                                        FROM Default_Task_Assignments_to_User__mdt
+                                        WHERE DeveloperName = 'Compliance_Request_Email' LIMIT 1];
+                }
+
+                if(reqAssignDefault != null 
+                    && String.isNotBlank(reqAssignDefault.Task_Assignement_User_Id__c) == true
+                    && (reqAssignDefault.Task_Assignement_User_Id__c.length() == 15 
+                        || reqAssignDefault.Task_Assignement_User_Id__c.length() == 18)
+                    && Id.valueOf(reqAssignDefault.Task_Assignement_User_Id__c).getSobjectType().getDescribe().getName() == 'Contact') {
+                    
+                    complianceReq.Contact__c = reqAssignDefault.Task_Assignement_User_Id__c;
+
+                } else {
+                    throw new CustomException('Invalid Contact Id for task assignment. Please check Custom metadata record with Developer Name \'Complaince_Request_Email\'');
+                }
+            }
+            insert complianceReq;
+            emailRec.RelatedToId = complianceReq.Id;
+            insert emailRec;
+            result.success = true;
 
         } catch (Exception e) {
             
@@ -113,5 +153,19 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
             result.success = false;
         }
         return result;
+    }
+
+    public String getconcordinateString(List<String> StringList) {
+
+        String concordinateStr = '';
+        if(StringList != null && StringList.isEmpty() == false) {
+
+            for(String iterateStr : StringList) {
+                        
+                concordinateStr += iterateStr + ', ';
+            }
+            concordinateStr.removeEnd(', ');
+        }
+        return concordinateStr;
     }
 }

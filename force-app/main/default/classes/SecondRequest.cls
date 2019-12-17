@@ -1,3 +1,8 @@
+/**
+ * This class will send request to AWS.
+ * @author : Avco Team
+ * @created Date : December 2019
+ */ 
 public class SecondRequest extends IntegrationUtilityClass implements Queueable,Database.AllowsCallouts {
     private String recordId;
     private String uName;
@@ -27,6 +32,8 @@ public class SecondRequest extends IntegrationUtilityClass implements Queueable,
         
         JSONstr = JSON.serialize(awswrap,true);
         System.debug('\n******'+JSONstr +'\n******');
+        
+        if (test.isRunningTest())Test.setMock(HttpCalloutMock.class, new UploadFileMock());
         
         HttpRequest objHttpRequest2 = new HttpRequest();
         objHttpRequest2.setMethod('POST');

@@ -6,7 +6,7 @@
     <label>AWSUploadPageNew</label>
     <packageVersions>
         <majorNumber>1</majorNumber>
-        <minorNumber>319</minorNumber>
+        <minorNumber>383</minorNumber>
         <namespace>nu_dse</namespace>
     </packageVersions>
 </ApexPage>
