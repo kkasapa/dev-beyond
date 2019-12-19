@@ -89,7 +89,7 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
 
             EmailMessage emailRec = new EmailMessage(FromAddress = email.fromAddress, FromName = email.fromName,
                 HtmlBody = email.htmlBody, Incoming = true, MessageDate = system.now(), Subject = email.subject,
-                TextBody = email.plainTextBody, Status = '2');
+                TextBody = email.plainTextBody, Status = '0');
 
             emailRec.ToAddress = getconcordinateString(email.toAddresses);
             emailRec.CcAddress = getconcordinateString(email.ccAddresses);
