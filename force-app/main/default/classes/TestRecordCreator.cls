@@ -61,9 +61,9 @@ public with sharing class TestRecordCreator {
     
     public static nu_dse__TradeLine__c createTradeLine(Id AccId, Id programId){
         
-        Id recId = [select id from RecordType where sObjectType='Account' and developerName='Creditor' limit 1].id;
+        /*Id recId = [select id from RecordType where sObjectType='Account' and developerName='Creditor' limit 1].id;
         Account creditor = createCreditorAccount(recId);
-        insert creditor; 
+        insert creditor;*/ 
         
         nu_dse__TradeLine__c trdLine = new nu_dse__TradeLine__c(
                                                 nu_dse__Program__c = programId,

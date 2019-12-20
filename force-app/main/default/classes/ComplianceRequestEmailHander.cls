@@ -84,14 +84,15 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
             insert complianceReq;
             result.success = true;*/
 
-            Compliance_Request__c complianceReq = new Compliance_Request__c(Description__c = email.subject, Name__c = email.fromName,
-                Email_Address__c = email.fromAddress);
+            String toAddStr = getconcordinateString(email.toAddresses);
+
+            Compliance_Request__c complianceReq = new Compliance_Request__c(Description__c = email.subject+'\n'+email.plainTextBody,
+                Name__c = email.fromName, From_Address__c = email.fromAddress, To_Address__c = toAddStr);
 
             EmailMessage emailRec = new EmailMessage(FromAddress = email.fromAddress, FromName = email.fromName,
                 HtmlBody = email.htmlBody, Incoming = true, MessageDate = system.now(), Subject = email.subject,
-                TextBody = email.plainTextBody, Status = '0');
+                TextBody = email.plainTextBody, Status = '0', ToAddress = toAddStr);
 
-            emailRec.ToAddress = getconcordinateString(email.toAddresses);
             emailRec.CcAddress = getconcordinateString(email.ccAddresses);
 
             // Query the related Contact using from email address
@@ -164,7 +165,7 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
                         
                 concordinateStr += iterateStr + ', ';
             }
-            concordinateStr.removeEnd(', ');
+            concordinateStr = concordinateStr.removeEnd(', ');
         }
         return concordinateStr;
     }
