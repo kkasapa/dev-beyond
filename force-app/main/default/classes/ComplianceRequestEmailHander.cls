@@ -84,25 +84,42 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
             insert complianceReq;
             result.success = true;*/
 
-            String toAddStr = getconcordinateString(email.toAddresses);
+            String toAddStr = email.toAddresses != null ? String.join(email.toAddresses, ', ') : null;
+            String emailBody = email.subject+'\n'+email.plainTextBody;
+            
+            if(String.isNotBlank(emailBody) 
+                && emailBody.length() > 500) {
+                
+                emailBody = emailBody.substring(0, 425) + '...EMAIL BODY TOO LARGE! PLEASE CHECK THE ACTIVITIES FOR FULL CONTENT';
+            }
 
-            Compliance_Request__c complianceReq = new Compliance_Request__c(Description__c = email.subject+'\n'+email.plainTextBody,
+            Compliance_Request__c complianceReq = new Compliance_Request__c(Description__c = emailBody,
                 Name__c = email.fromName, From_Address__c = email.fromAddress, To_Address__c = toAddStr);
 
             EmailMessage emailRec = new EmailMessage(FromAddress = email.fromAddress, FromName = email.fromName,
                 HtmlBody = email.htmlBody, Incoming = true, MessageDate = system.now(), Subject = email.subject,
                 TextBody = email.plainTextBody, Status = '0', ToAddress = toAddStr);
 
-            emailRec.CcAddress = getconcordinateString(email.ccAddresses);
-
+            emailRec.CcAddress = email.ccAddresses != null ? String.join(email.ccAddresses, ', ') : null;
+            
+            Id relatedContactId;
+            
             // Query the related Contact using from email address
-            List<Contact> relatedConList = [SELECT Id, Email FROM Contact
+            for(Contact contactInst : [SELECT Id, Email,(SELECT Id FROM Compliance_Request__r) FROM Contact
                                             WHERE Email = :email.fromAddress
-                                            ORDER BY LastmodifiedDate DESC LIMIT 1];
+                                            ORDER BY LastmodifiedDate DESC]) {
+                if(relatedContactId == null) {
+                    relatedContactId = contactInst.Id;
+                }
+                if(contactInst.Compliance_Request__r.isEmpty() == false) {
+                    relatedContactId = contactInst.Id;
+                    break;
+                }                                
+            }
 
-            if(relatedConList.isEmpty() == false) {
+            if(String.isNotBlank(relatedContactId)) {
                 
-                complianceReq.Contact__c = relatedConList[0].Id;
+                complianceReq.Contact__c = relatedContactId;
             
             } else {
                 
@@ -154,19 +171,5 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
             result.success = false;
         }
         return result;
-    }
-
-    public String getconcordinateString(List<String> StringList) {
-
-        String concordinateStr = '';
-        if(StringList != null && StringList.isEmpty() == false) {
-
-            for(String iterateStr : StringList) {
-                        
-                concordinateStr += iterateStr + ', ';
-            }
-            concordinateStr = concordinateStr.removeEnd(', ');
-        }
-        return concordinateStr;
     }
 }

@@ -43,7 +43,7 @@ public with sharing class ComplianceRequestEmailHander_Test {
         Compliance_Request__c createdComplianceReq = [SELECT Id, Description__c FROM Compliance_Request__c 
                                                       WHERE Contact__c = :contactRec.Id LIMIT 1];
                                     
-        system.assertEquals(email.subject, createdComplianceReq.Description__c);
+        system.assertEquals(email.subject+'\n'+email.plainTextBody, createdComplianceReq.Description__c);
 
         EmailMessage emailRec = [SELECT Id, TextBody FROM EmailMessage WHERE RelatedToId =:createdComplianceReq.Id LIMIT 1];
         system.assertEquals(email.plainTextBody, emailRec.TextBody);                
@@ -89,7 +89,7 @@ public with sharing class ComplianceRequestEmailHander_Test {
         Compliance_Request__c createdComplianceReq = [SELECT Id, Description__c FROM Compliance_Request__c 
                                                       WHERE Contact__c = :defaultContactRec.Id LIMIT 1];
 
-        system.assertEquals(email.subject, createdComplianceReq.Description__c);
+        system.assertEquals(email.subject+'\n'+email.plainTextBody, createdComplianceReq.Description__c);
         //system.assertEquals(email.plainTextBody, createdComplianceReq.Description__c);                
     }   
 

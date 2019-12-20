@@ -1,0 +1,9 @@
+<apex:page controller="AWSDownloadController" ><!--action="{!sendEmail}"--->
+ 
+ <!-- 
+<a href="/servlet/servlet.FileDownload?file={!imageAttachment.Id}" target="_blank">
+<img src="/servlet/servlet.FileDownload?file={!imageAttachment.Id}" width="100" height="75"/>
+
+</a>
+-->  
+</apex:page>
