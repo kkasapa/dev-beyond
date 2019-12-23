@@ -14,14 +14,14 @@ public class IntegrationUtilityClass {
     
     public static AWS_Document__c getAws(String recordId){
         AWS_Document__c  awsRecord = [SELECT id, Name,File_Link__c,Category__c,Program__c,Content_Type__c,
-                                      File_Name__c,Folder__c,Size__c,Bucket__c,Program__r.Name 
+                                      File_Name__c,Folder__c,Size__c,Bucket__c,Program__r.Name,Program__r.nu_dse__Account__r.Name 
                                       FROM AWS_Document__c 
                                       WHERE id =: recordId];
         return awsRecord;
     }
-    public static List<AWS_PDF_Split__c> getAwsSplitList(String recordId){
-          List<AWS_PDF_Split__c> awsCList = [SELECT id, Name,SearchTitle__c, OutputFileName__c FROM AWS_PDF_Split__c
-                                           	  WHERE Name LIKE 'SplitAuth%' ];
+    public static List<AWS_PDF_Split__c> getAwsSplitList(){
+        List<AWS_PDF_Split__c> awsCList = [SELECT id, Name,SearchTitle__c, OutputFileName__c 
+                                           FROM AWS_PDF_Split__c];
         return awsCList;
     }
     

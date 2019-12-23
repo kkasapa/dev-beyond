@@ -7,7 +7,7 @@ public class AWSS3RESTFileDownload {
         string bucketname = 'bf-test-salesforce-upload';
         //Digu
         String region ='region=us-east-1';
-        String emailAddress ='rmathews@beyondfinance.com';
+        String emailAddress ='dipatel@beyondfinance.com';
         String contentType ='application/pdf';
         String Key = 'AKIAYZBFNVFF2JJYRPDN';
         String Secret ='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';
@@ -21,7 +21,8 @@ public class AWSS3RESTFileDownload {
         req.setHeader('Content-Type', 'application/pdf');
         //req.setHeader('Accept', 'application/pdf');
         //req.setEndpoint('https://s3-' + region + '.amazonaws.com' + '/'+ bucketname + '/' +'Program'+ + filename);   //path style
-        req.setEndpoint('https://s3.console.aws.amazon.com'+'/'+ s3+'/object' +'/'+ bucketname + '/' +'Program'+'/'+ Program+'/'+ filename);
+        req.setEndpoint('https://s3.console.aws.amazon.com'+'/'+ s3+'/object' +'/'+ bucketname + '/' +'Program'+'/'+ Program+'/'+ filename );
+        system.debug('I am here');
         req.setHeader('Date', formattedDateString);
         req.setHeader('Authorization',createAuthHeader('GET',contentType,filename,formattedDateString,bucketname,key,secret));
         
@@ -95,7 +96,7 @@ String url = serverURL+'/'+bucketName+'/'+codedFilename+'?response-content-dispo
         //string attFileLink='Program/P-35170/P-35170-Data Mask Data Sheet November 2019 NEWW.pdf';
         string attFileLink='Program/P-38322/P-38322-Enrollmeent_Agreement.pdf';
         String attContentType='application/pdf';
-        String emailAddress ='rmathews@beyondfinance.com';
+        String emailAddress ='dipatel@beyondfinance.com';
         AWS_Credentials_Settings__c setting = [Select Key__c,Secret__c,Bucket_Name__c,ACL__c from AWS_Credentials_Settings__c];
         String now = Datetime.now().formatGMT('EEE, dd MMM yyyy HH:mm:ss z');
         String host='s3.amazonaws.com';
@@ -117,16 +118,16 @@ String url = serverURL+'/'+bucketName+'/'+codedFilename+'?response-content-dispo
         Http http = new Http();
         if(!Test.isRunningTest()) //added to avoid call out in Test class
             try {
-            	HTTPResponse res = http.send(req);   
+                HTTPResponse res = http.send(req);   
                 
                 System.debug('RESContent-Type:'+ res.getHeader('Content-Type'));
-            	system.debug('res'+res);
+                system.debug('res'+res);
                 
                 System.debug('MYDEBUG: RESPONSE STRING: ' + res.toString());
-           		system.debug('I a m here');
-            	system.debug(res.getBody());
+                system.debug('I a m here');
+                system.debug(res.getBody());
             
-            	system.debug('***id-2***'+res.getHeader('x-amz-id-2'));
+                system.debug('***id-2***'+res.getHeader('x-amz-id-2'));
                 
                 Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
                 message.setToAddresses(new String[] { emailAddress });

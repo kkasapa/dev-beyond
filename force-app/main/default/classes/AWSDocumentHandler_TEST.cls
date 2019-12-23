@@ -1,13 +1,20 @@
-/**
-* This test class is created to check the functionality of AWS_DocumentHandler class 
-* @author : Avco Team
-* @created Date : December 2019
+/*
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+* Test Class to check the functionality of SplitFileIntoThree Queueable class.  
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+* @author         Shravan 
+* @modifiedBy     
+* @maintainedBy   Shravan
+* @version        1.0
+* @created        2019-12-19
+* @modified       2019-12-19
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
 @isTest
 public class AWSDocumentHandler_TEST {
     /**
-	* This method is used to create the test data
-	*/
+* This method is used to create the test data
+*/
     @testSetup
     static void awsTestData(){
         Switch__c swc = new Switch__c();
@@ -15,31 +22,58 @@ public class AWSDocumentHandler_TEST {
         swc.Turn_Off__c = true;
         insert swc;
         
+        AWS_Endpoints__c awsTitle = new AWS_Endpoints__c();
+        awsTitle.Name = 'Split PDF By Title Single';
+        awsTitle.Active__c = false;
+        awsTitle.Endpoint_Name__c = 'https://zb0bwfulaf.execute-api.us-east-1.amazonaws.com/staging/v1/documents/pdf/split-by-title';
+        insert awsTitle;        
+        
+        AWS_Endpoints__c awsPage = new AWS_Endpoints__c();
+        awsPage.Name = 'PDF Split Single by Page';
+        awsPage.Active__c = false;
+        awsPage.Endpoint_Name__c = 'https://zb0bwfulaf.execute-api.us-east-1.amazonaws.com/staging/v1/documents/pdf/split-by-page';
+        insert awsPage;
+        
+        AWS_Endpoints__c awsBulk = new AWS_Endpoints__c();
+        awsBulk.Name = 'PDF Split Bulk';
+        awsBulk.Active__c = false;
+        awsBulk.Endpoint_Name__c = 'https://zb0bwfulaf.execute-api.us-east-1.amazonaws.com/staging/v1/documents/pdf/split-by-title/bulk';
+        insert awsBulk; 
+        
+        AWS_Endpoints__c awsBulkPage = new AWS_Endpoints__c();
+        awsBulkPage.Name = 'Split PDF Bulk by page';
+        awsBulkPage.Active__c = false;
+        awsBulkPage.Endpoint_Name__c = 'https://zb0bwfulaf.execute-api.us-east-1.amazonaws.com/staging/v1/documents/pdf/split-by-page/bulk';
+        insert awsBulkPage; 
+        
         AWS_PDF_Split__c awsSplit = new AWS_PDF_Split__c();
-        awsSplit.Name = 'Enrollment-Agreement';
+        awsSplit.Name = 'Auth Letter';
         awsSplit.SearchTitle__c = 'test';
         awsSplit.bucket__c = 'test';
         awsSplit.sourceFileName__c = 'test';
         awsSplit.OutputFileName__c = 'test';
-        awsSplit.AWS_PDF_Name_Start__c = 'AUTHORIZATION-SPAA-Enrollment-Agreement';        
+        awsSplit.AWS_PDF_Name_Start__c = 'AUTHORIZATION-SPAA-Enrollment-Agreement.pdf';   
+        
         insert awsSplit;
         
         AWS_PDF_Split__c awsSplitSR = new AWS_PDF_Split__c();
-        awsSplitSR.Name = 'Enrollment-AgmntSec';
+        awsSplitSR.Name = 'LPOA';
         awsSplitSR.SearchTitle__c = 'test';
         awsSplitSR.bucket__c = 'test';
         awsSplitSR.sourceFileName__c = 'test';
         awsSplitSR.OutputFileName__c = 'test';
-        awsSplitSR.AWS_PDF_Name_Start__c = 'AUTHORIZATION-SPAA-Enrollment-Agreement';        
+        awsSplitSR.AWS_PDF_Name_Start__c = 'AUTHORIZATION-SPAA-Enrollment-Agreement.pdf';  
+        
         insert awsSplitSR;
         
         AWS_PDF_Split__c awsSplitEA = new AWS_PDF_Split__c();
-        awsSplitEA.Name = 'Enrollment-Agmnt';
+        awsSplitEA.Name = 'ATC';
         awsSplitEA.SearchTitle__c = 'test';
         awsSplitEA.bucket__c = 'test';
         awsSplitEA.sourceFileName__c = 'test';
         awsSplitEA.OutputFileName__c = 'test';
-        awsSplitEA.AWS_PDF_Name_Start__c = 'AUTHORIZATION-SPAA-Enrollment-Agreement';        
+        awsSplitEA.AWS_PDF_Name_Start__c = 'AUTHORIZATION-SPAA-Enrollment-Agreement.pdf'; 
+        
         insert awsSplitEA;
         
         nu_dse__Program__c pgm = new nu_dse__Program__c();
@@ -54,33 +88,82 @@ public class AWSDocumentHandler_TEST {
         awsdoc.Content_Type__c = 'testCOntentType';
         awsdoc.Size__c = 2;
         awsdoc.createdFromAWS__c = false;
+        awsdoc.File_Name__c = 'AUTHORIZATION-SPAA-Enrollment-Agreement.pdf';
         insert awsdoc;
     }
     /**
-	* This method is used to test the FirstRequest class
+	* This method is used to test the splitPDFByTitle
 	*/ 
     @isTest
-    static void testAWSFirstCallout(){        
-        String uName = UserInfo.getName();
+    static void testsplitPDFByTitle(){
+        String uName = UserInfo.getName(); 
+        AWS_Endpoints__c awsE = [SELECT id,Name,Active__c FROM AWS_Endpoints__c WHERE Name ='Split PDF By Title Single' ];
+        awsE.Active__c = true;
+        update awsE;
+        
         AWS_Document__c awsRecord = [SELECT id, Name FROM AWS_Document__c WHERE Bucket__c ='testBucket' LIMIT 1]; 
-        FirstRequest frqueue = new FirstRequest(awsRecord.id,uName); 
+        PdfSplitService frqueue1 = new PdfSplitService(awsRecord.id,uName); 
         
         Test.startTest();
-        System.enqueueJob(frqueue);
+        System.enqueueJob(frqueue1);
+        Test.stopTest();
+    } 
+    
+    /**
+	* This method is used to test the splitPDFByPage
+	*/ 
+    
+    @isTest
+    static void testsplitPDFByPage(){
+        String uName = UserInfo.getName();
+        AWS_Endpoints__c awsE1 = [SELECT id,Name,Active__c FROM AWS_Endpoints__c WHERE Name ='PDF Split Single by Page' ];
+        awsE1.Active__c = true;
+        update awsE1;        
+        
+        AWS_Document__c awsRecord = [SELECT id, Name FROM AWS_Document__c WHERE Bucket__c ='testBucket' LIMIT 1]; 
+        PdfSplitService frqueue2 = new PdfSplitService(awsRecord.id,uName); 
+        
+        Test.startTest();
+        System.enqueueJob(frqueue2);
+        Test.stopTest();
+    }    
+    /**
+	* This method is used to test the splitPDFBulk
+	*/
+    
+    @isTest
+    static void testsplitPDFBulk(){        
+        String uName = UserInfo.getName();
+        AWS_Endpoints__c awsE3  = [SELECT id,Name,Active__c FROM AWS_Endpoints__c WHERE Name ='PDF Split Bulk' ];
+        awsE3.Active__c = true;
+        update awsE3;        
+        
+        AWS_Document__c awsRecord = [SELECT id, Name FROM AWS_Document__c WHERE Bucket__c ='testBucket' LIMIT 1]; 
+        PdfSplitService frqueue3 = new PdfSplitService(awsRecord.id,uName); 
+        
+        Test.startTest();
+        System.enqueueJob(frqueue3);
         Test.stopTest();
     }
     
+    
     /**
-	* This method is used to test the SecondRequest class
+	* This method is used to test the splitPDFBulkPage
 	*/ 
     @isTest
-    static void testAWSSecondCallout(){
+    static void testsplitPDFBulkPage(){        
         String uName = UserInfo.getName();
+        AWS_Endpoints__c awsE4 = [SELECT id,Name,Active__c FROM AWS_Endpoints__c WHERE Name ='Split PDF Bulk by page' ];
+        awsE4.Active__c = true;
+        update awsE4;        
+        
         AWS_Document__c awsRecord = [SELECT id, Name FROM AWS_Document__c WHERE Bucket__c ='testBucket' LIMIT 1]; 
-        SecondRequest srqueue = new SecondRequest(awsRecord.id,uName);  
+        PdfSplitService frqueue4 = new PdfSplitService(awsRecord.id,uName); 
         
         Test.startTest();
-        System.enqueueJob(srqueue);
+        System.enqueueJob(frqueue4);
         Test.stopTest();
-    }    
+    }
+    
+    
 }
