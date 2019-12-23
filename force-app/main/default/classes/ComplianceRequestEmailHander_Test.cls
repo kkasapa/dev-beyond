@@ -10,23 +10,6 @@ public with sharing class ComplianceRequestEmailHander_Test {
         // Create a new test lead and insert it in the test method.
         Contact contactRec = new Contact(FirstName = 'Test', LastName = 'Contact', Email = 'user@test.com');
         insert contactRec;
-    
-        /*nu_dse__Data_Mapping__c emailComplianceReqDataMapping = TestRecordCreator.createDataMapping('EmailToComplianceRequest', 'Messaging.inboundEmail', 'Compliance_Request__c');
-        insert emailComplianceReqDataMapping;
-        
-        List<nu_dse__Field_mapping__c> fieldMappingList = new List<nu_dse__Field_mapping__c>();
-        
-        nu_dse__Field_mapping__c fieldMapping1 = TestRecordCreator.createFieldMapping(emailComplianceReqDataMapping.Id, 'subject', 'Subject__c', false, '');
-        nu_dse__Field_mapping__c fieldMapping2 = TestRecordCreator.createFieldMapping(emailComplianceReqDataMapping.Id, 'plainTextBody', 'Description__c', false, '');
-        nu_dse__Field_mapping__c fieldMapping3 = TestRecordCreator.createFieldMapping(emailComplianceReqDataMapping.Id, 'fromAddress', 'Email_Address__c', false, '');
-        nu_dse__Field_mapping__c fieldMapping4 = TestRecordCreator.createFieldMapping(emailComplianceReqDataMapping.Id, 'fromName', 'Name__c', false, '');
-
-        fieldMappingList.add(fieldMapping1);
-        fieldMappingList.add(fieldMapping2);
-        fieldMappingList.add(fieldMapping3);
-        fieldMappingList.add(fieldMapping4);
-
-        insert fieldMappingList;*/
 
         // Test with the subject that matches the unsubscribe statement.
         email.subject = 'Test inbound email task creation';
@@ -49,27 +32,14 @@ public with sharing class ComplianceRequestEmailHander_Test {
         system.assertEquals(email.plainTextBody, emailRec.TextBody);                
     }
 
-    static testMethod void testComplianceRequestCreationDefaultCon() {
+    static testMethod void testComplianceRequestCreation2() {
         
-        Contact defaultContactRec = new Contact(FirstName = 'Test', LastName = 'Default Contact', Email = 'info@test.com');
-        insert defaultContactRec;
-
-        /*nu_dse__Data_Mapping__c emailComplianceReqDataMapping = TestRecordCreator.createDataMapping('EmailToComplianceRequest', 'Messaging.inboundEmail', 'Compliance_Request__c');
-        insert emailComplianceReqDataMapping;
+        Contact ContactRec = new Contact(FirstName = 'Test', LastName = 'Default Contact', Email = 'user@test.com');
+        insert ContactRec;
         
-        List<nu_dse__Field_mapping__c> fieldMappingList = new List<nu_dse__Field_mapping__c>();
-        
-        nu_dse__Field_mapping__c fieldMapping1 = TestRecordCreator.createFieldMapping(emailComplianceReqDataMapping.Id, 'subject', 'Subject__c', false, '');
-        nu_dse__Field_mapping__c fieldMapping2 = TestRecordCreator.createFieldMapping(emailComplianceReqDataMapping.Id, 'plainTextBody', 'Description__c', false, '');
-        nu_dse__Field_mapping__c fieldMapping3 = TestRecordCreator.createFieldMapping(emailComplianceReqDataMapping.Id, 'fromAddress', 'Email_Address__c', false, '');
-        nu_dse__Field_mapping__c fieldMapping4 = TestRecordCreator.createFieldMapping(emailComplianceReqDataMapping.Id, 'fromName', 'Name__c', false, '');
-
-        fieldMappingList.add(fieldMapping1);
-        fieldMappingList.add(fieldMapping2);
-        fieldMappingList.add(fieldMapping3);
-        fieldMappingList.add(fieldMapping4);
-
-        insert fieldMappingList;*/
+        Compliance_Request__c complianceReq = new Compliance_Request__c(Description__c = 'Test Call', Name__c= 'Test', 
+            From_Address__c = 'user@test.com', Contact__c = ContactRec.Id);
+        insert complianceReq;
 
         // Create a new email and envelope object.
         Messaging.InboundEmail email = new Messaging.InboundEmail() ;
@@ -86,14 +56,14 @@ public with sharing class ComplianceRequestEmailHander_Test {
         ComplianceRequestEmailHander inboundTaskCreationObj = new ComplianceRequestEmailHander();
         inboundTaskCreationObj.handleInboundEmail(email, env);
 
-        Compliance_Request__c createdComplianceReq = [SELECT Id, Description__c FROM Compliance_Request__c 
-                                                      WHERE Contact__c = :defaultContactRec.Id LIMIT 1];
+        List<Compliance_Request__c> createdComplianceReqList = [SELECT Id, Description__c FROM Compliance_Request__c 
+                                                                WHERE Contact__c = :ContactRec.Id];
 
-        system.assertEquals(email.subject+'\n'+email.plainTextBody, createdComplianceReq.Description__c);
+        system.assertEquals(email.subject+'\n'+email.plainTextBody, createdComplianceReqList[1].Description__c);
         //system.assertEquals(email.plainTextBody, createdComplianceReq.Description__c);                
     }   
 
-    static testMethod void testComplianceRequestCreationException() {
+    static testMethod void testComplianceRequestCreation3() {
         
         // Create a new email and envelope object.
         Messaging.InboundEmail email = new Messaging.InboundEmail() ;
@@ -108,34 +78,38 @@ public with sharing class ComplianceRequestEmailHander_Test {
 
         // Call the class and test it with the data in the testMethod.
         ComplianceRequestEmailHander complianceReqObj = new ComplianceRequestEmailHander();
-        complianceReqObj.handleInboundEmail(email, env);              
+        complianceReqObj.handleInboundEmail(email, env);     
+
+        Contact createdCon = [SELECT Id, Email FROM Contact LIMIT 1];      
+
+        system.assertEquals('user@test.com', createdCon.Email);   
     
-        /*nu_dse__Data_Mapping__c emailComplianceReqDataMapping = TestRecordCreator.createDataMapping('EmailToComplianceRequest', 'Messaging.inboundEmail', 'Compliance_Request__c');
-        insert emailComplianceReqDataMapping;
+        Compliance_Request__c createdComplianceReq = [SELECT Id, Description__c FROM Compliance_Request__c 
+                                                      WHERE Contact__c = :createdCon.Id LIMIT 1];
+                                    
+        system.assertEquals(email.subject+'\n'+email.plainTextBody, createdComplianceReq.Description__c);
+
+        EmailMessage emailRec = [SELECT Id, TextBody FROM EmailMessage WHERE RelatedToId =:createdComplianceReq.Id LIMIT 1];
+        system.assertEquals(email.plainTextBody, emailRec.TextBody);   
+    }   
+
+    static testMethod void testComplianceRequestException() {
         
-        List<nu_dse__Field_mapping__c> fieldMappingList = new List<nu_dse__Field_mapping__c>();
-        
-        nu_dse__Field_mapping__c fieldMapping1 = TestRecordCreator.createFieldMapping(emailComplianceReqDataMapping.Id, 'subject', 'Subject__c', false, '');
-        nu_dse__Field_mapping__c fieldMapping2 = TestRecordCreator.createFieldMapping(emailComplianceReqDataMapping.Id, 'plainTextBody', 'Description__c', false, '');
-        nu_dse__Field_mapping__c fieldMapping3 = TestRecordCreator.createFieldMapping(emailComplianceReqDataMapping.Id, 'fromAddress', 'Email_Address__c', false, '');
-        nu_dse__Field_mapping__c fieldMapping4 = TestRecordCreator.createFieldMapping(emailComplianceReqDataMapping.Id, 'fromName', 'Name__c', false, '');
-        nu_dse__Field_mapping__c fieldMapping5 = TestRecordCreator.createFieldMapping(emailComplianceReqDataMapping.Id, '', 'Priority__c', true, 'Low');
+        // Create a new email and envelope object.
+        Messaging.InboundEmail email = new Messaging.InboundEmail() ;
+        Messaging.InboundEnvelope env    = new Messaging.InboundEnvelope();
 
-        fieldMappingList.add(fieldMapping1);
-        fieldMappingList.add(fieldMapping2);
-        fieldMappingList.add(fieldMapping3);
-        fieldMappingList.add(fieldMapping4);
-        fieldMappingList.add(fieldMapping5);
+        // Test with the subject that matches the unsubscribe statement.
+        email.subject = null;
+        email.plainTextBody = null;
+        email.fromAddress = 'user@test.com';
+        env.fromAddress = 'user@test.com';
 
-        insert fieldMappingList;
+        // Call the class and test it with the data in the testMethod.
+        ComplianceRequestEmailHander complianceReqObj = new ComplianceRequestEmailHander();
+        complianceReqObj.handleInboundEmail(email, env);  
 
-        complianceReqObj.handleInboundEmail(email, env);*/
-
-        List<nu_dse__Error_Log__c> errorLogList = [SELECT Id, nu_dse__Message__c 
-                                                   FROM nu_dse__Error_Log__c LIMIT 1];
-
-        //system.assertEquals('Mapping records not available. Please create Data and field mappings.', errorLogList[0].nu_dse__Message__c);
-        system.assertEquals('Invalid Contact Id for task assignment. Please check Custom metadata record with Developer Name \'Complaince_Request_Email\'',
-                     errorLogList[0].nu_dse__Message__c);
+        nu_dse__Error_Log__c errLog = [SELECT Id FROM nu_dse__Error_Log__c];
+        system.assert(errLog != null); 
     }   
 }

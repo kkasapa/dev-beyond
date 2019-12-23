@@ -88,9 +88,9 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
             String emailBody = email.subject+'\n'+email.plainTextBody;
             
             if(String.isNotBlank(emailBody) 
-                && emailBody.length() > 500) {
-                
-                emailBody = emailBody.substring(0, 425) + '...EMAIL BODY TOO LARGE! PLEASE CHECK THE ACTIVITIES FOR FULL CONTENT';
+                && emailBody.length() > 400) {
+
+                emailBody = emailBody.abbreviate(400) + 'EMAIL BODY TOO LARGE! PLEASE CHECK THE ACTIVITIES FOR FULL CONTENT';
             }
 
             Compliance_Request__c complianceReq = new Compliance_Request__c(Description__c = emailBody,
@@ -123,7 +123,7 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
             
             } else {
                 
-                Default_Task_Assignments_to_User__mdt reqAssignDefault = new Default_Task_Assignments_to_User__mdt();
+                /*Default_Task_Assignments_to_User__mdt reqAssignDefault = new Default_Task_Assignments_to_User__mdt();
                 
                 if (Test.isRunningTest() == true) {
                     
@@ -153,7 +153,12 @@ global class ComplianceRequestEmailHander implements Messaging.InboundEmailHandl
 
                 } else {
                     throw new CustomException('Invalid Contact Id for task assignment. Please check Custom metadata record with Developer Name \'Complaince_Request_Email\'');
-                }
+                }*/
+                Contact newContact = new Contact(Email = email.fromAddress);
+                newContact.FirstName = email.fromName.contains(' ') ? email.fromName.substringBeforeLast(' '): null;
+                newContact.LastName = email.fromName.contains(' ') ? email.fromName.substringAfterLast(' '): email.fromName;
+                insert newContact;
+                complianceReq.Contact__c = newContact.Id;
             }
             insert complianceReq;
             emailRec.RelatedToId = complianceReq.Id;
