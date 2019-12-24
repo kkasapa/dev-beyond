@@ -1,3 +1,8 @@
+/**
+ * This class will send request to AWS.
+ * @author : Avco Team
+ * @created Date : December 2019
+ */ 
 public class SecondRequest extends IntegrationUtilityClass implements Queueable,Database.AllowsCallouts {
     private String recordId;
     private String uName;

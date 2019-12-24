@@ -1,6 +1,7 @@
 @isTest 
 private class ContactToProspectConversion_Test{
-    static testMethod void validate() {
+    // Depricate...SF-581
+    /*static testMethod void validate() {
       Test.startTest();
        List<RecordType> crecType = [SELECT id FROM RecordType WHERE SObjectType = 'Contact' and DeveloperName='Pardot' LIMIT 1];
        List<RecordType> recType = [SELECT id FROM RecordType WHERE SObjectType = 'nu_dse__Prospect__c' and DeveloperName='Debt_Settlement' LIMIT 1];
@@ -38,6 +39,6 @@ private class ContactToProspectConversion_Test{
            ContactToProspectConversion contactToConvert = new ContactToProspectConversion();
            }
     Test.stopTest();
-    }
+    }*/
   
 }

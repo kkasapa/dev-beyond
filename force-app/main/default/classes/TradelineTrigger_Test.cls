@@ -163,4 +163,49 @@ public with sharing class TradelineTrigger_Test {
         system.assertEquals(3, updaterTradelineList[1].Program_Settlement_Order__c);
         system.assertEquals(1, updaterTradelineList[2].Program_Settlement_Order__c);
     }
+
+    Public static testmethod void updateProgramDiscoverIncluded_InsertTest(){
+        
+        nu_dse__Program__c program = [SELECT Id FROM nu_dse__Program__c LIMIT 1];
+        Account acc = [SELECT Id FROM Account LIMIT 1];
+        
+        nu_dse__TradeLine__c tradeLine = TestRecordCreator.createTradeLine(acc.id, program.Id);
+
+        Id creditorRecordTypeId = Schema.SObjectType.Account.getRecordTypeInfosByName().get('Creditor').getRecordTypeId();
+        Account creditorAcc = TestRecordCreator.createCreditorAccount(creditorRecordTypeId);
+        creditorAcc.Name = 'Discover';
+        insert creditorAcc;
+
+        Test.startTest();
+            tradeLine.nu_dse__Original_Creditor__c = creditorAcc.Id;
+            tradeLine.nu_dse__Include_In_The_Program__c = true;
+            insert tradeline;
+        Test.stopTest();
+
+        nu_dse__Program__c updatedProgram = [SELECT Discover_Included__c FROM nu_dse__Program__c 
+                                             LIMIT 1];
+        
+        system.assertEquals(true, updatedProgram.Discover_Included__c);
+    }
+
+    Public static testmethod void updateProgramDiscoverIncluded_Test(){
+        
+        nu_dse__TradeLine__c tradeLine = [SELECT Id FROM nu_dse__TradeLine__c LIMIT 1];
+        
+        Id creditorRecordTypeId = Schema.SObjectType.Account.getRecordTypeInfosByName().get('Creditor').getRecordTypeId();
+        Account creditorAcc = TestRecordCreator.createCreditorAccount(creditorRecordTypeId);
+        creditorAcc.Name = 'Discover';
+        insert creditorAcc;
+
+        Test.startTest();
+            tradeLine.nu_dse__Original_Creditor__c = creditorAcc.Id;
+            tradeLine.nu_dse__Include_In_The_Program__c = true;
+            update tradeline;
+        Test.stopTest();
+
+        nu_dse__Program__c updatedProgram = [SELECT Discover_Included__c FROM nu_dse__Program__c 
+                                             LIMIT 1];
+        
+        system.assertEquals(true, updatedProgram.Discover_Included__c);
+    }
 }

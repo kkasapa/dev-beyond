@@ -1,12 +1,14 @@
 /**
-*This test class is created to check the functionality of AWS_DocumentHandler class 
+* This test class is created to check the functionality of AWS_DocumentHandler class 
+* @author : Avco Team
+* @created Date : December 2019
 */
 @isTest
 public class AWSDocumentHandler_TEST {
     /**
 	* This method is used to create the test data
 	*/
-    @testSetUp
+    @testSetup
     static void awsTestData(){
         Switch__c swc = new Switch__c();
         swc.Name = 'Swith Off';
@@ -19,8 +21,7 @@ public class AWSDocumentHandler_TEST {
         awsSplit.bucket__c = 'test';
         awsSplit.sourceFileName__c = 'test';
         awsSplit.OutputFileName__c = 'test';
-        awsSplit.AWS_PDF_Name_Start__c = 'AUTHORIZATION-SPAA-Enrollment-Agreement';
-        
+        awsSplit.AWS_PDF_Name_Start__c = 'AUTHORIZATION-SPAA-Enrollment-Agreement';        
         insert awsSplit;
         
         AWS_PDF_Split__c awsSplitSR = new AWS_PDF_Split__c();
@@ -29,8 +30,7 @@ public class AWSDocumentHandler_TEST {
         awsSplitSR.bucket__c = 'test';
         awsSplitSR.sourceFileName__c = 'test';
         awsSplitSR.OutputFileName__c = 'test';
-        awsSplitSR.AWS_PDF_Name_Start__c = 'AUTHORIZATION-SPAA-Enrollment-Agreement';
-        
+        awsSplitSR.AWS_PDF_Name_Start__c = 'AUTHORIZATION-SPAA-Enrollment-Agreement';        
         insert awsSplitSR;
         
         AWS_PDF_Split__c awsSplitEA = new AWS_PDF_Split__c();
@@ -39,8 +39,7 @@ public class AWSDocumentHandler_TEST {
         awsSplitEA.bucket__c = 'test';
         awsSplitEA.sourceFileName__c = 'test';
         awsSplitEA.OutputFileName__c = 'test';
-        awsSplitEA.AWS_PDF_Name_Start__c = 'AUTHORIZATION-SPAA-Enrollment-Agreement';
-        
+        awsSplitEA.AWS_PDF_Name_Start__c = 'AUTHORIZATION-SPAA-Enrollment-Agreement';        
         insert awsSplitEA;
         
         nu_dse__Program__c pgm = new nu_dse__Program__c();
@@ -56,47 +55,32 @@ public class AWSDocumentHandler_TEST {
         awsdoc.Size__c = 2;
         awsdoc.createdFromAWS__c = false;
         insert awsdoc;
-        
-        
-        
-        
     }
     /**
-	* This method is used to test the first request
+	* This method is used to test the FirstRequest class
 	*/ 
     @isTest
-    static void testAWSFirstCallout(){
-        
-        
-        //Test.setMock(HttpCalloutMock.class, new UploadFileMock());
+    static void testAWSFirstCallout(){        
         String uName = UserInfo.getName();
         AWS_Document__c awsRecord = [SELECT id, Name FROM AWS_Document__c WHERE Bucket__c ='testBucket' LIMIT 1]; 
-        FirstRequest frqueue = new FirstRequest(awsRecord.id,uName);       
-        frqueue.doChainJob = false;
+        FirstRequest frqueue = new FirstRequest(awsRecord.id,uName); 
         
         Test.startTest();
         System.enqueueJob(frqueue);
         Test.stopTest();
-
     }
     
     /**
-	* This method is used to test the first request
+	* This method is used to test the SecondRequest class
 	*/ 
     @isTest
     static void testAWSSecondCallout(){
-        
-        
-        //Test.setMock(HttpCalloutMock.class, new UploadFileMock());
         String uName = UserInfo.getName();
         AWS_Document__c awsRecord = [SELECT id, Name FROM AWS_Document__c WHERE Bucket__c ='testBucket' LIMIT 1]; 
-        SecondRequest srqueue = new SecondRequest(awsRecord.id,uName);       
-        //frqueue.doChainJob = false;
+        SecondRequest srqueue = new SecondRequest(awsRecord.id,uName);  
         
         Test.startTest();
         System.enqueueJob(srqueue);
         Test.stopTest();
-
-    }
-    
+    }    
 }

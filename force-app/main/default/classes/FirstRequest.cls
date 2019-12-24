@@ -1,8 +1,11 @@
+/**
+* This class will send request to AWS.
+* @author : Avco Team
+* @created Date : December 2019
+*/
 public class FirstRequest extends IntegrationUtilityClass implements Queueable,Database.AllowsCallouts {
     private String recordId;
     private String uName;
-    
-    public Boolean doChainJob = true;
     
     public FirstRequest(String recordId, String uName) {
         this.recordId = recordId;
@@ -35,14 +38,13 @@ public class FirstRequest extends IntegrationUtilityClass implements Queueable,D
         objHttpRequest.setEndpoint('https://zb0bwfulaf.execute-api.us-east-1.amazonaws.com/staging/v1/split-pdf/by-title');
         //objHttpRequest.setBody('{"title":"Limited Power of Attorney to Speak and Negotiate","bucket": "bf-test-salesforce-upload","sourceFileName":"Program/P-37682/P-37682-AUTHORIZATION-SPAA-Enrollment-Agreement-AL-Test BLP 2-Prospect-05212019.pdf","outputFileName":"LPA.pdf"}');
         objHttpRequest.setBody(JSONstr);
-        Http http1 = New Http(); 
-        if (test.isRunningTest())Test.setMock(HttpCalloutMock.class, new UploadFileMock());  
         
-          
+        if (test.isRunningTest()) Test.setMock(HttpCalloutMock.class, new UploadFileMock());
         
-            HttpResponse objResponse = http1.send(objHttpRequest);
-        	system.debug('objResponse1'+objResponse);
-            if(objResponse.getStatusCode() == 200){
+        Http http1 = New Http();         
+        HttpResponse objResponse = http1.send(objHttpRequest);
+        system.debug('objResponse1'+objResponse);
+        if(objResponse.getStatusCode() == 200){
             System.debug('Success');
             Map<String, Object> DocObject= (Map<String, Object>)JSON.deserializeUntyped(objResponse.getBody());
             system.debug(DocObject);
@@ -58,8 +60,7 @@ public class FirstRequest extends IntegrationUtilityClass implements Queueable,D
             AWS.Size__c = awsRecord.Size__c;
             AWS.createdFromAWS__c = true;
             
-            insert AWS;
-            
+            insert AWS;            
         }else{
             System.debug('Error');
             createLog(recordId, 'Class: FirstRequest, Method: execute',uName);
@@ -67,12 +68,8 @@ public class FirstRequest extends IntegrationUtilityClass implements Queueable,D
         if(!test.isRunningTest()) {
             SecondRequest sr = new SecondRequest(recordId,uName);
             Id jobID = System.enqueueJob(sr);
-        }
-   
-        }  
-        
-        
-        
+        }        
+    }  
     
     public class awsWrapper{
         public String title{get;set;}
