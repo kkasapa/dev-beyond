@@ -47,6 +47,10 @@ public class ProspectHandler extends TriggerHandler {
             updateProspectOwner(newProspect, null);
             //Copy prospect client and co-client Encrypted SSN to non Encrypted SSN
             updateProspectNonEncryptSSN(newProspect, null);
+            //generating a 2 digit random number for data sampling, only on create and read-only to all profiles.
+            updateRandomDigit(newProspect);
+            // Update last disposition when F9Lastdisposition changes 
+            updateLastDisposition(newProspect, null);
         }
         //checkDuplicateAndTagAccount(); 
     }
@@ -141,6 +145,17 @@ public class ProspectHandler extends TriggerHandler {
         }
 
     }
+
+    public void updateLastDisposition(nu_dse__Prospect__c newProspect, nu_dse__Prospect__c oldProspect) {
+
+        if((newProspect.F9LastDisposition__c != null || newProspect.F9LastDisposition__c != newProspect.nu_dse__Last_Disposition__c)
+            && (Trigger.isInsert 
+                || newProspect.F9LastDisposition__c  != oldProspect.F9LastDisposition__c)) {
+            
+            newProspect.nu_dse__Last_Disposition__c = newProspect.F9LastDisposition__c;
+        }
+    }
+
     /*  * This method filters prospects that are need to be pushed to Velocify
         * Prospect must have velocify Id and change in Prospect Status.
      */
@@ -490,6 +505,13 @@ public class ProspectHandler extends TriggerHandler {
             recallRequest.add(req);
         }
         List<Approval.ProcessResult> result = Approval.process(recallRequest);
+    }
+
+    /* Logic added as part of SF-553 for generating random number in prospect for data sampling.
+       https://beyondfinancial.atlassian.net/browse/SF-553
+    */
+    public void updateRandomDigit(nu_dse__Prospect__c newProspect){
+        newProspect.Random_Digits__c = String.valueOf(Integer.valueOf(Math.random()*100)).leftPad(2, '0'); // number generated here are completely random
     }
 
     public class SSNDuplicateReferWrap{

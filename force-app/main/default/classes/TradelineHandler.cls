@@ -27,9 +27,9 @@ public class TradelineHandler extends TriggerHandler {
     Set<Id> savignCalcTradelineIds = new Set<Id>(); // Set of Tradeline Id for Savings Calc 
     Set<Id> savingCalcUpdateProgramIds = new Set<Id>(); // Set of Program Id for Savings Calc based on tradeline savings
     Map<Id, List<nu_dse__TradeLine__c>> programIdTradelineMap = new Map<Id, List<nu_dse__TradeLine__c>>();
-    Map<Id, nu_dse__Program__c> programsToUpdate = new Map<Id,nu_dse__Program__c>();
-    Set<Id> dicoverUpdateProgramIds = new Set<Id>();
-    Static Set<Id> staticDicoverUpdateTradelineIds = new Set<Id>();
+    Map<Id, nu_dse__Program__c> programsToUpdate = new Map<Id,nu_dse__Program__c>();// Map of Programs for update 
+    Set<Id> dicoverUpdateProgramIds = new Set<Id>(); // Set of Program Ids for discover update 
+    Static Set<Id> staticDicoverUpdateTradelineIds = new Set<Id>(); // static Set of Program Ids which has already discover updated 
     
     public override void afterInsert() {
     
@@ -55,12 +55,12 @@ public class TradelineHandler extends TriggerHandler {
     public override void beforeInsert() {
 
         for (nu_dse__TradeLine__c newTradeline : (List<nu_dse__TradeLine__c>) trigger.new) {
-
+            // Collect the program Ids for tradeline settlement order update
             collectProgramIdsforSettlementOrder(newTradeline, null);
         }
 
         if(programIdTradelineMap.isEmpty() == false) {
-
+            // Update the settlement order in new tradeline
             updateTradelineSettlementOrder();
         }
     }
@@ -68,12 +68,12 @@ public class TradelineHandler extends TriggerHandler {
     public override void beforeUpdate() {
 
         for (nu_dse__TradeLine__c newTradeline : (List<nu_dse__TradeLine__c>) trigger.new) {
-
+            // Collect the program Ids for tradeline settlement order update
             collectProgramIdsforSettlementOrder(newTradeline, oldTLMap.get(newTradeline.Id));
         }
 
         if(programIdTradelineMap.isEmpty() == false) {
-
+            // Update the settlement order in updating tradeline
             updateTradelineSettlementOrder();
         }
     }
@@ -108,7 +108,8 @@ public class TradelineHandler extends TriggerHandler {
         update programsToUpdate.values();
 
     }
-
+    /* Collect the 'Settled - Legal', 'Settled - Non Legal', 'Making payments' status tradeline's Program Ids 
+        for update tradeline settlment order */
     public void collectProgramIdsforSettlementOrder(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
         
         Set<String> currentStageSet = new Set<String>{'Settled - Legal', 'Settled - Non Legal', 'Making payments'};
@@ -125,7 +126,7 @@ public class TradelineHandler extends TriggerHandler {
             }
         }
     }
-
+    // Collect the tradeline's Program Ids with creditor name as 'Discover' for update the Program's Discover included field 
     public void collectProgramIdsforDiscoverUpdate(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
         
         if(newTradeline.nu_dse__Program__c != null
@@ -141,7 +142,7 @@ public class TradelineHandler extends TriggerHandler {
             staticDicoverUpdateTradelineIds.add(newTradeline.Id);
         }
     }
-
+    // Collect the current balance changing tradeline record Ids for saving calc 
     public void collectSavingCalcTradelines(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
 
         if((newTradeline.nu_dse__Current_Balance__c  != null || newTradeline.nu_dse__Original_Debt__c != null
@@ -156,7 +157,7 @@ public class TradelineHandler extends TriggerHandler {
             savignCalculatedTradelineIds.add(newTradeline.Id);
         }
     }
-
+    // Collect the saving calc update tradeline's Program Ids for aggregate saving values from tradeline  
     public void collectsavingCalcUpdates(nu_dse__TradeLine__c newTradeline, nu_dse__TradeLine__c oldTradeline) {
 
         if(newTradeline.nu_dse__Program__c != null && (Trigger.isInsert
@@ -169,7 +170,7 @@ public class TradelineHandler extends TriggerHandler {
             savingCalcUpdateProgramIds.add(newTradeline.nu_dse__Program__c);
         }
     }
-
+    // Update the Program discover Included based on the updated tradeline creditors
     public void updateProgramDiscoverIncluded() {
 
         for(nu_dse__TradeLine__c newTradeLine : [SELECT Id, nu_dse__Include_In_The_Program__c, nu_dse__Original_Creditor__c, 
@@ -178,11 +179,13 @@ public class TradelineHandler extends TriggerHandler {
                                                  FROM nu_dse__TradeLine__c 
                                                  WHERE nu_dse__Program__c IN :dicoverUpdateProgramIds]) {
             
-            nu_dse__Program__c updateProgram = new nu_dse__Program__c(Id = newTradeLine.nu_dse__Program__c, Discover_Included__c = false);
+            nu_dse__Program__c updateProgram = new nu_dse__Program__c(Id = newTradeLine.nu_dse__Program__c);
             
             if(programsToUpdate.containskey(updateProgram.Id)) {
                 updateProgram = programsToUpdate.get(updateProgram.Id);
             }
+            updateProgram.Discover_Included__c = updateProgram.Discover_Included__c != false ? true : false;
+
             if(((newTradeLine.nu_dse__Original_Creditor__c != null && newTradeLine.nu_dse__Original_Creditor__r.Name == 'Discover') 
                 || (newTradeLine.nu_dse__New_Creditor__c != null && newTradeLine.nu_dse__New_Creditor__r.Name == 'Discover'))
                 && newTradeLine.nu_dse__Include_In_The_Program__c == true){
@@ -193,7 +196,8 @@ public class TradelineHandler extends TriggerHandler {
             }
         }
     }
-
+    /* Update the Tradeline settlement order based on num of tradeline records in Programs with 
+        'Settled - Legal', 'Settled - Non Legal', 'Making payments' status */
     public void updateTradelineSettlementOrder() {
 
         for(AggregateResult result: [SELECT count(Id) setteledTradelinesCount, nu_dse__Program__c
@@ -224,7 +228,7 @@ public class TradelineHandler extends TriggerHandler {
             }
         }
     }
-
+    // Updated the aggregate tradeline saving calculation to reated Program.
     public void aggregateSavingsToProgram() {
 
         for (AggregateResult result: [SELECT sum(Savings_Months_to_Payoff__c) payOffMonthSum, 
@@ -249,12 +253,12 @@ public class TradelineHandler extends TriggerHandler {
             programsToUpdate.put(programId, program);
         }
     }
-
+    // Calculate the saving value for the Tradeline based on current balance in REST API
     @future(callout=true)
     public static void calculateSavings(Set<Id> tradelineIds) {
         
         List<nu_dse__TradeLine__c> tradelineToUpdateList = new List<nu_dse__TradeLine__c>(); 
-
+        // Get the saving calculation setting details from custom settings 
         PaymentsCalcService.SavingCalcSettings savingCalcSetting = PaymentsCalcService.getSavingCalcSettings();
 
         for (nu_dse__TradeLine__c newTradeline : [SELECT Id, Name, nu_dse__Current_Balance__c, nu_dse__Original_Debt__c 
@@ -272,7 +276,7 @@ public class TradelineHandler extends TriggerHandler {
 
                 debt = newTradeline.nu_dse__Current_Balance__c;
             }
-            
+            // Calculate the saving calculaton using REST API in service class
             nu_dse__TradeLine__c tradelineToUpdate = (nu_dse__Tradeline__c)PaymentsCalcService.savingsCalculatorExternalService(
                                                                     savingCalcSetting, debt, 'nu_dse__Tradeline__c');
             tradelineToUpdate.Id = newTradeline.Id;

@@ -325,14 +325,14 @@ public with sharing class ApprovalsController {
                     && selectedObjectMap.containsKey(processInstApprovalsMap.get(approvalId).approval.targetId) == true) {
                     
                     DateTime createdDate  = DateTime.valueOf((selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('CreatedDate')));
-                    processInstApprovalsMap.get(approvalId).approval.CreatedDate = createdDate.format('MM-dd-YYYY');
+                    processInstApprovalsMap.get(approvalId).approval.CreatedDate = createdDate.format('MM-dd-yyyy');
                     processInstApprovalsMap.get(approvalId).approval.CreatedDateInMs = createdDate.getTime();
 
                     if(selectedValue == 'nu_dse__Offer__c' 
                         && selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('nu_dse__First_Payment_Date__c') != null) {
                         Date fistPaymentDate = Date.valueOf(selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('nu_dse__First_Payment_Date__c'));
                         DateTime firstPaymentDateTime = DateTime.newInstance(fistPaymentDate, Time.newInstance(0,0,0,0));
-                        processInstApprovalsMap.get(approvalId).approval.fistPaymentDate = firstPaymentDateTime.format('MM-dd-YYYY');
+                        processInstApprovalsMap.get(approvalId).approval.fistPaymentDate = firstPaymentDateTime.format('MM-dd-yyyy');
                         processInstApprovalsMap.get(approvalId).approval.fistPaymentDateInMs = firstPaymentDateTime.getTime();
                     }
                 }

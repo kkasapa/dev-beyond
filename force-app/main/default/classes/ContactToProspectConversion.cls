@@ -1,5 +1,6 @@
-public class ContactToProspectConversion{        
-    public static void convertToPropsect(Map<id,Contact> newcontactMap) {
+public class ContactToProspectConversion{ 
+    // Depricate...SF-581       
+    /*public static void convertToPropsect(Map<id,Contact> newcontactMap) {
              List<RecordType> recType = [SELECT id FROM RecordType WHERE SObjectType = 'nu_dse__Prospect__c' and DeveloperName='Debt_Settlement' LIMIT 1];
              List<contact> updatedContacts = new List<Contact>(); 
              List<nu_dse__Prospect__c> insertProspects = new LIst<nu_dse__Prospect__c>(); 
@@ -69,5 +70,5 @@ public class ContactToProspectConversion{
         }
         
         update updatedContacts; 
-    }
+    }*/
 }

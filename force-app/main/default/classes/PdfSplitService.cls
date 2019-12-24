@@ -35,7 +35,7 @@ public class PdfSplitService implements Queueable,Database.AllowsCallouts {
 	* This method will callout the AWS EndPoint to Split PDF By Title Single
 	*/
     public static void splitPDFByTitle(String recordId, String uName){        
-        AWS_Document__c awsRecord = IntegrationUtilityClass.getAws(recordId);
+        AWS_Document__c awsRecord = AWS_DocumentUtility.getAws(recordId);
         String JSONstr = ''; 
         String pgmName = awsRecord.Program__r.Name;
         String accName = awsRecord.Program__r.nu_dse__Account__r.Name;
@@ -56,7 +56,7 @@ public class PdfSplitService implements Queueable,Database.AllowsCallouts {
         objHttpRequest.setEndpoint(splitByTitleEndPoint);
         objHttpRequest.setBody(JSONstr);
         
-        if (test.isRunningTest()) Test.setMock(HttpCalloutMock.class, new UploadFileMock());
+       // if (test.isRunningTest()) Test.setMock(HttpCalloutMock.class, new UploadFileMock());
         
         Http http1 = New Http();         
         HttpResponse objResponse = http1.send(objHttpRequest);
@@ -66,11 +66,11 @@ public class PdfSplitService implements Queueable,Database.AllowsCallouts {
             System.debug('Success');
             Map<String, Object> DocObject= (Map<String, Object>)JSON.deserializeUntyped(objResponse.getBody());
             system.debug(DocObject);
-            AWS_Document__c dObj = IntegrationUtilityClass.getSingleResponse(DocObject,awsRecord);
+            AWS_Document__c dObj = AWS_DocumentUtility.getSingleResponse(DocObject,awsRecord);
             insert dObj;            
         }else{
             System.debug('Error');
-            IntegrationUtilityClass.createLog(recordId, 'Class: FirstRequest, Method: execute',uName);
+            AWS_DocumentUtility.createLog(recordId, 'Class: FirstRequest, Method: execute',uName);
         }    
     }
     
@@ -78,7 +78,7 @@ public class PdfSplitService implements Queueable,Database.AllowsCallouts {
 	* This method will construct the PDF Split Single by Page
 	*/
     public static void splitPDFByPage(String recordId, String uName){
-        AWS_Document__c awsRecord = IntegrationUtilityClass.getAws(recordId);
+        AWS_Document__c awsRecord = AWS_DocumentUtility.getAws(recordId);
         String JSONstr = '';
         String pgmName = awsRecord.Program__r.Name;
         String accName = awsRecord.Program__r.nu_dse__Account__r.Name;
@@ -94,7 +94,7 @@ public class PdfSplitService implements Queueable,Database.AllowsCallouts {
         String splitByPageEndPoint = AWS_Endpoints__c.getValues('PDF Split Single by Page').Endpoint_Name__c;
         System.debug('\n******'+JSONstr +'\n******');
         
-        if (test.isRunningTest())Test.setMock(HttpCalloutMock.class, new UploadFileMock());
+       // if (test.isRunningTest())Test.setMock(HttpCalloutMock.class, new UploadFileMock());
         
         HttpRequest objHttpRequest2 = new HttpRequest();
         objHttpRequest2.setMethod('POST');
@@ -110,18 +110,18 @@ public class PdfSplitService implements Queueable,Database.AllowsCallouts {
             System.debug('Success');
             Map<String, Object> DocObject= (Map<String, Object>)JSON.deserializeUntyped(objResponse2.getBody());
             system.debug(DocObject);
-            AWS_Document__c dObj = IntegrationUtilityClass.getSingleResponse(DocObject,awsRecord);                   
+            AWS_Document__c dObj = AWS_DocumentUtility.getSingleResponse(DocObject,awsRecord);                   
             insert dObj;            
         }else{
             System.debug('Error');
-            IntegrationUtilityClass.createLog(awsRecord.Id, 'Class: SecondRequest, Method: execute',uName);
+            AWS_DocumentUtility.createLog(awsRecord.Id, 'Class: SecondRequest, Method: execute',uName);
         }
     }
     /**
 	* This method will construct the PDF Split Bulk
 	*/
     public static void splitPDFBulk(String recordId, String uName){
-        AWS_Document__c awsRecord = IntegrationUtilityClass.getAws(recordId);        
+        AWS_Document__c awsRecord = AWS_DocumentUtility.getAws(recordId);        
         String JSONstr = '';
         String pgmName = awsRecord.Program__r.Name;
         String accName = awsRecord.Program__r.nu_dse__Account__r.Name;
@@ -129,7 +129,7 @@ public class PdfSplitService implements Queueable,Database.AllowsCallouts {
         AWSSchemaClass.awsWrapper awswrap 				= new AWSSchemaClass.awsWrapper();
         AWSSchemaClass.splitNodesWrap spNodes   		= new AWSSchemaClass.splitNodesWrap();        
         List<AWSSchemaClass.splitNodesWrap> spNodesList = new List<AWSSchemaClass.splitNodesWrap>();
-        List<AWS_PDF_Split__c> awsCList 				= IntegrationUtilityClass.getAwsSplitList(); 
+        List<AWS_PDF_Split__c> awsCList 				= AWS_DocumentUtility.getAwsSplitList(); 
         
         for(Integer i=0;i<awsCList.size();i++){
             spNodes.title = awsCList[i].SearchTitle__c;
@@ -144,7 +144,7 @@ public class PdfSplitService implements Queueable,Database.AllowsCallouts {
         String splitByBulkEndPoint = AWS_Endpoints__c.getValues('PDF Split Bulk').Endpoint_Name__c;
         System.debug('\n******'+JSONstr +'\n******');
         
-        if (test.isRunningTest())Test.setMock(HttpCalloutMock.class, new UploadFileMockSplit());
+        //if (test.isRunningTest())Test.setMock(HttpCalloutMock.class, new UploadFileMockSplit());
         
         HttpRequest objHttpRequest = new HttpRequest();
         objHttpRequest.setMethod('POST');
@@ -162,18 +162,18 @@ public class PdfSplitService implements Queueable,Database.AllowsCallouts {
             List<AWSSchemaClass.ResponseClass> responseList = new List<AWSSchemaClass.ResponseClass>();
             responseList = (List<AWSSchemaClass.ResponseClass>)JSON.deserialize(objResponse.getBody(), List<AWSSchemaClass.ResponseClass>.class);           
             system.debug(responseList);            
-            List<AWS_Document__c> aswFList = IntegrationUtilityClass.getBulkResponse(responseList,awsRecord);
+            List<AWS_Document__c> aswFList = AWS_DocumentUtility.getBulkResponse(responseList,awsRecord);
             insert aswFList;
         }else{
             System.debug('Error');
-            IntegrationUtilityClass.createLog(recordId, 'Class: SplitFileIntoThree, Method: execute',uName);
+            AWS_DocumentUtility.createLog(recordId, 'Class: SplitFileIntoThree, Method: execute',uName);
         } 
     }
     /**
 	* This method will construct the Split PDF Bulk by page
 	*/
     public static void splitPDFBulkByPage(String recordId, String uName){
-        AWS_Document__c awsRecord  = IntegrationUtilityClass.getAws(recordId);
+        AWS_Document__c awsRecord  = AWS_DocumentUtility.getAws(recordId);
         String splitByBulkEndPoint = AWS_Endpoints__c.getValues('Split PDF Bulk by page').Endpoint_Name__c;
     } 
 }

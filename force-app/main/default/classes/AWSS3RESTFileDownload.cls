@@ -7,7 +7,7 @@ public class AWSS3RESTFileDownload {
         string bucketname = 'bf-test-salesforce-upload';
         //Digu
         String region ='region=us-east-1';
-        String emailAddress ='dipatel@beyondfinance.com';
+        String emailAddress ='Shravan.Dasari@avcoconsulting.com';
         String contentType ='application/pdf';
         String Key = 'AKIAYZBFNVFF2JJYRPDN';
         String Secret ='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';
@@ -96,7 +96,7 @@ String url = serverURL+'/'+bucketName+'/'+codedFilename+'?response-content-dispo
         //string attFileLink='Program/P-35170/P-35170-Data Mask Data Sheet November 2019 NEWW.pdf';
         string attFileLink='Program/P-38322/P-38322-Enrollmeent_Agreement.pdf';
         String attContentType='application/pdf';
-        String emailAddress ='dipatel@beyondfinance.com';
+        String emailAddress ='Shravan.Dasari@avcoconsulting.com';
         AWS_Credentials_Settings__c setting = [Select Key__c,Secret__c,Bucket_Name__c,ACL__c from AWS_Credentials_Settings__c];
         String now = Datetime.now().formatGMT('EEE, dd MMM yyyy HH:mm:ss z');
         String host='s3.amazonaws.com';
