@@ -49,8 +49,12 @@ public class ProspectHandler extends TriggerHandler {
             updateProspectNonEncryptSSN(newProspect, null);
             //generating a 2 digit random number for data sampling, only on create and read-only to all profiles.
             updateRandomDigit(newProspect);
-            // Update last disposition when F9Lastdisposition changes 
-            updateLastDisposition(newProspect, null);
+            // Update last disposition when F9Lastdisposition or Prospect status has values 
+            /*updateLastDisposition(newProspect, null);
+            // Update Lead Source when Affilate has values 
+            updateLeadSource(newProspect, null);
+            // Update converted  date time when prospect status equals post sale
+            updateConvertedDate(newProspect, null);*/
         }
         //checkDuplicateAndTagAccount(); 
     }
@@ -88,6 +92,12 @@ public class ProspectHandler extends TriggerHandler {
             updateProspectOwner(newProspect, oldProspectMap.get(newProspect.Id));
             //Copy prospect client and co-client Encrypted SSN to non Encrypted SSN
             updateProspectNonEncryptSSN(newProspect, oldProspectMap.get(newProspect.Id));
+            // Update last disposition when F9Lastdisposition or Prospect status changes 
+            /*updateLastDisposition(newProspect, oldProspectMap.get(newProspect.Id));
+            // Update Lead Source when Affilate changes 
+            updateLeadSource(newProspect, oldProspectMap.get(newProspect.Id));
+            // Update converted  date time when prospect status change
+            updateConvertedDate(newProspect, oldProspectMap.get(newProspect.Id));*/
         } 
 
         // checkDuplicateAndTagAccount(); 
@@ -146,7 +156,7 @@ public class ProspectHandler extends TriggerHandler {
 
     }
 
-    public void updateLastDisposition(nu_dse__Prospect__c newProspect, nu_dse__Prospect__c oldProspect) {
+    /*public void updateLastDisposition(nu_dse__Prospect__c newProspect, nu_dse__Prospect__c oldProspect) {
 
         if((newProspect.F9LastDisposition__c != null || newProspect.F9LastDisposition__c != newProspect.nu_dse__Last_Disposition__c)
             && (Trigger.isInsert 
@@ -154,7 +164,35 @@ public class ProspectHandler extends TriggerHandler {
             
             newProspect.nu_dse__Last_Disposition__c = newProspect.F9LastDisposition__c;
         }
+
+        if((newProspect.nu_dse__Prospect_Status__c == 'Clear to Close' || newProspect.nu_dse__Prospect_Status__c == 'Post Sale')
+            && (Trigger.isInsert 
+                || newProspect.nu_dse__Prospect_Status__c  != oldProspect.nu_dse__Prospect_Status__c
+                || newProspect.nu_dse__Prospect_Status__c  != newProspect.nu_dse__Last_Disposition__c )) {
+            
+            newProspect.nu_dse__Last_Disposition__c = newProspect.nu_dse__Prospect_Status__c;
+        }
     }
+
+    public void updateLeadSource(nu_dse__Prospect__c newProspect, nu_dse__Prospect__c oldProspect) {
+
+        if((newProspect.nu_dse__Affiliate__c == 'AMOne')
+            && (Trigger.isInsert 
+                || newProspect.nu_dse__Affiliate__c  != oldProspect.nu_dse__Affiliate__c)) {
+            
+            newProspect.Lead_Source__c = newProspect.nu_dse__Affiliate__c;
+        }
+    }
+
+    public void updateConvertedDate(nu_dse__Prospect__c newProspect, nu_dse__Prospect__c oldProspect) {
+
+        if((newProspect.nu_dse__Prospect_Status__c == 'Post Sale')
+            && (Trigger.isInsert 
+                || newProspect.nu_dse__Prospect_Status__c  != oldProspect.nu_dse__Prospect_Status__c)) {
+            
+            newProspect.nu_dse__Converted_Date_Time__c = system.now();
+        }
+    }*/
 
     /*  * This method filters prospects that are need to be pushed to Velocify
         * Prospect must have velocify Id and change in Prospect Status.

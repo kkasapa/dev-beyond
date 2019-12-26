@@ -11,6 +11,6 @@
 * @systemLayer    Trigger
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
-trigger ProgramTrigger on nu_dse__Program__c (after insert, before update, after update) {
+trigger ProgramTrigger on nu_dse__Program__c (before insert, after insert, before update, after update) {
     new ProgramHandler().run();
 }

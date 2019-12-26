@@ -1,5 +1,9 @@
 @isTest 
 private class ContactToProspectConversion_Test{
+    @isTest
+    private static void testProspectConversion() {
+        ContactToProspectConversion ProspectConversionTest = new ContactToProspectConversion();
+    }
     // Depricate...SF-581
     /*static testMethod void validate() {
       Test.startTest();

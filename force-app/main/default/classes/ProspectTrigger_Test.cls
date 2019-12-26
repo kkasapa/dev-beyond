@@ -13,9 +13,11 @@ public class ProspectTrigger_Test implements HttpCalloutMock {
         settings.SOAP_Action_Status_Update__c = 'https://service.leads360.com/ModifyLeadStatus';
         insert settings;
         
-        TU_Permission_Audit__c permAudit = new TU_Permission_Audit__c(uuid__c = '187.55', Created_At__c = system.today());
+        TU_Permission_Audit__c permAudit = new TU_Permission_Audit__c(uuid__c = 'ae123', Created_At__c = system.today());
         insert permAudit;
-         
+        TU_Permission_Audit__c permAudit1 = new TU_Permission_Audit__c(uuid__c = 'ae124', Created_At__c = system.today());
+        insert permAudit1; 
+
         nu_dse__Prospect__c prospectInstance = TestRecordCreator.createProspect();
         prospectInstance.nu_dse__Last_Disposition__c = 'Disqualified';
         prospectInstance.Has_Been_Assigned__c = true ;
@@ -24,7 +26,6 @@ public class ProspectTrigger_Test implements HttpCalloutMock {
         
         nu_dse__Prospect__c prospectInstance1 = TestRecordCreator.createProspect();
         prospectInstance1.nu_dse__Last_Disposition__c = 'Disqualified';
-        prospectInstance1.uuid__c = '187.55';
         insert prospectInstance1;
 
         List<nu_dse__Prospect__c> prospectList = new List<nu_dse__Prospect__c>();
@@ -46,7 +47,6 @@ public class ProspectTrigger_Test implements HttpCalloutMock {
         prospectInstance4.nu_dse__SSN_ENC__c = '111-11-1111';
         prospectInstance4.nu_dse__Co_SSN_ENC__c = '222-22-2222';
         prospectList.add(prospectInstance4);
-
 
         insert prospectList;
 
@@ -92,9 +92,12 @@ public class ProspectTrigger_Test implements HttpCalloutMock {
     @isTest
     public static void updateDispositionEmailType_Test() {
     
-        List<nu_dse__Prospect__c> prospectList = [SELECT Id FROM nu_dse__Prospect__c LIMIT 1];
+        List<nu_dse__Prospect__c> prospectList = [SELECT Id, nu_dse__Last_Disposition__c FROM nu_dse__Prospect__c LIMIT 2];
         
+        system.debug('test'+prospectList[1].nu_dse__Last_Disposition__c);
         prospectList[0].nu_dse__Last_Disposition__c = 'LTLending';
+        prospectList[1].nu_dse__Last_Disposition__c = 'Disqualified';
+        prospectList[1].uuid__c  = 'ae124';
         update prospectList;
         
         List<nu_dse__Prospect__c> updatedProspectList = [SELECT Id, Disposition_Email_Type__c, FIve9_Owner_ID__c, OwnerId, uuid__c  
@@ -300,8 +303,31 @@ public class ProspectTrigger_Test implements HttpCalloutMock {
         System.assert(String.isNotBlank(updatedProspectList[0].Client_SSN_Duplicate_Reference__c));
         System.assert(updatedProspectList[0].Co_Client_Duplicate_By_SSN__c);
         System.assert(updatedProspectList[0].Client_Duplicate_By_SSN__c);
-
-
     }
 
+    @isTest
+    public static void updateRandomDigit_Test() {
+
+        Test.startTest();
+        List<nu_dse__Prospect__c> prospectsList = new List<nu_dse__Prospect__c>();
+
+        nu_dse__Prospect__c prospectInstance2 = TestRecordCreator.createProspect();
+        prospectInstance2.nu_dse__First_Name__c = 'Random Num Test';
+        prospectsList.add(prospectInstance2);
+
+        nu_dse__Prospect__c prospectInstance3 = TestRecordCreator.createProspect();
+        prospectInstance3.nu_dse__First_Name__c = 'Random Num Test';
+        prospectsList.add(prospectInstance3);
+
+        nu_dse__Prospect__c prospectInstance4 = TestRecordCreator.createProspect();
+        prospectInstance4.nu_dse__First_Name__c = 'Random Num Test';
+        prospectsList.add(prospectInstance4);
+
+        insert prospectsList;
+
+        for(nu_dse__Prospect__c prospect: [SELECT Id, Random_digits__c FROM nu_dse__Prospect__c LIMIT 10]) {
+            System.assertEquals(2, prospect.Random_digits__c.length());
+        }
+        Test.stopTest();
+    }
 }

@@ -84,7 +84,7 @@ public with sharing class Batch_OfferAuthReminder implements Database.Batchable<
             if(approvedOffer.nu_dse__Status__c == '03-Offer Approved (Pre-payment setup)'
                 && approvedOffer.Client_Authorization_Received__c == false
                 && approvedOffer.nu_dse__First_Payment_Date__c > system.today()) {
-
+                System.debug('if-1');
                 Integer daysDiff = Date.valueOf(approvedOffer.Offer_Pre_Approved_Date__c).daysBetween(system.today());
 
                 if(daysDiff == 0) { 
@@ -119,15 +119,16 @@ public with sharing class Batch_OfferAuthReminder implements Database.Batchable<
                     taskToUpsertList.add(newEmailTask);
                 }
             } else {
+                System.debug('else-1');
                 authorizedOfferIds.add(approvedOffer.Id);
             }
         }
 
         if(authorizedOfferIds.isEmpty() == false) {
-            
+            System.debug('not empty-1');
             taskToDeleteList = [SELECT Id FROM Task 
                                 WHERE whatId IN :authorizedOfferIds AND Status != 'Completed'
-                                    AND Unique_Identifier__c LIKE 'Offer Auth %'];
+                                    AND Unique_Identifier__c LIKE '%Offer Auth%'];
         }
 
         delete taskToDeleteList;

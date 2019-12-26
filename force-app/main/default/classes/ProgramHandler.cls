@@ -32,6 +32,13 @@ public class ProgramHandler extends TriggerHandler {
     Set<Id> savingsCalcProgramIds = new Set<Id>();// programIds for saving calculation 
     List<BLP_Bus__e> BLPBUSEvents = new List<BLP_Bus__e>();
 
+    public override void beforeInsert(){
+        for (nu_dse__Program__c newProgram : (List<nu_dse__Program__c>)Trigger.New) {
+            //generating a 2 digit random number for data sampling, only on create and read-only to all profiles.
+            updateRandomDigit(newProgram);
+        }
+    }
+
     public override void afterInsert() {
 
         for (nu_dse__Program__c newProgram : (List<nu_dse__Program__c>)Trigger.New) {
@@ -368,6 +375,13 @@ public class ProgramHandler extends TriggerHandler {
                 ||(newProgram.Original_Enrolled_Program_Debt__c != oldProgram.Original_Enrolled_Program_Debt__c))) {
             savingsCalcProgramIds.add(newProgram.Id);
         }
+    }
+
+    /* Logic added as part of SF-553 for generating random number in program for data sampling.
+       https://beyondfinancial.atlassian.net/browse/SF-553
+    */
+    public void updateRandomDigit(nu_dse__Program__c newProgram){
+        newProgram.Program_Random_Digit__c = String.valueOf(Integer.valueOf(Math.random()*100)).leftPad(2, '0'); // number generated here are completely random
     }
     
     @future(callout=true)

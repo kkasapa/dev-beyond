@@ -421,4 +421,27 @@ public class ProgramHandler_Test {
             system.debug('Exception caught: ' + e.getMessage());
         }
     }
+
+    @isTest
+    public static void updateProgramRandomDigit_Test() {
+
+        List<RecordType> accRecTypeList = [SELECT Id FROM RecordType 
+                                    WHERE sObjectType = 'Account' AND isPersonType = true 
+                                        AND DeveloperName = 'Client' LIMIT 1];
+
+        Test.startTest();
+        Account acc = TestRecordCreator.createAccount('Account1', accRecTypeList[0].Id);
+        insert acc; 
+        nu_dse__Processor__c processor = TestRecordCreator.createProcessor('GCS');
+        insert processor;
+
+        nu_dse__Program__c program = TestRecordCreator.createProgram(acc.Id, processor.Id);
+        insert program;
+
+        nu_dse__Program__c newprogram = [SELECT Id, Program_Random_Digit__c 
+                                        FROM nu_dse__Program__c 
+                                        ORDER BY CreatedDate DESC LIMIT 1 ];
+        System.assertEquals(2, newprogram.Program_Random_Digit__c.length());
+        Test.stopTest();
+    }
 }

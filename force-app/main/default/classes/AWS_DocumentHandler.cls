@@ -10,31 +10,16 @@ public class AWS_DocumentHandler extends TriggerHandler {
         afterInsertAWSMap = new Map<id,String>();
     }    
     public override void afterInsert() {
-        string uName = userinfo.getName();
-        Map<String, AWS_PDF_Split__c> csMap = new Map<String, AWS_PDF_Split__c>();
-        for(AWS_PDF_Split__c ast : [SELECT id, AWS_PDF_Name_Start__c FROM AWS_PDF_Split__c]){
-            csMap.put(ast.AWS_PDF_Name_Start__c, ast);
-        }
-        for(AWS_Document__c awsRecord : newAWSDocumentMap.values()){
-            
-            
-            if(Switch__c.getValues('Swith Off').Turn_Off__c == true && !awsRecord.createdFromAWS__c){
-                system.debug('@csMap'+csMap);
-                system.debug('@awsRecord.File_Name__c'+awsRecord.File_Name__c);
-                
-                
-                if(csMap.get(awsRecord.File_Name__c).AWS_PDF_Name_Start__c.startsWith(awsRecord.File_Name__c)){
-                    PdfSplitService sf = new PdfSplitService(awsRecord.id,uName);
-                    ID jobID = System.enqueueJob(sf);
-                } 
-                if(csMap.get(awsRecord.File_Name__c).AWS_PDF_Name_Start__c.startsWith(awsRecord.File_Name__c)){
-                    if(awsRecord.File_Name__c == csMap.get(awsRecord.File_Name__c).AWS_PDF_Name_Start__c){
-                    }
-                    // call the BLP Class
-                }
-                
-                
-            }
+        string uName = userinfo.getName();        
+        for(AWS_Document__c awsRecord : newAWSDocumentMap.values()){            
+            if(Switch__c.getValues('Swith Off').Turn_Off__c == true && !awsRecord.createdFromAWS__c
+              && awsRecord.File_Name__c.contains('BLP')){
+                AWS_PdfSplitServiceBLP sf = new AWS_PdfSplitServiceBLP(awsRecord.id,uName);
+                  ID jobID = System.enqueueJob(sf);
+              }else{
+                  AWS_PdfSplitService sf = new AWS_PdfSplitService(awsRecord.id,uName);
+                  ID jobID = System.enqueueJob(sf);
+              }
         }         
     }
     

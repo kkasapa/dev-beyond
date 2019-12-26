@@ -17,6 +17,24 @@ public class AWSSchemaClass {
         public String sourceFileName{get;set;}
         public String outputFileName{get;set;}
     }
+    public class SplitByCmBlp{
+        public String title{get;set;}
+        public Decimal page{get;set;}
+        public Decimal pages{get;set;}
+        public String outputFileName{get;set;}
+    }
+    public class SplitByAlcBlp{
+        public String title{get;set;}
+        public Decimal page{get;set;}
+        public Decimal pages{get;set;}
+        public String outputFileName{get;set;}
+    }
+    public class SplitByLnmBlp{
+        public String title{get;set;}
+        public Decimal page{get;set;}
+        public Decimal pages{get;set;}
+        public String outputFileName{get;set;}
+    }
     
     public class SplitByPageSingle{
         public Decimal page{get;set;}

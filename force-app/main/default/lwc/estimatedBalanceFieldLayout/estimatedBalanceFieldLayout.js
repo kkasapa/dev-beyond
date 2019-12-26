@@ -8,7 +8,7 @@ export default class EstimatedBalanceFieldLayout extends LightningElement {
     programRecordUi;
 
     function1() {
-        console.log('-->',this.programId);
+        //console.log('-->',this.programId);
     }
     
 }
