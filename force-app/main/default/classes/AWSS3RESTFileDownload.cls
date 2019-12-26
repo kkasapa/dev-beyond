@@ -9,8 +9,8 @@ public class AWSS3RESTFileDownload {
         String region ='region=us-east-1';
         String emailAddress ='Shravan.Dasari@avcoconsulting.com';
         String contentType ='application/pdf';
-        String Key = 'AKIAYZBFNVFF2JJYRPDN';
-        String Secret ='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';
+        String Key = '********************';
+        String Secret ='********************';
         String Program = 'P-37682';
         String s3 ='s3';
         
