@@ -1,0 +1,13 @@
+<aura:component  controller ="SearchController">
+    <aura:attribute name="SearchWord" type ="String" default =""/>
+    <aura:attribute name ="words" type ="String[]" />
+    <aura:attribute name ="Data" type ="Object" />    
+    <ui:inputText value="{!v.SearchWord}"  placeholder="Please Enter" />
+    <lightning:button  variant ="bare" onclick ="{!c.Searchtheword}" label ="Search" />   
+    <aura:iteration var="wordsDisplay" items="{!v.words}">
+        <p>{!wordsDisplay}</p>
+    </aura:iteration>
+    <!--aura:iteration var ="DataDisplay" items ="{!v.Data}">
+        <p>{!DataDisplay}</p>
+    </aura:iteration>-->
+</aura:component>

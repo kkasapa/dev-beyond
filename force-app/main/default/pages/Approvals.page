@@ -1,4 +1,16 @@
-<apex:page controller="ApprovalsController" readOnly="true">
+<!--
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+* Visualforce Page for Approvals Tab. 
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+* @author         Ashwin Bretto   <abretto@selastech.com>
+* @modifiedBy     Vignesh   <vsadhasivam@selastech.com>
+* @maintainedBy   Ashwin Bretto   <abretto@selastech.com>
+* @version        1.0
+* @created        2019-01-09
+* @modified       2019-08-29
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+-->
+<apex:page controller="ApprovalsController">
 
     <link rel="stylesheet" href="{!URLFOR($Resource.nu_dse__SLDS_221, '/assets/styles/salesforce-lightning-design-system.min.css')}" />
     <head>
@@ -364,10 +376,15 @@
             position:fixed;
         }
         
-        input {
-        
-            
-        }         
+        .nudebt-modal_header_primary {
+            background-color: rgb(34,54,117);
+            color: rgb(255,255,255);
+        }       
+        .nudebt-button, .nudebt-button:hover, .nudebt-button:active, .nudebt-button:focus {
+            background-color: rgb(122,180,59);
+            color: rgb(255,255,255);
+            border: none;
+        }
     </style>
    
     <div>
@@ -381,38 +398,43 @@
     </div>
 
    
-    <apex:form >
+    <apex:form id="approvalForm">
         
-        <apex:actionFunction name="filterApprovals" action="{!onFilterChange}" rerender="tableData" oncomplete="applyJQueryTable();  hideSpinner();">
+        <apex:actionFunction name="filterApprovals" action="{!onFilterChange}" rerender="tableData" oncomplete="applyJQueryTable('{!selectedRadio}');  hideSpinner();">
             <apex:param name="filterBy" value="" />
         </apex:actionFunction>
-        <apex:actionFunction name="approval_refreshApprovals" action="{!renderApprovals}" rerender="tableData" oncomplete="applyJQueryTable(); hideSpinner();"/>
+        <apex:actionFunction name="setCurrentApproval" action="{!setCurrentApproval}" rerender="reAssignModal" oncomplete="hideSpinner();">
+            <apex:param name="currentApprovalIndex" assignTo="{!currentApprovalIndex}" value="" /> 
+        </apex:actionFunction>
+        <apex:actionFunction name="reAssignApproval" action="{!reAssignApproval}" rerender="reAssignModal" oncomplete="redirectPage(event.target.id);hideSpinner();" />
+        <apex:actionFunction name="cancelReAssignApproval" action="{!cancelReAssignApproval}" rerender="reAssignModal" oncomplete="hideSpinner();" />
+        <apex:actionFunction name="approval_refreshApprovals" action="{!renderApprovals}" rerender="tableData" oncomplete="applyJQueryTable('{!selectedRadio}'); hideSpinner();"/>
         <apex:outputPanel id="page">
-            <div class="slds">
+            <div class="slds" id="dataTableDiv">
                 <div class="slds-card nudebt-section-header-primary">
                     <div class="slds-card__header slds-grid">
                         <header class="slds-media slds-media--center slds-has-flexi-truncate">
                             <h2>
-                                <a href="javascript:void(0);" class="slds-card__header-link slds-truncate">
-                                    <span class="slds-text-heading--small font-color-white" >Approval Processes</span>
-                                </a>
+                                <span class="slds-text-heading--small font-color-white" >Approval Processes</span>
                             </h2>
                         </header>
                         
                         <div>
                             <br/>
-                            <apex:selectRadio value="{!selectedRadio}" styleClass="radio">
+                            <!-- Fixed Filter change apply for switch selectedRadio[SF-62]  --> 
+                            <apex:selectRadio id="selectedObj" value="{!selectedRadio}" styleClass="radio" onchange="onFilterChange()">
                                 <apex:selectOption itemLabel="Prospect" itemValue="nu_dse__Prospect__c"/>
                                 <apex:selectOption itemLabel="Offer" itemValue="nu_dse__Offer__c"/>
-                                <apex:actionSupport event="onchange" action="{!renderApprovals}" reRender="tableData" onsubmit="showSpinner();" oncomplete="applyJQueryTable(); hideSpinner();"/>
+                                <!-- <apex:actionSupport event="onchange" action="{!renderApprovals}" reRender="tableData" onsubmit="showSpinner();" oncomplete="applyJQueryTable(); hideSpinner();"/> -->
                             </apex:selectRadio>
                         </div>
-                        <div class="slds-no-flex">                        
-                            <div class="slds-form-element">
+                        <div class="slds-no-flex">            
+                            <!-- Added refresh button to render recent changes in lead without reload whole page[SF-62] -->            
+                            <div class="slds-form-element" style="display: inline-block;">
                               <label class="slds-form-element__label font-color-white" for="select-01">Filter Approvals</label>
                               <div class="slds-form-element__control">
                                 <div class="slds-select_container">
-                                  <select class="slds-select" id="select-01" onchange="onFilterChange()" > 
+                                  <select class="slds-select" id="filterSelect" onchange="onFilterChange()" > 
                                     <option value="all">All</option>
                                     <option value="me">Assigned To me</option>
                                     <option value="queue">Assigned To Queue</option>
@@ -420,6 +442,7 @@
                                 </div>
                               </div>
                             </div>
+                            <button id="refreshButton" class="nudebt-button slds-button slds-button--neutral slds-m-left--xx-large" onclick="refreshPage();" type="button">Refresh</button>
                         </div>
                     </div>
                     <div class="slds-card__body slds-panel">
@@ -430,29 +453,75 @@
                                         <tr>
                                             <th>Actions</th>
                                             <th>Approval</th>
+                                            <th>First Payment Date</th>
+                                            <th>First Payment Date in ms(hidden)</th>
                                             <th>Submitted By</th>
                                             <th>Assigned To</th>
                                             <th>Submit Status</th>
+                                            <!-- Added new Last Approved column in Table [SF-333]-->
+                                            <th>Last Approved By</th>
+                                            <!-- Added new Last RejectedBy column in Table [SF-62]-->
+                                            <th>Last Rejected By</th>
                                             <th>Time in Queue (HH:MM)</th>
-                                            <th>Completed Date</th>
-                                            <th>Status</th>
-                                            
+                                            <!-- Added hidden Total mins in Queue column in Approvals Table for sorting[SF-339]-->
+                                            <th>Total mins in Queue (hidden)</th>
+                                            <!-- Changed Completed Date to created Date column in Table [SF-62]-->
+                                            <!-- Added new Time Since Reassigned(HH:MM) column in Table [SF-333]-->
+                                            <th>Time Since Reassigned (HH:MM)</th>
+                                            <!-- Added hidden Total mins Since Reassigned column in Table [SF-333]-->
+                                            <th>Total mins Since Reassigned (hidden)</th>
+                                            <th>Created Date</th>
+                                            <th>Created Date in Ms (hidden)</th>
+                                            <!-- Removed status column in Approvals Table[SF-62]-->
                                         </tr>
                                     </thead>
                                     <tbody class="approval-set--section">
+                                        <apex:variable var="count" value="{!0}"></apex:variable>
                                         <apex:repeat value="{!approvalSets}" var="approvalSet">
                                             <tr class="approval-set--approval-steps">
                                                 <td>
-                                                    <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator') && approvalSet.workItemId != null}">
-                                                        <span class="approval-set--aprove-button">
-                                                            <a href="{!'/p/process/ProcessInstanceWorkitemWizardStageManager?id=' + approvalSet.workItemId + '&retURL=%2F' + recordId}" target="_blank" >Approve/Reject</a>
-                                                        </span>
-                                                    </apex:outputPanel>
-                                                    <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator') && approvalSet.workItemId != null}">
-                                                        <span class="approval-set--aprove-button">
-                                                            <a disabled="true" class="diabled-anchor">Approve/Reject</a>
-                                                        </span>
-                                                    </apex:outputPanel>
+                                                    <!-- Added new Reassign action in Actions colum [SF-100]-->
+                                                    <div>
+                                                        <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator' || ((selectedRadio == 'nu_dse__Prospect__c' && modifyAllProspect) || (selectedRadio == 'nu_dse__Offer__c' && modifyAllOffer))) && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a href="{!'/p/process/ProcessInstanceWorkitemWizardStageManager?id=' + approvalSet.workItemId + '&retURL=%2F' + approvalSet.recordId}" target="_blank" >Approve/Reject</a>
+                                                            </span>
+                                                        </apex:outputPanel>
+                                                        <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator' || ((selectedRadio == 'nu_dse__Prospect__c' && modifyAllProspect) || (selectedRadio == 'nu_dse__Offer__c' && modifyAllOffer))) && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a href="{!'/apex/ApprovalDecisionPage?id=' + approvalSet.workItemId + '&retURL=%2F' + approvalSet.recordId}" target="_blank" >New Approval</a>
+                                                            </span>
+                                                        </apex:outputPanel>
+                                                        <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator' && ((selectedRadio != 'nu_dse__Prospect__c' || !(modifyAllProspect)) && (selectedRadio != 'nu_dse__Offer__c' || !(modifyAllOffer)))) && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a disabled="true" class="diabled-anchor">Approve/Reject</a>
+                                                            </span>
+                                                        </apex:outputPanel>
+                                                    </div>
+                                                    <div>
+                                                        <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator' || ((selectedRadio == 'nu_dse__Prospect__c' && modifyAllProspect) || (selectedRadio == 'nu_dse__Offer__c' && modifyAllOffer))) && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a href="{!'/'+ approvalSet.workItemId + '/e?et=REASSIGN&retURL=%2F' + approvalSet.recordId}" target="_blank" >Reassign</a>
+                                                            </span>
+                                                        </apex:outputPanel>
+                                                        <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator' && ((selectedRadio != 'nu_dse__Prospect__c' || !(modifyAllProspect)) && (selectedRadio != 'nu_dse__Offer__c' || !(modifyAllOffer)))) && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a disabled="true" class="diabled-anchor">Reassign</a>
+                                                            </span>
+                                                        </apex:outputPanel>
+                                                    </div>        
+                                                    <div>
+                                                        <apex:outputPanel rendered="{! (approvalSet.approval.showActions || $Profile.Name == 'System Administrator' || ((selectedRadio == 'nu_dse__Prospect__c' && modifyAllProspect) || (selectedRadio == 'nu_dse__Offer__c' && modifyAllOffer))) && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a id="{!count}" onclick="showSpinner(); setCurrentApproval(event.target.id);">Reassign to me</a>
+                                                            </span>
+                                                        </apex:outputPanel>
+                                                        <apex:outputPanel rendered="{!(!(approvalSet.approval.showActions) && $Profile.Name != 'System Administrator' && ((selectedRadio != 'nu_dse__Prospect__c' || !(modifyAllProspect)) && (selectedRadio != 'nu_dse__Offer__c' || !(modifyAllOffer)))) && approvalSet.workItemId != null}">
+                                                            <span class="approval-set--aprove-button">
+                                                                <a disabled="true" class="diabled-anchor">Reassign to me</a>
+                                                            </span>
+                                                        </apex:outputPanel>
+                                                    </div>                                                  
                                                 </td>
                                                 <td >
                                                     <div class="approval-set--approval-name">{!approvalSet.approvalName}</div>
@@ -460,21 +529,48 @@
                                                         <a href="{!'/' + approvalSet.recordId}" target="_blank">{!approvalSet.recordName}</a><!-- - <a href="{!'/' + approvalSet.tradelineid}" target="_blank">Tradeline</a> -->
                                                     </div>
                                                 </td>
+                                                <td><center>{!approvalSet.approval.fistPaymentDate}</center></td>
+                                                <td><center>{!approvalSet.approval.fistPaymentDateInMs}</center></td>
                                                 <td>
                                                     <a href="{! '/' + approvalSet.approval.submittedBy}" target="_blank" >{!approvalSet.approval.submittedByName}</a>
                                                 </td>
                                                 <td>
-                                                    <a href="{! '/' + approvalSet.approval.asignedTo}" target="_blank" >{!approvalSet.approval.asignedToName}</a>
+                                                    <apex:outputPanel rendered="{!BEGINS(approvalSet.approval.asignedTo, '005')}">
+                                                        <a href="{! '/' + approvalSet.approval.asignedTo}" target="_blank" >{!approvalSet.approval.asignedToName}</a> 
+                                                    </apex:outputPanel>
+                                                    <apex:outputPanel rendered="{!BEGINS(approvalSet.approval.asignedTo, '00G')}">
+                                                        <a href="{! '/p/own/Queue/d?id=' + approvalSet.approval.asignedTo}" target="_blank" >{!approvalSet.approval.asignedToName}</a>
+                                                    </apex:outputPanel>
                                                 </td>
                                                 <td>{!approvalSet.approval.submitStatus}</td>
+                                                <!-- Added last ApprovedBy column in Approvals Table[SF-333]-->
+                                                <td>
+                                                    <a href="{! '/' + approvalSet.approval.lastApprovedBy}" target="_blank" >{!approvalSet.approval.lastApprovedByName}</a>
+                                                </td>
+                                                <!-- Added last Rejectedby column in Approvals Table[SF-62]-->
+                                                <td>
+                                                    <a href="{! '/' + approvalSet.approval.lastRejectedBy}" target="_blank" >{!approvalSet.approval.lastRejectedByName}</a>
+                                                </td>
                                                 <td>
                                                     <center>
                                                         {!IF(LEN(TEXT(approvalSet.approval.elapsedHours)) == 1, LPAD(TEXT(approvalSet.approval.elapsedHours), 2, '0'), approvalSet.approval.elapsedHours)}:{!IF(LEN(TEXT(approvalSet.approval.elapsedMins)) == 1, LPAD(TEXT(approvalSet.approval.elapsedMins), 2, '0'), approvalSet.approval.elapsedMins)}
                                                     </center>
                                                 </td>
-                                                <td><center>{!approvalSet.approval.completedDate}</center></td>
-                                                <td>{!approvalSet.status}</td> 
+                                                <!-- Added hidden total min column in Approvals Table for sorting[SF-339]-->
+                                                <td><center>{!approvalSet.approval.elapsedTotalMins}</center></td>
+                                                <!-- Added Total min since reAssigned column in Approvals Table[SF-333]-->
+                                                <td>
+                                                    <center>
+                                                        {!IF(LEN(TEXT(approvalSet.approval.reAssignedElapsedHours)) == 1, LPAD(TEXT(approvalSet.approval.reAssignedElapsedHours), 2, '0'), approvalSet.approval.reAssignedElapsedHours)}:{!IF(LEN(TEXT(approvalSet.approval.reAssignedElapsedMins)) == 1, LPAD(TEXT(approvalSet.approval.reAssignedElapsedMins), 2, '0'), approvalSet.approval.reAssignedElapsedMins)}
+                                                    </center>
+                                                </td>
+                                                <!-- Added hidden total min since reAssigned column in Approvals Table for sorting[SF-333]-->
+                                                <td><center>{!approvalSet.approval.reAssignedElapsedTotalMins}</center></td>
+                                                <!-- Updated CompletedDate as createdDate column in Approvals Table[SF-62]-->
+                                                <td><center>{!approvalSet.approval.createdDate}</center></td>
+                                                <td><center>{!approvalSet.approval.createdDateInMs}</center></td>
                                             </tr>
+                                            <apex:variable var="count" value="{!count + 1}"/>
                                         </apex:repeat>
                                     </tbody>
                                 </table>
@@ -482,26 +578,99 @@
                         </apex:outputPanel>
                     </div>
                     <div class="slds-card__footer">
-                        
                     </div>
                 </div>
             </div>
         </apex:outputPanel>
+        <apex:outputPanel id="reAssignModal">
+            <apex:outputPanel rendered="{!reAssign}">
+                <div role="dialog" tabindex="-1" aria-labelledby="reAssignModal" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container" >
+                        <div class="slds-modal__header nudebt-modal_header_primary">
+                            <h2 class="slds-text-heading--medium">Reassign Approval Request</h2>
+                        </div>
+                        <div class="slds-modal__content slds-p-around--medium" >
+                            <div class="slds-grid slds-wrap">
+                                <div class="slds-col">
+                                    <span class="slds-form-element__label">Related To</span>
+                                    <div class="slds-form-element__control">
+                                        <span class="slds-form-element__static">
+                                            <a href="{!'/' + currentApproval.recordId}" target="_blank">{!currentApproval.recordName}</a>
+                                        </span>
+                                    </div>
+                                    <span class="slds-form-element__label">Approver</span>
+                                    <div class="slds-form-element__control">
+                                        <span class="slds-form-element__static">
+                                            <a href="{! '/' + $User.Id}" target="_blank" >{!$User.FirstName} {!$User.LastName}</a>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="slds-col">
+                                    <span class="slds-form-element__label">Submitted By</span>
+                                    <div class="slds-form-element__control">
+                                        <span class="slds-form-element__static">
+                                            <a href="{! '/' + currentApproval.approval.submittedBy}" target="_blank" >{!currentApproval.approval.submittedByName}</a>
+                                        </span>
+                                    </div>
+                                    <span class="slds-form-element__label">Assigned Approver</span>
+                                    <div class="slds-form-element__control">
+                                        <span class="slds-form-element__static">
+                                            <a href="{! '/' + currentApproval.approval.asignedTo}" target="_blank" >{!currentApproval.approval.asignedToName}</a>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-modal__footer nudebt-modal_header_primary">
+                            <button class="slds-button slds-button--brand nudebt-button" id="{!currentApproval.recordId}" type="button" onclick="showSpinner();reAssignApproval();">Reassign Approval Request</button>
+                            <button class="slds-button slds-button--neutral nudebt-button" type="button" onclick="showSpinner();cancelReAssignApproval();">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-backdrop slds-backdrop--open"></div>
+            </apex:outputPanel>
+        </apex:outputPanel>
         <script>
-                                            
+            var currentPage = {number:0, sortOrder:[10, "desc" ], length:25};      
+            // Updated to slected filter name got from element[SF-62]
             function onFilterChange() {
                 showSpinner();
-                console.log('changed to ->',event.currentTarget.value);
-                let filter = event.currentTarget.value;
+                var filter = document.getElementById('filterSelect').value;
                 if (filter) {
                 
                     filterApprovals(filter);
                 }
             }
+            
+            function redirectPage(recordId) {
+                var redirectRef = window.open("/"+recordId, '_blank');
+            }
+
+            function refreshPage() {
+
+                var table =  $('#approvalsTable').DataTable();
+                currentPage.length = table.page.info().length;
+                currentPage.number = table.page.info().page * table.page.info().length;
+                if(table.context != null && table.context[0].aaSorting != null) {
+                    currentPage.sortOrder = table.context[0].aaSorting[0];
+                }
+                onFilterChange();
+            }
         </script>
         
         <script>
-        
+            
+            window.onresize = onResize;
+
+            function onResize() {
+
+                if (window.innerWidth) {
+
+                    var windowWidth = window.innerWidth * (81 / 100);
+                    $("#dataTableDiv").css("max-width", windowWidth);
+                }
+            }
+
             function showSpinner() {
         
                 var spinner = document.getElementById('Spinner');
@@ -533,14 +702,12 @@
                     dBody.style.overflow = 'auto';
                 }
             }
-
-        
             showSpinner();
             function approval_getApprovals() {
                 console.log('calling approval_refreshApprovals function.');
                 window.setTimeout(function() {
                     approval_refreshApprovals();
-                    applyJQueryTable();
+                    applyJQueryTable('nu_dse__Prospect__c');
                 }, 0);
             }
             
@@ -548,13 +715,49 @@
                 approval_getApprovals();
             })();
 
-            function applyJQueryTable() {
-            
+            function applyJQueryTable(selectedObj) {
+
+                if(event != null && event.target.Id == 'refreshButton') {
+                    reCreateJQueryTable();
+                }
                 $(document).ready( function () {
-                    $('#approvalsTable').DataTable();
-                } );
+                    createJQueryDataTable(selectedObj);
+                });
+                onResize();
             }
-            
+
+            function createJQueryDataTable(selectedObj) {
+
+                console.log('test::', selectedObj);
+                
+                var table = $('#approvalsTable').DataTable({
+                    // Added default setting as default record count 25 & sort desc based on Time in Queue column[SF-339]
+                    "iDisplayLength": currentPage.length,
+                    "displayStart": currentPage.number,
+                    "order": [currentPage.sortOrder],
+                    "scrollX": true, 
+                    "columnDefs":[
+                        {"visible": false, "targets": 10},
+                        { "orderData": [10], "targets": 9},
+                        {"visible": false, "targets": 12},
+                        { "orderData": [12], "targets": 11},
+                        {"visible": false, "targets": 14},
+                        { "orderData": [14], "targets": 13},
+                        {"visible": false, "targets": 3},
+                        {"visible": (selectedObj == 'nu_dse__Prospect__c' ? false : true) , "targets": 2},
+                        {"orderData": [3], "targets": 2}
+                    ]
+                });
+            }
+
+            function reCreateJQueryTable(selectedObj) {
+
+                if (j$.fn.dataTable.isDataTable('#approvalsTable')) {
+                            
+                    j$('#approvalsTable').DataTable().clear().destroy();
+                }
+                createJQueryDataTable(selectedObj);
+            }
             
         </script>
     </apex:form>  

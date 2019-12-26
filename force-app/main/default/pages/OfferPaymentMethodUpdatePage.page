@@ -1,0 +1,19 @@
+<apex:page standardController="nu_dse__Offer__c">
+  <apex:slds />
+    <apex:includeLightning />
+
+    <div id="lightning" />
+
+    <script>
+        $Lightning.use("c:OfferDetailPageButtonApp", function() {
+          $Lightning.createComponent("c:OfferPaymentMethodUpdateComp",
+              {"currentOfferId" : '{!$CurrentPage.parameters.Id}'},
+              "lightning",
+              function(cmp) {
+                console.log("Comp was created",'{!$CurrentPage.parameters.Id}');
+                // do some stuff
+              }
+          );
+        });
+    </script>
+</apex:page>

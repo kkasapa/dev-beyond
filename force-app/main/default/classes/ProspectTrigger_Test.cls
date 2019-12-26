@@ -26,6 +26,66 @@ public class ProspectTrigger_Test implements HttpCalloutMock {
         prospectInstance1.nu_dse__Last_Disposition__c = 'Disqualified';
         prospectInstance1.uuid__c = '187.55';
         insert prospectInstance1;
+
+        List<nu_dse__Prospect__c> prospectList = new List<nu_dse__Prospect__c>();
+
+        nu_dse__Prospect__c prospectInstance2 = TestRecordCreator.createProspect();
+        prospectInstance2.nu_dse__First_Name__c = 'Duplicate_SSN';
+        prospectInstance2.nu_dse__SSN_ENC__c = '111-11-1111';
+        prospectInstance2.nu_dse__Co_SSN_ENC__c = '222-22-2222';
+        prospectList.add(prospectInstance2);
+
+        nu_dse__Prospect__c prospectInstance3 = TestRecordCreator.createProspect();
+        prospectInstance3.nu_dse__First_Name__c = 'Duplicate_SSN';
+        prospectInstance3.nu_dse__SSN_ENC__c = '111-11-1111';
+        prospectInstance3.nu_dse__Co_SSN_ENC__c = '222-22-2222';
+        prospectList.add(prospectInstance3);
+
+        nu_dse__Prospect__c prospectInstance4 = TestRecordCreator.createProspect();
+        prospectInstance4.nu_dse__First_Name__c = 'Duplicate_SSN';
+        prospectInstance4.nu_dse__SSN_ENC__c = '111-11-1111';
+        prospectInstance4.nu_dse__Co_SSN_ENC__c = '222-22-2222';
+        prospectList.add(prospectInstance4);
+
+
+        insert prospectList;
+
+        List<RecordType> accRecTypeList = [SELECT Id FROM RecordType 
+                                    WHERE sObjectType = 'Account' AND isPersonType = true 
+                                        AND DeveloperName = 'Client' LIMIT 1];
+
+
+        Account acc = TestRecordCreator.createAccount('Account1', accRecTypeList[0].Id);
+        acc.nu_dse__SSN__c = '111-11-1111';
+        acc.nu_dse__Co_SSN__c = '222-22-2222';
+        insert acc; 
+        Account acc1 = TestRecordCreator.createAccount('Account1', accRecTypeList[0].Id);
+        acc1.nu_dse__SSN__c = '111-11-1111';
+        acc1.nu_dse__Co_SSN__c = '222-22-2222';
+        insert acc1; 
+        nu_dse__Processor__c processor = TestRecordCreator.createProcessor('GCS');
+        insert processor;
+
+        nu_dse__Program__c program = TestRecordCreator.createProgram(acc.Id, processor.Id);
+        program.nu_dse__Program_Status__c = 'Active Client';
+        insert program;
+        nu_dse__Program__c program1 = TestRecordCreator.createProgram(acc1.Id, processor.Id);
+        program1.nu_dse__Program_Status__c = 'Active Client';
+        insert program1;
+
+
+    }
+    static testMethod void validateProspectHandler()
+    {
+        nu_dse__Prospect__c testp = new nu_dse__Prospect__c(nu_dse__First_Name__c='Test Prospect', nu_dse__Last_Name__c='Prospect');
+        insert testp;
+        nu_dse__Prospect__c testProspect = [SELECT Id FROM nu_dse__Prospect__c WHERE nu_dse__First_Name__c = 'Test Prospect' AND nu_dse__Last_Name__c= 'Prospect' LIMIT 1];
+        Approval.ProcessSubmitRequest app = new Approval.ProcessSubmitRequest();
+        app.setObjectId(testProspect.id);
+        app.setNextApproverIds(new Id[] {UserInfo.getUserId()});
+        Approval.ProcessResult result = Approval.process(app);
+        testProspect.Recalled_Approval__c = true;
+        update testProspect;
     }
     
     //testing trigger updates on Disposition Email Type
@@ -209,4 +269,39 @@ public class ProspectTrigger_Test implements HttpCalloutMock {
         res.setBody(doc.toXmlString());
         return res;
     }
+
+    @isTest
+    public static void prospectSSNDuplicationCheck() {
+
+        List<nu_dse__Program__c> progList = [SELECT Id, Name, nu_dse__Account__r.FirstName, nu_dse__Account__r.nu_dse__SSN__c 
+                                                    FROM nu_dse__Program__c WHERE nu_dse__Account__r.nu_dse__SSN__c = '111-11-1111'];
+        List<nu_dse__Prospect__c> prospectList = [SELECT Id, Name, nu_dse__First_Name__c, nu_dse__SSN__c 
+                                                    FROM nu_dse__Prospect__c WHERE nu_dse__First_Name__c = 'Duplicate_SSN'];
+
+        prospectList[0].nu_dse__SSN_ENC__c = '';
+        prospectList[0].nu_dse__CO_SSN_ENC__c = '';
+        update prospectList[0];
+
+        Test.startTest();
+        prospectList[0].nu_dse__SSN_ENC__c = '111-11-1111';
+        prospectList[0].nu_dse__CO_SSN_ENC__c = '222-22-2222';
+        update prospectList[0];
+        Test.stopTest();
+
+        /*List<nu_dse__Program__c> newprogList = [SELECT Id, Name, nu_dse__Account__r.FirstName, nu_dse__Account__r.nu_dse__SSN__c 
+                                              FROM nu_dse__Program__c LIMIT 10];
+
+        */
+        List<nu_dse__Prospect__c> updatedProspectList = [SELECT Id, Name, nu_dse__First_Name__c, nu_dse__SSN__c, Client_SSN_Duplicate_Reference__c, 
+                                                            Co_Client_Duplicate_By_SSN__c, Client_Duplicate_By_SSN__c
+                                                            FROM nu_dse__Prospect__c WHERE nu_dse__First_Name__c = 'Duplicate_SSN'];
+       
+
+        System.assert(String.isNotBlank(updatedProspectList[0].Client_SSN_Duplicate_Reference__c));
+        System.assert(updatedProspectList[0].Co_Client_Duplicate_By_SSN__c);
+        System.assert(updatedProspectList[0].Client_Duplicate_By_SSN__c);
+
+
+    }
+
 }

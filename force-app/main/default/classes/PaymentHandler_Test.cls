@@ -1,7 +1,6 @@
 @istest
 public class PaymentHandler_Test {
 
-    
     @testsetup
     public static void testData(){
         
@@ -171,14 +170,15 @@ public class PaymentHandler_Test {
                                                  FROM nu_dse__Payment__c WHERE nu_dse__Dont_Consider__c = false];
         if(paymentsList.size()>0) {
         
+        Test.startTest();
             Task taskInst = new Task(whatId = paymentsList[0].Id, Subject = 'Payments Reminder SMS Task', ActivityDate = system.Today().addDays(1),
                                       Unique_Identifier__c = paymentsList[0].Id+'Payments Reminder SMS',nu_dse__Is_System_Task__c = true);
             insert taskInst;
             nu_dse__Payment__c paymenInst = new nu_dse__Payment__c(Id = paymentsList[0].Id, nu_dse__Transaction_Status__c = 'Cancelled');
             update paymenInst;
-            
+            Test.stopTest();
             List<Task> taskList = [SELECT Id, Status FROM Task WHERE WhatId = :paymentsList[0].Id];
-            System.assertEquals('Completed', taskList[0].Status);
+            System.assert(taskList.isEmpty() == true);
         }
     } 
     
@@ -202,5 +202,78 @@ public class PaymentHandler_Test {
          List<nu_dse__Program__c> completedProgramList = [SELECT Next_Draft_Date__c FROM nu_dse__Program__c
                                                  WHERE Id = :paymentsList[0].nu_dse__Program__c];
          System.assertEquals(null, completedProgramList[0].Next_Draft_Date__c);
+     }
+
+     static testMethod void taskActivityDateTest(){
+        
+        nu_dse__Payment__c paymentInst = [SELECT Id, nu_dse__Schedule_Date__c
+                                          FROM nu_dse__Payment__c LIMIT 1];
+        
+        List<Task> taskList = new List<Task>();
+        for(Integer i = 1; i <= 2; i ++){
+            Task taskInst = new Task();
+            taskInst.WhatId = paymentInst.Id;
+            taskInst.ActivityDate = system.today();
+            if(math.mod(i, 2) == 0){
+                taskInst.Subject = 'SMS REMINDER';
+                taskInst.Unique_Identifier__c = 'Payment Reminder - SMS 1';
+            }
+            else{
+                taskInst.Subject = 'EMAIL REMINDER';
+                taskInst.Unique_Identifier__c = 'Payment Reminder - Email 1';
+            }
+            taskList.add(taskInst);
+        }
+        insert taskList;
+        
+        Test.startTest();
+            paymentInst.nu_dse__Schedule_Date__c = system.today().addDays(7);
+            paymentInst.nu_dse__Transaction_Status__c = 'Pending'; 
+            update paymentInst;
+        Test.stopTest();
+        
+        List<Task> updatedTaskList = [SELECT Id, ActivityDate FROM Task 
+                                      WHERE WhatId = :paymentInst.Id];
+        System.assertEquals(system.today().addDays(5), updatedTaskList[0].ActivityDate);  
+    }
+
+    public static testmethod void paymentCompletedDate_UpdateTest() {
+        
+        nu_dse__Program__c programInst = [SELECT Id FROM nu_dse__Program__c LIMIT 1];
+        nu_dse__Offer__c offerInst = [SELECT Id FROM nu_dse__Offer__c LIMIT 1];
+
+        Id settlementRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Settlement').getRecordTypeId();
+
+        List<nu_dse__Payment__c> paymentList = new List<nu_dse__Payment__c>();
+        nu_dse__Payment__c paymentInst1 = TestRecordCreator.createPayment(programInst.Id, 'Completed', 'Withdrawal', settlementRecordTypeId, offerInst.Id);
+        paymentInst1.nu_dse__Schedule_Date__c = system.today().addDays(-5);
+        nu_dse__Payment__c paymentInst2 = TestRecordCreator.createPayment(programInst.Id, 'Pending', 'Withdrawal', settlementRecordTypeId, offerInst.Id);
+        nu_dse__Payment__c paymentInst3 = TestRecordCreator.createPayment(programInst.Id, 'Pending', 'Withdrawal', settlementRecordTypeId, offerInst.Id);
+        paymentInst3.nu_dse__Schedule_Date__c = system.today().addDays(-2);
+
+        paymentList.add(paymentInst1);
+        paymentList.add(paymentInst2);
+        paymentList.add(paymentInst3);
+
+        insert paymentList;
+
+        List<nu_dse__Payment__c> updatePaymentList = new List<nu_dse__Payment__c>();
+
+        Test.startTest();
+
+            paymentInst2.nu_dse__Schedule_Date__c = system.today().addDays(-3);
+            paymentInst2.nu_dse__Transaction_Status__c = 'Completed';
+            paymentInst3.nu_dse__Transaction_Status__c = 'Completed';
+            updatePaymentList.add(paymentInst2);
+            updatePaymentList.add(paymentInst3);
+            update updatePaymentList;
+
+        Test.stopTest();
+
+        nu_dse__Offer__c updatedOfferInst = [SELECT First_Creditor_Payment_Completed_Date__c, Last_Payment_Completed_Date__c
+                                             FROM nu_dse__Offer__c LIMIT 1];
+
+        System.assertEquals(system.today().addDays(-5), updatedOfferInst.First_Creditor_Payment_Completed_Date__c);
+        System.assertEquals(system.today(), updatedOfferInst.Last_Payment_Completed_Date__c);  
      }
 }

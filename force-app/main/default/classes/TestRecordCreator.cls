@@ -61,9 +61,9 @@ public with sharing class TestRecordCreator {
     
     public static nu_dse__TradeLine__c createTradeLine(Id AccId, Id programId){
         
-        Id recId = [select id from RecordType where sObjectType='Account' and developerName='Creditor' limit 1].id;
+        /*Id recId = [select id from RecordType where sObjectType='Account' and developerName='Creditor' limit 1].id;
         Account creditor = createCreditorAccount(recId);
-        insert creditor; 
+        insert creditor;*/ 
         
         nu_dse__TradeLine__c trdLine = new nu_dse__TradeLine__c(
                                                 nu_dse__Program__c = programId,
@@ -166,6 +166,13 @@ public with sharing class TestRecordCreator {
         return feeItem;
     }
     
+            public static Alias__c createAlias(Id OriginalCreditor){
+        Alias__c alObj = new Alias__c(
+            Original_creditor__c = OriginalCreditor
+        );
+        return alObj;           
+    }
+    
     public static nu_dse__Group_Task__c createGroupTask(Id relatedToId) {
     
         nu_dse__Group_Task__c groupTaskRec = new nu_dse__Group_Task__c(nu_dse__Related_To__c = relatedToId, nu_dse__Subject__c = 'Test', nu_dse__Description__c = 'Test Description', nu_dse__ActivityDate__c = system.today());
@@ -250,5 +257,12 @@ public with sharing class TestRecordCreator {
                                                                                              Key__c = '1234',
                                                                                              Secret__c = 'AB12');
         return awsCredentialsSetting ;
+    }
+    
+    public static Loan_Application__c createLoanApplication(Id programId) {
+        
+        Loan_Application__c loan = new Loan_Application__c (program_name__c =  programId,
+                                                            Application_Status__c = '04-Preapproved');
+        return loan ;
     }
 }

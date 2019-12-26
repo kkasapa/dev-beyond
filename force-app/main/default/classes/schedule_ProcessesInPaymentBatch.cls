@@ -1,25 +1,40 @@
-global class schedule_ProcessesInPaymentBatch implements Schedulable {
+public class schedule_ProcessesInPaymentBatch implements Schedulable {
    
-    global Integer paddingDays;
+    public Set<Id> paymentIds;
+    public String whereConditionStr;
     
     public schedule_ProcessesInPaymentBatch() {
+    }
+    public schedule_ProcessesInPaymentBatch(Set<Id> processPaymentIds) {
 
-        paddingDays = 2;
+        paymentIds = new Set<Id>();
+        if(processPaymentIds != null 
+            && processPaymentIds.isEmpty() == false) {
+            
+            paymentIds.addAll(processPaymentIds);
+        }
+    }  
+
+    public schedule_ProcessesInPaymentBatch(String whereCondition) {
+        
+        if(String.isNotBlank(whereCondition) == true) {
+        
+            whereConditionStr = whereCondition;
+        }
     }
-  
-    public schedule_ProcessesInPaymentBatch(Integer paddingDaysCount) {
-   
-        paddingDays = paddingDaysCount;
-    }
-    
-    global void execute(SchedulableContext sc) {
-    
-        if(paddingDays == null) {
-           
-            paddingDays = 2;
-        }   
-       
-        Batch_ProcessesInPayment paymentProcessBatch = new Batch_ProcessesInPayment(paddingDays); 
-        database.executebatch(paymentProcessBatch);
+
+    public void execute(SchedulableContext sc) {
+
+        if(paymentIds != null 
+            && paymentIds.isEmpty() == false) {   
+            Batch_ProcessesInPayment paymentProcessBatch = new Batch_ProcessesInPayment(paymentIds); 
+            database.executebatch(paymentProcessBatch);
+        } else if(String.isNotBlank(whereConditionStr) == true) {
+            Batch_ProcessesInPayment paymentProcessBatch = new Batch_ProcessesInPayment(whereConditionStr); 
+            database.executebatch(paymentProcessBatch);
+        } else {
+            Batch_ProcessesInPayment paymentProcessBatch = new Batch_ProcessesInPayment(''); 
+            database.executebatch(paymentProcessBatch);
+        }
     }
 }

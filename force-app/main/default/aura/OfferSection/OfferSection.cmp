@@ -1,0 +1,645 @@
+<aura:component implements="lightning:isUrlAddressable,flexipage:availableForAllPageTypes,force:lightningQuickAction,force:hasRecordId" access="global" controller = "ProposalController">
+    
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />  
+    <aura:attribute name="payment" type="nu_dse__Payment__c" default="{ 'sobjectType' : 'nu_dse__Payment__c' }"/>
+    <aura:attribute name="fieldName" type="String" default= "nu_dse__Transaction_Method__c" access="global" />
+    <aura:attribute name="ofFields" type="nu_dse__Offer__c" default="{ 'sobjectType' : 'nu_dse__Offer__c' }"/>
+    <aura:attribute name="sObjectName" type="String" default= "nu_dse__Payment__c" access="global"/>
+    <aura:attribute name="sObjectList" type="nu_dse__Program__c" />    
+    <aura:attribute name="myObjects" type="object"/> 
+    <aura:attribute name="prmObject" type="object"/> 
+    <aura:attribute name="program" type="nu_dse__Program__c"/>
+    <aura:attribute name="bankrec" type="nu_dse__Bank_Account__c"/>
+    <aura:attribute name="CreditorInfo" type="Account" default="{ 'sobjectType' : 'Account' }"/>
+    <aura:attribute name="TradelineInfo" type="nu_dse__TradeLine__c" default="{ 'sobjectType' : 'nu_dse__TradeLine__c' }"/>
+    <aura:attribute name="tradeObjects" type="object"/> 
+    
+    <aura:attribute name="tradeList" type="nu_dse__TradeLine__c[]" />
+    
+    <aura:attribute name="paginationList" type="nu_dse__TradeLine__c[]"/>
+        
+    <aura:attribute name="pageSize" type="Integer" default="1"/>
+            
+    <aura:attribute name="totalSize" type="Integer"/>
+                
+    <aura:attribute name="start" type="Integer" />
+                
+    <aura:attribute name="end" type="Integer"/>
+                    
+    <aura:attribute name="boolean" type="boolean" default="false"/>   
+                    
+    <aura:attribute name="pgmId" type="String"/>
+    <aura:attribute name="parameters" type="String"/>
+    <aura:attribute name="recordId" type="String"/>
+    <aura:attribute name="tradelinesList" type="String"/>
+    <aura:attribute name="ofMap" type="String"/>   
+    <aura:attribute name="picklistValues" access="public" type="String[]"/> 
+    <aura:attribute name="Creditor" type="String"/>
+    
+                    
+                    
+                    <!--
+                    <div class="slds-size_4-of-4">
+                        <div class="slds-box slds-box_x-small slds-text-align_left slds-m-around_x-small">Tradline 12345</div>
+                    </div>
+    -->
+    <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-border_left slds-border_right"  >
+        <tr>
+            <td>
+         <aura:iteration items="{!v.paginationList}" var="item">
+            <ui:outputText value="{!item.Name}" />
+        </aura:iteration>
+                </td>
+            </tr>
+    </table>
+        
+        
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-size_2-of-4">
+                            <lightning:layoutItem size="2">
+                                <lightning:button label="Search" class="slds-size_medium"   />
+                            </lightning:layoutItem>
+                        </div>
+                        <div class="slds-size_1-of-4">
+                            <lightning:layoutItem size="2">
+                                <lightning:button label="Save Data" class="slds-size_medium"   />
+                            </lightning:layoutItem>
+                        </div>
+                        <div class="slds-size_1-of-4">
+                            <lightning:layoutItem size="2">
+                                <lightning:button label="Next Tradeline>>" class="slds-size_medium"  disabled="{!v.end >= v.totalSize}" onclick="{!c.next}" />
+                            </lightning:layoutItem>
+                        </div>
+                    </div>
+                    
+                    <!--  <c:Search />-->
+    
+    <table>
+        <tr>
+                    <table>
+                        <tr>
+                            <td>
+                                <img src="{!$Resource.User_Icon}" />
+                                
+                                <div class="slds-m-horizontal--large">  <ul>
+                                    <li>{!v.prmObject.AccountName} </li>
+                                    <li>SSN: {!v.prmObject.SSN}</li>
+                                    
+                                    </ul>  
+                                </div>
+                                <br></br>
+                                <div class="slds-m-horizontal--large">
+                                    <ul>
+                                        <li>Email: {!v.prmObject.Email}</li>
+                                        <li>Addreess: {!v.prmObject.Address}</li>
+                                        <li>City: {!v.prmObject.City} &nbsp; State:{!v.prmObject.State }  &nbsp; Zip: {!v.prmObject.ZipCode} </li>
+                                    </ul> 
+                                </div>
+                                <br></br>
+                                <div class="slds-m-horizontal--large">
+                                    Phone:  {!v.prmObject.Cell_Phone__c}
+                                </div>  
+                            </td>
+                            <td>
+                                <div class="slds-align_absolute-left" style="height:5rem">
+                                    <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-border_left slds-border_right"  >
+                                         <tbody>
+                                        <tr>
+                                           
+                                            <th>
+                                                Enrollment Date
+                                            </th>
+                                      
+                                       
+                                            <th>
+                                                Total Active Debt 
+                                            </th>
+                                       
+                                       
+                                            <th>
+                                                Available Funds This Month 
+                                            </th>
+                                            <th>
+                                                Total Enrolled Debits 
+                                            </th>
+                                                    <th>
+                                               Settled Tradelines
+                                            </th>
+                                        </tr>
+                                             
+                                                
+                                             
+                                        </tbody>
+                                        
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+            </tr>
+                 <tr> 
+                    <!--section header-->
+                    
+                    <!--section header--> 
+                    
+                    <!--Tabs Started-->
+                    
+                    
+                    <table class="gridtable">
+                        <tr  >
+                            <th align="center" >Program</th>
+                            <th align="center" bgcolor="#d3d3d3">Client Detail</th>
+                            <th bgcolor="#d3d3d3">Hardship</th>
+                            <th >Budget</th>
+                            <th bgcolor="#d3d3d3">Attachments</th>
+                            <th bgcolor="#d3d3d3">Credit Reports</th>
+                        </tr>
+                        
+                    </table>
+                     </tr>  
+                    <br></br>
+                    <div  class="slds-border_bottom"></div>
+                    <br></br>
+                    <div  class="slds-border_bottom"></div>   
+                    
+                    <!--Tabs-->
+                    
+                    <!--Bank Section-->
+                    <tr>
+                    <table>
+                        <tr>
+                            <tbody>
+                            <td>
+                                <!--  Add Bank Logo here-->
+                                
+                                
+                                <lightning:icon iconName="utility:display_text" size="small"/>
+                                
+                                <div class="slds-m-horizontal--large">  <ul>
+                                    <li>{!v.bankrec.nu_dse__Bank_Name__c} </li>
+                                    <li>Bank account N*: {!v.bankrec.nu_dse__Bank_Account_Number__c}</li>
+                                    
+                                    </ul>  
+                                </div>
+                                <br></br>
+                                <div class="slds-m-horizontal--large">
+                                    <ul>
+                                        <li>Routing N*: {!v.bankrec.nu_dse__Routing_Number__c}</li>
+                                        <li>Status: {!v.bankrec.nu_dse__Status__c}</li>
+                                        <li>Account type: {!v.bankrec.nu_dse__Account_Type__c}</li>
+                                        
+                                        <br></br>
+                                        <li>City: {!v.bankrec.nu_dse__City__c} &nbsp; State:{!v.bankrec.nu_dse__State__c }  &nbsp; Zip: {!v.bankrec.nu_dse__Zip__c} </li>
+                                    </ul> 
+                                </div>
+                                <br></br>
+                                
+                            </td>
+                            
+                                
+                            <!--Blank-->
+                            <td>
+                                <div class="slds-align_absolute-left" style="height:5rem">
+                                    <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-border_left slds-border_right"  >
+                                        
+                                        <tr>
+                                            <th>
+                                                Debt type
+                                            </th>
+                                             <th>
+                                                Deliquency 
+                                            </th>
+                                             <th>
+                                              last payment date 
+                                            </th>
+                                            <th>
+                                              Program fee
+                                            </th>
+                                        </tr>
+                                        
+                                        
+                                        
+                                    </table>
+                                </div>
+                            </td>
+                                </tbody>
+                            <!--Blank-->
+                        </tr>
+                    </table>
+                        </tr>
+        
+        </table>
+                    <!--Bank Section-->
+                   
+                    
+                    <!--Creditor Section-->
+                    <table class="gridtable slds-table slds-table_bordered slds-table_cell-buffer slds-border_left slds-border_right">
+                        
+                        <tr>
+                            <th>Creditor Contact Information
+                                <td>
+                                    <div class="slds-m-around_small slds-grid slds-gutters">
+                                        <div class="slds-grid slds-grid_vertical">
+                                            <div class="slds-col">
+                                                <span>
+                                                    <lightning:input placeholder="Name"   value="{!v.CreditorInfo.Name}" />                        
+                                                    
+                                                    
+                                                </span>
+                                            </div>
+                                            <div class="slds-col">
+                                                <span>
+                                                    <lightning:input placeholder="Phone Number"   value="{!v.CreditorInfo.Phone}" /> 
+                                                </span>
+                                            </div>
+                                            <div class="slds-col">
+                                                <span>
+                                                    <lightning:input placeholder="Email"   value="{!v.CreditorInfo.Email_Address__c}" /> 
+                                                </span>
+                                            </div>
+                                            <div class="slds-col">
+                                                <span>
+                                                </span>
+                                            </div>
+                                            <div class="slds-col">
+                                                <span>
+                                                    <lightning:input placeholder="Fax #"   value="{!v.CreditorInfo.Fax}" />  
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </th>
+                            <th>Tradeline Info
+                                <td>
+                                    <div class="slds-m-around_small slds-grid slds-gutters">
+                                        <div class="slds-grid slds-grid_vertical">
+                                            <div class="slds-col">
+                                                <span>
+                                                    <lightning:input placeholder="Enrolled Creditor"   value="{!v.TradelineInfo.nu_dse__Sales_creditor__c}" />  
+                                                </span>
+                                            </div>
+                                            <div class="slds-col">
+                                                <span>
+                                                    <lightning:input placeholder="Current Owner"   value="{!v.TradelineInfo.nu_dse__Sales_creditor__c}" />  
+                                                </span>
+                                            </div>
+                                            <div class="slds-col">
+                                                <span>
+                                                    <lightning:input placeholder="Collection Agency"   value="{!v.TradelineInfo.nu_dse__Sales_creditor__c}" />  
+                                                </span>
+                                            </div>
+                                            <div class="slds-col">
+                                                <span>
+                                                    <lightning:input placeholder="Current Account #"   value="{!v.TradelineInfo.nu_dse__Sales_creditor__c}" />  
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    
+                                </td>
+                                
+                            </th>
+                            
+                            <th> Balance
+                                <td>
+                                    <div class="slds-m-around_small slds-grid slds-gutters">
+                                        <div class="slds-grid slds-grid_vertical">
+                                            <div class="slds-col">
+                                                <span>
+                                                    <lightning:input placeholder="Enrolled Balance"   value="{!v.program.Estimated_Current_Month_Balance__c}" />  
+                                                </span>
+                                            </div>
+                                            <div class="slds-col">
+                                                <span>
+                                                    <lightning:input placeholder="Verified Balance"   value="{!v.program.Estimated_Current_Month_Balance__c}" />  
+                                                </span>
+                                            </div>
+                                            <div class="slds-col">
+                                                <span>
+                                                    <lightning:input placeholder="New Current Balance"   value="{!v.program.Estimated_Current_Month_Balance__c}" />  
+                                                </span>
+                                            </div>
+                                            <br></br>
+                                            
+                                        </div>
+                                    </div>
+                                    
+                                    
+                                    
+                                </td>
+                            </th>
+                            <th> Dailog Title
+                                <td>
+                                    
+                                    <div class="slds-m-around_small slds-grid slds-gutters">
+                                        <div class="slds-grid slds-grid_vertical">
+                                            <tr>
+                                                <div class="slds-col">
+                                                    <span>
+                                                        <lightning:input placeholder="Days Deliquent"   value="{!v.program.Estimated_Current_Month_Balance__c}" />  
+                                                    </span>
+                                                </div>
+                                                
+                                                <div class="slds-col">
+                                                    <span>
+                                                        <ui:inputCheckbox aura:id="checkbox"  /> Charged Off
+                                                    </span>
+                                                </div>
+                                            </tr>
+                                            <div class="slds-col">
+                                                <span>
+                                                    <lightning:input placeholder="Last Payment Date"   value="{!v.program.Estimated_Current_Month_Balance__c}" />  
+                                                </span>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>
+                                    
+                                    
+                                </td>
+                            </th>
+                        </tr>
+                    </table>  
+                    <!--Creditor Section-->
+                    
+                    <!-- Offer Section -->
+                    <div class="slds-section slds-is-open" aura:id="colorSection">
+                        <!-- Section -->
+                        <h3 class="slds-section__title">
+                            <button aria-controls="offerId" class="slds-button slds-section__title-action">
+                                <span onclick="{!c.toggleSection}" data-auraId="colorSection">
+                                    <lightning:icon iconName="utility:switch"
+                                                    alternativeText="button icon"
+                                                    size="x-small"
+                                                    class="slds-section__title-action-icon slds-button__icon_left"/>
+                                </span>
+                                <span class="slds-truncate" title="offers">Offer Section</span>
+                            </button>
+                        </h3>
+                        <!-- Section -->
+                        
+                        <!--Section body-->
+                        <table >
+                            <tr>
+                                
+                                <td >
+                                    <table >
+                                        <tr>
+                                            <td>
+                                                
+                                                <div class="slds-section__content" id="offerId">  
+                                                    <div class="slds-m-around_small slds-grid slds-gutters">
+                                                        <div class="slds-grid slds-grid_vertical">
+                                                            
+                                                            <div class="slds-col">  
+                                                                <span>
+                                                                    <lightning:select aura:id="Trades"   name="TradeLine" label="TradeLines" >
+                                                                        <option value="">--None--</option>
+                                                                        <aura:iteration items="{!v.tradelinesList}" var="tr" indexVar="key">
+                                                                            
+                                                                            <option text="{!tr.value}" />
+                                                                        </aura:iteration>
+                                                                    </lightning:select>
+                                                                </span>
+                                                            </div>
+                                                            
+                                                            <div class="slds-col">
+                                                                <span>
+                                                                    <lightning:select aura:id="Picklist"   name="Filter by Offers" label="Filter by Offers" >
+                                                                        <option value="">--None--</option>
+                                                                        <aura:iteration items="{!v.ofMap}" var="pg" indexVar="key">
+                                                                            
+                                                                            <option text="{!pg.value}" />
+                                                                        </aura:iteration>
+                                                                    </lightning:select>
+                                                                </span>
+                                                            </div>
+                                                            
+                                                            <div class="slds-col">
+                                                                <span>
+                                                                    <lightning:input label="Offer Amount"  value="{!v.ofFields.nu_dse__Offer_Amount__c}" />                                        
+                                                                </span>
+                                                            </div>
+                                                            
+                                                            <div class="slds-col">
+                                                                <span>
+                                                                    <lightning:input label="# of Payments"    value="{!v.ofFields.nu_dse__Number_of_Payments__c}" />                                        
+                                                                </span>
+                                                            </div>
+                                                            
+                                                            <div class="slds-col">
+                                                                <span>
+                                                                    <lightning:input type ="Date" label="First Payment Date"  value="{!v.ofFields.nu_dse__First_Payment_Date__c}" />                                        
+                                                                </span>
+                                                            </div>
+                                                            
+                                                            <div class="slds-col">
+                                                                <span>
+                                                                    <lightning:input type ="Date" label="Payment Re Occurring Day"  value="{!v.ofFields.nu_dse__Payment_Re_Occuring_Day__c}" />
+                                                                </span>
+                                                            </div>
+                                                            
+                                                            <div class="slds-col"> 
+                                                                <span>   
+                                                                    <lightning:select aura:id="pMethod"   name=" Payment Method" label=" Payment Method">
+                                                                        
+                                                                        <option value="">--None--</option>
+                                                                        <aura:iteration items="{!v.picklistValues}" var="item" >
+                                                                            <option value="{!item}" selected="{!item==v.picklistValues}">{!item}</option>                                                       
+                                                                        </aura:iteration>
+                                                                        
+                                                                    </lightning:select>   
+                                                                </span>
+                                                            </div>  
+                                                            
+                                                            
+                                                            <div class="slds-col"> 
+                                                                <div class="slds-section__content" id="offerId">  
+                                                                    <lightning:layoutItem size="2">
+                                                                        <lightning:button variant="success" class="slds-size_medium" label="Simulate" onclick="{!c.getPays}" />
+                                                                    </lightning:layoutItem>
+                                                                </div>               
+                                                            </div>
+                                                            
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                
+                                                
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                                
+                                <td>
+                                    <aura:if isTrue="{!v.boolean}">
+                                        <div class="slds-section__content" id="offerId" >
+                                            <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-border_left slds-border_right"  >
+                                                
+                                                <thead>
+                                                    <tr class="slds-text-title_caps">
+                                                        <th scope="col">
+                                                            <div class="slds-truncate" title="Name">NAME</div>                                
+                                                        </th>
+                                                        
+                                                        <th scope="col">
+                                                            <div class="slds-truncate" title="Type">TYPE</div>           
+                                                            
+                                                        </th>
+                                                        
+                                                        <th scope="col">
+                                                            <div class="slds-truncate" title="Transaction Status">STATUS</div>         
+                                                            
+                                                        </th>
+                                                        
+                                                        <th scope="col">
+                                                            <div class="slds-truncate" title="Amount">CREDITOR</div>            
+                                                            
+                                                        </th>
+                                                        
+                                                        <th scope="col">
+                                                            <div class="slds-truncate" title="Scheduled Date">SCHEDULED DATE</div> 
+                                                        </th>
+                                                        
+                                                        <th scope="col">
+                                                            <div class="slds-truncate" title="Amount">AMOUNT</div>            
+                                                            
+                                                        </th>
+                                                        
+                                                        <th scope="col">
+                                                            <div class="slds-truncate" title="Amount">TOTAL FEE</div>            
+                                                            
+                                                        </th>
+                                                        <th scope="col">
+                                                            <div class="slds-truncate" title="Amount">AMOUNT TO SAVINGS</div>            
+                                                            
+                                                        </th>
+                                                        <th scope="col">
+                                                            <div class="slds-truncate" title="Amount">BALANCE</div>            
+                                                            
+                                                        </th>
+                                                        
+                                                        
+                                                        
+                                                        
+                                                        
+                                                        
+                                                    </tr>
+                                                </thead>
+                                                
+                                                
+                                                
+                                                <tbody>
+                                                    <aura:iteration items="{!v.myObjects}" var="item">
+                                                        
+                                                        <tr>                                            
+                                                            <td> {!item.paymRecord.Name}</td>
+                                                            <td> {!item.paymRecord.nu_dse__Payment_Type__c}</td>
+                                                            <td> {!item.paymRecord.nu_dse__Transaction_Status__c}</td> 
+                                                            <td> {!item.creditor}</td> 
+                                                            <td> {!item.paymRecord.nu_dse__Schedule_Date__c}</td>
+                                                            <td> {!item.paymRecord.nu_dse__Amount__c}</td>
+                                                            <td> {!item.paymRecord.nu_dse__Processor_Fee__c}</td>
+                                                            <td>500</td>
+                                                            <td>100</td>
+                                                        </tr>
+                                                        
+                                                        
+                                                    </aura:iteration>
+                                                </tbody>                        
+                                                
+                                            </table>
+                                        </div>
+                                    </aura:if>
+                                    
+                                </td>
+                            </tr>  
+                            <tr>
+                            </tr> 
+                            
+                            
+                            
+                            
+                        </table>        
+                    </div> 
+                    <br></br>
+                    <div  class="slds-border_bottom"></div>
+                    <br></br>
+                    <div  class="slds-border_bottom"></div> 
+                    <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-border_left slds-border_right"  >
+                        
+                        <thead>
+                            <tr class="slds-text-title_caps">
+                                <th scope="col">
+                                    <div class="slds-truncate" >Creditor</div>                                
+                                </th>
+                                
+                                <th scope="col">
+                                    <div class="slds-truncate" >Bal</div>           
+                                    
+                                </th>
+                                
+                                <th scope="col">
+                                    <div class="slds-truncate" >Credit Util</div>         
+                                    
+                                </th>
+                                
+                                <th scope="col">
+                                    <div class="slds-truncate" >Loan Purpose</div>            
+                                    
+                                </th>
+                                
+                                <th scope="col">
+                                    <div class="slds-truncate" >Tradeline Security</div> 
+                                </th>
+                                
+                                <th scope="col">
+                                    <div class="slds-truncate" >Debt Owner</div>            
+                                    
+                                </th>
+                                
+                                <th scope="col">
+                                    <div class="slds-truncate" >Loan Description</div>            
+                                    
+                                </th>
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                            </tr>
+                        </thead>
+                        
+                        
+                        
+                        <tbody>
+                            <aura:iteration items="{!v.tradeObjects}" var="item">
+                                
+                                <tr>                                            
+                                    <td> {!item.Beyond_Manager_Name__c}</td>
+                                    <td> {!item.nu_dse__Original_Debt__c}</td>
+                                    <td> {!item.nu_dse__Credit_Limit__c}</td> 
+                                    <td> {!item.Loan_Application__c}</td> 
+                                    <td> 100</td>
+                                    <td> 100</td>
+                                    <td>100</td>
+                                    
+                                </tr>
+                                
+                                
+                            </aura:iteration>
+                        </tbody>                        
+                        
+                    </table>
+                    
+                    <!--section body--> 
+                    
+                    
+                    <!-- <c:SimulateButton/> -->
+                    
+                </aura:component>

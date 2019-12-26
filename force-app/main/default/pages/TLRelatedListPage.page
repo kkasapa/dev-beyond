@@ -1,0 +1,30 @@
+<apex:page standardController="nu_dse__Program__c" extensions="TradelineRelatedListExtension">
+    
+    <apex:pageBlock >
+        <apex:pageBlockTable value="{!lstOfTradeLines}" var="n" rendered="{!lstOfTradeLines.size != 0}">
+            <apex:column headerValue="TL Name" value="{!n.name}" />
+            <apex:column headerValue="Original Creditor" value="{!n.nu_dse__Original_Creditor__r.Name}" />
+            <apex:column headerValue="New Creditor" value="{!n.nu_dse__New_Creditor__r.Name}" />
+            <apex:column headerValue="Original Balance" value="{!n.nu_dse__Original_Debt__c}" />
+            <apex:column headerValue="Verified Balance" value="{!n.nu_dse__Verified_Balance__c}" />
+            <apex:column headerValue="Current Balance" value="{!n.Verified_Balance2__c}" />
+            <apex:column headerValue="Accepted Offers">
+                <apex:pageBlock rendered="{!n.nu_dse__Offers__r.size != 0}">
+                    <apex:pageBlockTable value="{!n.nu_dse__Offers__r}" var="offer">
+                        <apex:column headerValue="Offer Name" value="{!offer.name}" />
+                        <apex:column headerValue="Offer Amount" value="{!offer.nu_dse__Offer_Amount__c}" />
+                        <apex:column headerValue="Program Fee" value="{!offer.nu_dse__Program_Fee__c}" />
+                        <apex:column headerValue="Total Settlement w/ Fee" value="{!offer.nu_dse__Total_Settlement_with_Fee__c}" />
+                    </apex:pageBlockTable>
+                </apex:pageBlock>
+                <apex:outputText value="No Offer in accepted status" rendered="{!n.nu_dse__Offers__r.size == 0}"></apex:outputText>
+            </apex:column>  
+        </apex:pageBlockTable>
+        <apex:outputText style="text-align: center;display: block;" value="No Tradeline in Making payments stage" rendered="{!lstOfTradeLines.size == 0}"></apex:outputText>
+    </apex:pageBlock>   
+    <apex:pageBlock >
+        <apex:outputPanel id="MissingAttRpt" >
+            <apex:iframe src="https://beyondfinance--devbeyond.my.salesforce.com/00O22000000P8al?isdtp=lt" scrolling="true"  height="1588px"  width="100%"/>   
+        </apex:outputPanel>
+    </apex:pageBlock>
+</apex:page>

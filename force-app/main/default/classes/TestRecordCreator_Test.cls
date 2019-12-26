@@ -16,7 +16,7 @@ public class TestRecordCreator_Test {
         insert act; 
     }
 
- public testmethod static void createProspectTest(){
+ 	public testmethod static void createProspectTest(){
         
         Id recid = [select id from RecordType where sObjectType='Account' and Developername='Creditor'].id;
          Account act = TestRecordCreator.createCreditorAccount(recId);
@@ -39,6 +39,7 @@ public class TestRecordCreator_Test {
         insert program; 
         
     }
+    
      public testmethod static void createTaskTest(){
         
         Id recid = [select id from RecordType where sObjectType='Account' and Developername='Client'].id;
@@ -134,9 +135,6 @@ public class TestRecordCreator_Test {
         
         insert act; 
           
-      
-        
-          
         nu_dse__Processor__c p = TestRecordCreator.createProcessor('CFT');
         insert p;
         nu_dse__Program__c program = TestRecordCreator.createProgram(act.Id, p.id);
@@ -144,7 +142,7 @@ public class TestRecordCreator_Test {
         
         
         nu_dse__Bank_Account__c bank =TestRecordCreator.createBankAccount(program.Id);
-          
+          bank.Holder_Zip__c = '12345';
           insert bank; 
     }
     
@@ -161,5 +159,21 @@ public class TestRecordCreator_Test {
           List<nu_dse__Field_mapping__c> fm2=TestRecordCreator.ABTestingFieldMap2(DM2.id);
           insert fm2; 
         
+    }
+    
+    public testmethod static void createLoanApptest(){
+          
+        Id recid = [select id from RecordType where sObjectType='Account' and Developername='Client'].id;
+        Account act = TestRecordCreator.createAccount('Test',recId);
+        
+        insert act; 
+        
+        nu_dse__Processor__c p = TestRecordCreator.createProcessor('CFT');
+        insert p;
+        nu_dse__Program__c program = TestRecordCreator.createProgram(act.Id, p.id);
+        insert program; 
+          
+        loan_application__c loan = TestRecordCreator.createLoanApplication(program.id);
+        insert loan;
     }
 }

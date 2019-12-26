@@ -1,0 +1,48 @@
+<aura:component access="GLOBAL" controller="OfferPaymentMethodUpdateController">
+    <aura:attribute name="currentOfferId" type="String"/>
+    <aura:attribute name="ancillaryFees" type="List"/>
+    <aura:attribute name="paymentColumns" type="List"/>
+    <aura:attribute name="settlementPayments" type="List"/>
+    <aura:attribute name="showSpinner" type="Boolean" default="false"/>
+    <aura:handler name="init" action="{!c.doInit}" value="{!this}"/>
+    <c:ApexActionService aura:id="apexService"/>
+    <c:CustomToast aura:id="showToast"/>
+    <aura:if isTrue="{!v.showSpinner}">
+        <div >
+            <lightning:spinner alternativeText="Loading" variant="brand" size="medium" />
+        </div>
+    </aura:if>
+    
+    <!--<p>This Comp updates Transaction Method of this {!v.currentOfferId}</p>-->
+    <lightning:card title="Payment Transaction Method Update" iconName="utility:money">
+        <aura:set attribute="actions">
+            <aura:if isTrue="{!not(empty(v.ancillaryFees))}">
+                <div class="">
+                    <lightning:select aura:id="paymentMethodSelect" name="paymentMethod" 
+                        label="Payment Transaction Method" class="slds-size--4-of-12 slds-form_inline slds-show_inline-block slds-m-horizontal--medium" 
+                        variant="label-inline" >
+                        <option value="">--None--</option>
+                        <aura:iteration items="{!v.ancillaryFees}" var="ancillaryFee" >
+                            <option value="{!ancillaryFee.nu_dse__Transaction_Method_API_Name__c}">
+                                {!ancillaryFee.nu_dse__Transaction_Method_API_Name__c}
+                            </option>
+                        </aura:iteration>
+                    </lightning:select>
+                    <lightning:button variant="brand" label="Update Payment Method on Payments" 
+                                title="Update Payment Method on Payments" onclick="{!c.updatePayments}"/>
+                </div>    
+            </aura:if>        
+        </aura:set>
+        
+        <!---->
+        <div class="slds-m-top--x-large">
+            <aura:if isTrue="{!not(empty(v.settlementPayments))}">
+                <lightning:datatable
+                keyField="Id"
+                columns ="{!v.paymentColumns}"
+                data="{! v.settlementPayments }"
+                hideCheckboxColumn="true"/>
+            </aura:if>
+        </div>
+    </lightning:card>
+</aura:component>

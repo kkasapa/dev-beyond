@@ -11,7 +11,17 @@
 * @systemLayer    Trigger
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
-trigger prospectTrigger_TF on nu_dse__Prospect__c (before insert, before update, after update) {
+trigger prospectTrigger_TF on nu_dse__Prospect__c (before insert, before update, after insert, after update) {
     
     new ProspectHandler().run();
+    /*
+    RejectionCommentsRequired rejectHandler = new RejectionCommentsRequired();
+    
+    if(Trigger.isBefore){
+        if(Trigger.isUpdate){
+        system.debug('Trigger begin');
+            rejectHandler.rejectionMesage(trigger.newMap,trigger.oldMap);
+        }
+    }
+    */
 }

@@ -7,7 +7,7 @@
 * @maintainedBy   Ashwin Bretto   <abretto@selastech.com>
 * @version        1.0
 * @created        2019-05-16
-* @modified       2019-05-20
+* @modified       2019-10-31
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
 
@@ -25,13 +25,17 @@ public class PaymentHandler extends TriggerHandler {
     List<nu_dse__Group_Task__c> groupTaskToInsert = new List<nu_dse__Group_Task__c>();  //grouptasks to be inserted 
     Map<String, Id> queueMap;       //Map of QueueName and QueueName
     List<nu_dse__Error_Log__c> errorLogList = new List<nu_dse__Error_Log__c>(); 
-    Set<Id> cancelledPaymentIds = new Set<Id>(); //cancelled payment ids for cancelling their tasks
+    Set<Id> cancelledPaymentIds = new Set<Id>(); //cancelled payment ids for deleting their tasks
     Map<String, Holiday> holidayMap;
     Map<String, Id> comuTempNameIdMap; // map of communication Template Name and Its Id
     static Map<Id, User> userMailMap = new Map<Id, User>(); //Map of user Id and Email
     List<nu_dse__Payment__c> verbalAuthRecivedPayments= new List<nu_dse__Payment__c>(); //payments with verbal authorization as true
     Set<Id> verbalAuthRecivedPaymentProgramIds = new Set<Id>(); // collect program id of payment which has verbal auth received = true
     Set<Id> draftDateUpdateProgramIds = new Set<Id>();
+    Map<Id, Date> updatedIdscheduleDateMap = new Map<Id, Date>(); // Map of Payment Ids and those payments scheduleDate 
+    static Set<Id> processedDepositReminderPaymentIds = new Set<Id>(); 
+    static Set<Id> processedCompletedPaymentIds = new Set<Id>(); 
+    Set<Id> completedPaymentOfferIds = new Set<Id>(); //Set of Offer Id which has completed payments
 
     String MissingCommTemps = '';
 
@@ -42,6 +46,7 @@ public class PaymentHandler extends TriggerHandler {
 
     Id draftRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Draft').getRecordTypeId();
     Id settlementRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Settlement').getRecordTypeId();
+    Id feeRecordTypeId = Schema.SObjectType.nu_dse__Payment__c.getRecordTypeInfosByName().get('Fee').getRecordTypeId();
     
     public override void beforeInsert() {
         
@@ -51,9 +56,12 @@ public class PaymentHandler extends TriggerHandler {
                 collectpaymentSPIds(newPayment, null);
                 updateNSFDate(newPayment, null);          
             }
+            // mark the payments for creating deposit reminders
+            updateCreateDepositRemindersCheckbox(newPayment, null);
+
         }
         if(paymentSPIds.isEmpty() == false || SPIdsForTask.isEmpty() == false) {
-            updateManagerEmail();
+            updateSalespersonAndManagerEmail();
         }
     }
     
@@ -62,12 +70,16 @@ public class PaymentHandler extends TriggerHandler {
         for (nu_dse__Payment__c newPayment: (List<nu_dse__Payment__c>)Trigger.New) {
             //Process only for Payments on a Program and not Prospect
             if(newPayment.nu_dse__Program__c != null) {
+                // mark the payments for creating deposit reminders
+                updateCreateDepositRemindersCheckbox(newPayment, oldPaymentMap.get(newPayment.Id));
+                // Collect Salesperson Id to update Manager email
                 collectpaymentSPIds(newPayment, oldPaymentMap.get(newPayment.Id));
-                updateNSFDate(newPayment, oldPaymentMap.get(newPayment.Id));          
+                // Update NSF date as today for failed payments
+                updateNSFDate(newPayment, oldPaymentMap.get(newPayment.Id));        
             }
         }
         if(paymentSPIds.isEmpty() == false || SPIdsForTask.isEmpty() == false) {
-            updateManagerEmail();
+            updateSalespersonAndManagerEmail();
         }
     }
 
@@ -86,6 +98,8 @@ public class PaymentHandler extends TriggerHandler {
                 instantiateNSFTasks(newPayment, null);
                 //Creates a NSF Taskes and assign to Salesperson
                 createSalespersonNSFNotifiTask(newPayment, null);
+                // Collect Offer Ids to Update First and Last Creditor Payment Completed Date
+                collectcompletedPaymentOfferIds(newPayment, null);
             }
         }
         if(completedPaymentProgramIds.isEmpty() == false) {
@@ -95,11 +109,29 @@ public class PaymentHandler extends TriggerHandler {
         if(verbalAuthRecivedPaymentProgramIds.isEmpty() == false) {
             //creates a Group tasks for Verbal Authorization and assigns it to Payment Authorization Queue
             createVerbalAuthGroupTask();      
-        }                       
+        }       
+        if(completedPaymentOfferIds.isEmpty() == false) {
+            // Update First and Last Creditor Payment Completed Date
+            System.enqueueJob(new PaymentsQueueable(completedPaymentOfferIds));
+        }   
+
         update programsToBeUpdatedMap.values(); // finally updating all programs that are to be modified
         upsert taskToUpsertMap.values() Unique_Identifier__c; // finally upsertng tasks based on Unique_Identifier__c field
         upsert groupTaskToInsert nu_dse__Unique_Identifier__c ; //finally upserting group tasks
         insert errorLogList; // if any error logs were captured during execution it will be inserted for track of failure
+    }
+    
+    public void draftCompletedFlag(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment)
+    {
+        if(newPayment.nu_dse__Transaction_Status__c != oldPayment.nu_dse__Transaction_Status__c)
+        {
+            nu_dse__Program__c program = new nu_dse__Program__c(Id=newPayment.nu_dse__Program__c);
+            if((newPayment.nu_dse__Transaction_Status__c == 'Completed' || newPayment.nu_dse__Transaction_Status__c == 'Cleared' )&& program.First_Deposit_Cleared__c != true && newPayment.RecordTypeName__c == 'Draft')
+            {   
+                program.First_Deposit_Cleared__c = true;
+                programsToBeUpdatedMap.put(program.ID, program);
+            }
+        }
     }
     
     public override void afterUpdate() {
@@ -109,8 +141,10 @@ public class PaymentHandler extends TriggerHandler {
             if(newPayment.nu_dse__Program__c != null) {
                 // If Transaction status is changed to Completed, collecting the paymentId to update the program Phase and progress
                 collectCompletedPaymentProgramIds(newPayment, oldPaymentMap.get(newPayment.Id));
-                // collect payment Ids of Cancelled payments to Complete the existing tasks under those payments
+                // collect payment Ids of Cancelled payments to delete the existing tasks under those payments
                 collectCancelledPaymentIds(newPayment, oldPaymentMap.get(newPayment.Id));
+                // collect payment Ids and schedule date of schedule date updated payments to update the existing tasks activity date under those payments
+                collectscheduleDateUpdatedPaymentIds(newPayment, oldPaymentMap.get(newPayment.Id));
                 // collect payment Ids of Verbal Authorization Received payments to Create Group tasks under those payments and assigns it to Payment Authorization Queue
                 collectVerbalAuthPaymentIds(newPayment, oldPaymentMap.get(newPayment.Id));
                 // Collect Program Ids to update next Draft Payment date
@@ -120,16 +154,22 @@ public class PaymentHandler extends TriggerHandler {
                 // this method creates Task instance for NSF payments and adds to a map that is to be upserted based Unique Identifier
                 instantiateNSFTasks(newPayment, oldPaymentMap.get(newPayment.Id));  
                 //Creates a NSF Taskes and assign to Salesperson
-                createSalespersonNSFNotifiTask(newPayment, oldPaymentMap.get(newPayment.Id));  
+                createSalespersonNSFNotifiTask(newPayment, oldPaymentMap.get(newPayment.Id));
+                //If a Draft was completed, set a flag on the program.
+                draftCompletedFlag(newPayment, oldPaymentMap.get(newPayment.Id));
+                // Collect Offer Ids to Update First and Last Creditor Payment Completed Date
+                collectcompletedPaymentOfferIds(newPayment, oldPaymentMap.get(newPayment.Id));
             }
         }   
         if(completedPaymentProgramIds.isEmpty() == false) {
             // updates program with Complete % and Phase
             updateProgramPhaseAndProgress();  
         }
-        if(cancelledPaymentIds.isEmpty() == false) {
-            // When a payment is cancelled, it's Scheduled task will be completed to skip them from Batch processing it
-            completeTasksforCancelledPayments();
+        if(cancelledPaymentIds.isEmpty() == false
+            || updatedIdscheduleDateMap.isEmpty() == false) {
+            // When a payment was cancelled, We delete the task to skip them from Batch processing it
+            // or schedule date changed, We change the Task activity date. 
+            PaymentHandler.updateDeleteTask(cancelledPaymentIds, updatedIdscheduleDateMap);
         }
         if(verbalAuthRecivedPaymentProgramIds.isEmpty() == false) {
             //creates a Group tasks for Verbal Authorization and assigns it to Payment Authorization Queue
@@ -138,12 +178,39 @@ public class PaymentHandler extends TriggerHandler {
         if(draftDateUpdateProgramIds.isEmpty() == false) {
             // Updated Program NextDraftDate as upcoming draft Payment schedule date
             updateProgramNextDraftDate();
-        }                
+        }         
+        if(completedPaymentOfferIds.isEmpty() == false) {
+            // Update First and Last Creditor Payment Completed Date
+            System.enqueueJob(new PaymentsQueueable(completedPaymentOfferIds));
+        }         
         update programsToBeUpdatedMap.values(); // finally updating all programs that are to be modified
         upsert taskToUpsertMap.values() Unique_Identifier__c; // finally upsertng tasks based on Unique_Identifier__c field
         upsert groupTaskToInsert nu_dse__Unique_Identifier__c ; //finally upserting group tasks
         insert errorLogList; // if any error logs were captured during execution it will be inserted for track of failure
     }
+
+    /* Update Create Payment Reminder Tasks checkbox as true if the payment is ready for reminders.
+       This checkbox update used for updating activity date based on Padding days in processInPayment batch  */
+    public void updateCreateDepositRemindersCheckbox(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
+    
+        if(newPayment.RecordTypeId == draftRecordTypeId
+            && newPayment.nu_dse__Schedule_date__c != null
+            && (Trigger.isInsert 
+                || (oldPayment.nu_dse__Transaction_Status__c != newPayment.nu_dse__Transaction_Status__c
+                    || oldPayment.nu_dse__Schedule_date__c  != newPayment.nu_dse__Schedule_date__c))) {
+           
+            if ((newPayment.nu_dse__Transaction_Status__c == 'Pending' 
+                    || newPayment.nu_dse__Transaction_Status__c == 'Scheduled')
+                && newPayment.nu_dse__Schedule_date__c > system.today().addDays(1)) {
+                newPayment.Create_Payment_Reminder_Tasks__c = true; // this update will mark that payment to be picked by the daily batch job for creating reminders(tasks)
+            } else if (newPayment.nu_dse__Transaction_Status__c == 'Completed' 
+                        || newPayment.nu_dse__Transaction_Status__c == 'Cleared'
+                        || newPayment.nu_dse__Transaction_Status__c == 'Failed') {
+                newPayment.Create_Payment_Reminder_Tasks__c = false; // this update will mark that payment not to be picked by the daily batch job for creating reminders(tasks)
+            }
+        } 
+    }
+
     /* * Filter for "Send Salesperson Cleared Payment Notifiication" process
        * If first draft payment's Transaction Status or Payment Sequence Number changes and Transaction status is Completed/Cleared 
        * and salesperson ID formula is not null, collecting payment instance to assign with salesperson Email.
@@ -152,7 +219,9 @@ public class PaymentHandler extends TriggerHandler {
         
         //<Resly 05/20> - Remove unnecessary criteria
         if(newPayment.nu_dse__Transaction_Status__c == 'Completed' 
-            && newPayment.nu_dse__Payment_Sequence_Number__c == 1 
+            && (newPayment.nu_dse__Payment_Sequence_Number__c == 1 
+                || newPayment.nu_dse__Payment_Sequence_Number__c == 2
+                || newPayment.nu_dse__Payment_Sequence_Number__c == 3)
             && newPayment.RecordTypeId == draftRecordTypeId 
             && newPayment.Salesperson_ID_Formula__c != null
             && (Trigger.isInsert 
@@ -178,9 +247,10 @@ public class PaymentHandler extends TriggerHandler {
     /* conversion of "Send Salesperson Cleared Payment Notifiication" process
       * with completedPaymentSPIds query user's Beyond_Manager_Email__c and mapping it as userId => Beyond Manager Email 
     */   
-    public void updateManagerEmail() {
+    public void updateSalespersonAndManagerEmail() {
         
-        for(User user : [SELECT Id, Beyond_Manager_Email__c, IsActive FROM User WHERE Id IN :paymentSPIds OR Id IN :SPIdsForTask]) {
+        for(User user : [SELECT Id, Beyond_Manager_Email__c, IsActive, Email FROM User 
+                        WHERE (Id IN :paymentSPIds OR Id IN :SPIdsForTask) AND IsActive = true]) {
             userMailMap.put(user.Id, user);
             system.debug('usermailMap::'+userMailMap);
         }
@@ -188,10 +258,12 @@ public class PaymentHandler extends TriggerHandler {
             for(nu_dse__Payment__c newPayment : filteredPayments) {
                 if(userMailMap.containskey(newPayment.Salesperson_ID_Formula__c)) {
                     newPayment.Manager_Email__c = userMailMap.get(newPayment.Salesperson_ID_Formula__c).Beyond_Manager_Email__c;
+                    newPayment.Salesperson_Email__c = userMailMap.get(newPayment.Salesperson_ID_Formula__c).Email;
                 }
             }
         }
     }
+    
     /* When a Transaction Status is changed from Completed or To Completed,
         collecting programIds for processing
     */
@@ -203,11 +275,44 @@ public class PaymentHandler extends TriggerHandler {
             completedPaymentProgramIds.add(newPayment.nu_dse__Program__c);   
         }
     }
-    //If nu_dse__Transaction_Status__c changes to Cancelled, we collect paymentIds to Compelete the Tasks under the payment
+
+    /* When a Transaction Status is changed to Completed or Cleared,
+        collecting offerIds for processing
+    */
+    public void collectcompletedPaymentOfferIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
+        
+        if(newPayment.nu_dse__Offer__c != null
+            && (newPayment.RecordTypeId == settlementRecordTypeId
+                || (newPayment.RecordTypeId == feeRecordTypeId 
+                    && newPayment.nu_dse__Payment_Type__c == 'Fee Withdrawal'))
+            && (newPayment.nu_dse__Transaction_Status__c == 'Completed'
+                || newPayment.nu_dse__Transaction_Status__c == 'Cleared')
+            && processedCompletedPaymentIds.contains(newPayment.Id) == false
+            && (Trigger.isInsert 
+                || newPayment.nu_dse__Transaction_Status__c != oldPayment.nu_dse__Transaction_Status__c)){
+            completedPaymentOfferIds.add(newPayment.nu_dse__Offer__c);   
+            processedCompletedPaymentIds.add(newPayment.Id);
+        }
+    }
+    //If nu_dse__Transaction_Status__c changes to Cancelled, we collect paymentIds to delete the Tasks under the payment
     public void collectCancelledPaymentIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
         if(newPayment.nu_dse__Transaction_Status__c == 'Cancelled'
-            && oldPayment.nu_dse__Transaction_Status__c != newPayment.nu_dse__Transaction_Status__c) {
+            && oldPayment.nu_dse__Transaction_Status__c != newPayment.nu_dse__Transaction_Status__c
+            && processedDepositReminderPaymentIds.contains(newPayment.Id) == false) {
             cancelledPaymentIds.add(newPayment.Id);
+            processedDepositReminderPaymentIds.add(newPayment.Id);
+        }
+    }
+    //If nu_dse__Schedule_date__c updates, we collect paymentIds and Schedule date to update the Tasks activity date under the payment
+    public void collectscheduleDateUpdatedPaymentIds(nu_dse__Payment__c newPayment, nu_dse__Payment__c oldPayment) {
+        if(newPayment.RecordTypeId == draftRecordTypeId
+            && (newPayment.nu_dse__Transaction_Status__c == 'Pending' 
+                || newPayment.nu_dse__Transaction_Status__c == 'Scheduled')
+            && newPayment.nu_dse__Schedule_date__c != null
+            && oldPayment.nu_dse__Schedule_date__c != newPayment.nu_dse__Schedule_date__c
+            && processedDepositReminderPaymentIds.contains(newPayment.Id) == false) {
+            updatedIdscheduleDateMap.put(newPayment.Id, newPayment.nu_dse__Schedule_date__c);
+            processedDepositReminderPaymentIds.add(newPayment.Id);
         }
     }
     //If nu_dse__Transaction_Status__c changes to Failed, we collect paymentIds to Create the Group Tasks under the payment
@@ -427,15 +532,7 @@ public class PaymentHandler extends TriggerHandler {
             programsToBeUpdatedMap.put(program.Id, program);
         }
     }
-    // for all cancelled payments, updating child tasks as Completed status
-    public void completeTasksforCancelledPayments() {
     
-        for(Task task : [SELECT Id, Unique_Identifier__c, WhatId FROM Task WHERE Status != 'Completed' AND Unique_Identifier__c != null 
-                                                                                 AND WhatId IN :cancelledPaymentIds]) {
-            task.Status = 'Completed';
-            taskToUpsertMap.put(task.Unique_Identifier__c, task);
-        }
-    } 
     //creates a Group task and assigns to a Queue if Verbal_Authorization_Received__c = true
     public void createVerbalAuthGroupTask() { 
         
@@ -515,5 +612,119 @@ public class PaymentHandler extends TriggerHandler {
             this.activityDate = activityDateParam;
             this.paymentInstance = paymentInstanceParam;
         }
+    }
+
+    // for all cancelled payments, deleting child tasks
+    // and schedule date changed, Updating child Tasks activity date. 
+    @future
+    public static void updateDeleteTask(Set<Id> cancelledPaymentIds, Map<Id, Date> updatedIdscheduleDateMap) {
+
+        List<Task> taskToDeleteList = new List<Task>(); // Delete the Task when Payment was cancelled
+        Map<String, Task> taskToUpsertMap = new Map<String, Task>(); //tasks to be upserted based on unique Identifier
+        Map<Integer, Integer> paddingDaysMap = new Map<Integer, Integer>(); 
+        Map<Id, Date> prospectIdSMSTaskMaxSchDateMap = new Map<Id, Date>();
+        Set<Id> EmailPaymentIdSet = new Set<Id>();
+        Set<Id> SMSPaymentIdSet = new Set<Id>();
+        List<nu_dse__Error_Log__c> errLogsToInsert = new List<nu_dse__Error_Log__c>();
+
+        for(Deposit_Reminder_Configuration__mdt depositReminderConfig : [SELECT Padding_Days__c, Sequence_number__c 
+                                                                         FROM Deposit_Reminder_Configuration__mdt
+                                                                         WHERE Padding_Days__c > 0
+                                                                         ORDER BY Padding_Days__c DESC]){
+            paddingDaysMap.put(Integer.valueOf(depositReminderConfig.Sequence_number__c), Integer.valueOf(depositReminderConfig.Padding_Days__c));
+        }
+
+        for(Task task : [SELECT Id, Unique_Identifier__c, WhatId, activityDate FROM Task WHERE Status != 'Completed' AND Unique_Identifier__c != null 
+                                                                                 AND nu_dse__Communication_Sent__c != true
+                                                                                 AND (WhatId IN :cancelledPaymentIds
+                                                                                 OR WhatId IN :updatedIdscheduleDateMap.keySet())
+                                                                                 ORDER BY activityDate DESC]) {
+            if(cancelledPaymentIds.contains(task.WhatId) == true) {
+                taskToDeleteList.add(task);
+            } else if(updatedIdscheduleDateMap.containsKey(task.WhatId)){
+                
+                Integer padding = 0;
+
+                if(task.Unique_Identifier__c.contains('SMS') 
+                    && String.isNotBlank(task.Unique_Identifier__c.substringAfterLast('SMS '))
+                    && paddingDaysMap.containsKey(Integer.valueOf(task.Unique_Identifier__c.substringAfterLast('SMS ')))) {
+                    
+                    padding = paddingDaysMap.get(Integer.valueOf(task.Unique_Identifier__c.substringAfterLast('SMS ')));
+                    if(updatedIdscheduleDateMap.get(task.WhatId).addDays(-padding) > system.today()) {
+                        task.activityDate = updatedIdscheduleDateMap.get(task.WhatId).addDays(-padding);
+                        taskToUpsertMap.put(task.Unique_Identifier__c, task);
+                    } else if(updatedIdscheduleDateMap.get(task.WhatId) != system.today()
+                              && updatedIdscheduleDateMap.get(task.WhatId) != system.today().addDays(1)
+                              && SMSPaymentIdSet.contains(task.WhatId) == false) {
+                        task.activityDate = system.today().addDays(1);
+                        taskToUpsertMap.put(task.Unique_Identifier__c, task);
+                    } else {
+                        taskToDeleteList.add(task);
+                    }
+
+                    if(task.activityDate == system.today().addDays(1)) {
+                        SMSPaymentIdSet.add(task.WhatId);
+                    }
+
+                } else if(task.Unique_Identifier__c.contains('Email') 
+                    && String.isNotBlank(task.Unique_Identifier__c.substringAfterLast('Email '))
+                    && paddingDaysMap.containsKey(Integer.valueOf(task.Unique_Identifier__c.substringAfterLast('Email ')))) {
+                    
+                    padding = paddingDaysMap.get(Integer.valueOf(task.Unique_Identifier__c.substringAfterLast('Email ')));
+                    if(updatedIdscheduleDateMap.get(task.WhatId).addDays(-padding) > system.today()) {
+                        task.activityDate = updatedIdscheduleDateMap.get(task.WhatId).addDays(-padding);
+                        taskToUpsertMap.put(task.Unique_Identifier__c, task);
+                    } else if(updatedIdscheduleDateMap.get(task.WhatId) != system.today()
+                              && updatedIdscheduleDateMap.get(task.WhatId) != system.today().addDays(1)
+                              && EmailPaymentIdSet.contains(task.WhatId) == false){
+                        task.activityDate = system.today().addDays(1);
+                        taskToUpsertMap.put(task.Unique_Identifier__c, task);
+                    } else {
+                        taskToDeleteList.add(task);
+                    }
+
+                    if(task.activityDate == system.today().addDays(1)) {
+                        EmailPaymentIdSet.add(task.WhatId);
+                    }
+                } else {
+                    taskToDeleteList.add(task);
+                }
+            }
+        }
+
+        List<Task> taskToUpsertList = new List<Task>();
+        taskToUpsertList.addAll(taskToUpsertMap.values());
+        Integer count = 0;
+        for (Database.UpsertResult dmlResult : Database.upsert(taskToUpsertList, Task.Fields.Unique_Identifier__c, false)) {
+
+            if (dmlResult.isSuccess() == false) {
+                nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(nu_dse__Class_Method__c = 'PaymentHandler.updateDeleteTask[Update]',nu_dse__Error_Causing_Record_Id__c = String.valueOf(taskToUpsertList[count].Id), nu_dse__User_Context__c = UserInfo.getName());
+
+                errLog.nu_dse__Message__c = '';
+                for (Database.Error error: dmlResult.getErrors()) {
+                    errLog.nu_dse__Message__c += error.getMessage();
+                }
+                errLogsToInsert.add(errLog);
+            }
+            count++;
+        }
+        count = 0;
+        for (Database.DeleteResult dmlResult : Database.delete(taskToDeleteList, false)) {
+
+            if (dmlResult.isSuccess() == false) {
+                nu_dse__Error_Log__c errLog = new nu_dse__Error_Log__c(nu_dse__Class_Method__c = 'PaymentHandler.updateDeleteTask[Delete]',nu_dse__Error_Causing_Record_Id__c = String.valueOf(taskToDeleteList[count].Id), nu_dse__User_Context__c = UserInfo.getName());
+
+                errLog.nu_dse__Message__c = '';
+                for (Database.Error error: dmlResult.getErrors()) {
+                    errLog.nu_dse__Message__c += error.getMessage();
+                }
+                errLogsToInsert.add(errLog);
+            }
+            count++;
+        }
+
+        //errLogsToInsert.addAll(taskToUpsertMap.values(), 'Upsert'); // finally upsertng tasks based on Unique_Identifier__c field
+        // errLogsToInsert.addAll(taskToDeleteList, 'Delete'); // delete the cancelled payment related tasks list
+        insert errLogsToInsert;
     }
 }

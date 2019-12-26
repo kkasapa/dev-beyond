@@ -1,0 +1,28 @@
+<aura:component controller="PostEnrlmntPrcsActivitiesController">
+    
+    <aura:attribute name="showSpinner" type="Boolean" description="variable to toggle"/>
+    <aura:attribute name="tableData" type="List" access="GLOBAL" description="data to be listed in the table"/>
+    <aura:attribute name="columns" type="List" access="GLOBAL" description="Columns of the datatable"/>
+
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/><!--Action to be done on load of the comp-->
+
+    <c:ApexActionService aura:id="apexService"/><!-- This is a service component that communicates with Apex -->
+    <c:CustomToast aura:id="toast"/><!-- This is a service component that displays toast message-->
+
+    <c:RelatedListTableComp 
+        columns="{!v.columns}" 
+        data="{!v.tableData}" 
+        iconName="standard:task" 
+        cardTitle="Post Enrollment Process Activities">
+        <aura:set attribute="cardActions">
+            <lightning:buttonGroup>
+                    <lightning:button label="Action 1" />
+                    <lightning:button label="Action 2" />
+                    <lightning:button label="Action 3" />
+                </lightning:buttonGroup>
+            </aura:set>    
+        <aura:set attribute="cardFooter">
+            <p class="slds-align_absolute-center">Pagination can be included</p>
+        </aura:set>
+    </c:RelatedListTableComp>
+</aura:component>

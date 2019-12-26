@@ -1,7 +1,11 @@
 {
     "compilerOptions": {
         "baseUrl": ".",
-        "paths": {},
+        "paths": {
+            "c/estimatedBalanceFieldLayout": [
+                "estimatedBalanceFieldLayout/estimatedBalanceFieldLayout.js"
+            ]
+        },
         "experimentalDecorators": true
     },
     "include": [

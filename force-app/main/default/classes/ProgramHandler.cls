@@ -3,11 +3,11 @@
 * Handler class for ProgramTrigger, extends the TriggerHandler. 
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 * @author         Vignesh   <vsadhasivam@selastech.com>
-* @modifiedBy     Vignesh   <vsadhasivam@selastech.com>
+* @modifiedBy     Peter Le  <ple@beyondfinance.com>
 * @maintainedBy   Vignesh   <vsadhasivam@selastech.com>
 * @version        1.0
 * @created        2019-05-16
-* @modified       2019-06-25
+* @modified       2019-10-21
 * ──────────────────────────────────────────────────────────────────────────────────────────────────
 */
 public class ProgramHandler extends TriggerHandler {
@@ -29,6 +29,8 @@ public class ProgramHandler extends TriggerHandler {
     Map<String, Id> queueMap; // map of Queue Name and Its Id
     Map<String, Id> comuTempNameIdMap; // map of communication Template Name and Its Id
     Set<Id> velocifyProspectIds = new Set<Id>(); // Set of Prosepct Ids send for Velocify
+    Set<Id> savingsCalcProgramIds = new Set<Id>();// programIds for saving calculation 
+    List<BLP_Bus__e> BLPBUSEvents = new List<BLP_Bus__e>();
 
     public override void afterInsert() {
 
@@ -37,12 +39,26 @@ public class ProgramHandler extends TriggerHandler {
             createCCGroupTask(newProgram, null);    
             // Collect Prospect List for velocify
             collectProspectList(newProgram); 
+            // publishing Platform Event BLP Bus for triggering sync with BLP
+            createBLP_BusList(newProgram, null);
+            // Run the Savings Calculator for New Programs
+            //savings calculation based on Original_Enrolled_Program_Debt__c
+            collectProgramsForSavingsCalc(newProgram, null);
         }
+
+        if (savingsCalcProgramIds.isEmpty() == false) {
+            calculateSavings(savingsCalcProgramIds);
+        }
+
         upsert groupTaskList nu_dse__Unique_Identifier__c; // Upsert Group Task based on unique Identifier
 
         if(velocifyProspectIds.isEmpty() == false) {
             //Pushes fields from prospect to velocify based on datamapping record named "Velocifyleads"
             VelocifyLeadHandler.modifyLeads_Async(velocifyProspectIds);
+        }
+
+        if (BLPBUSEvents.isEmpty() == false) {
+            EventBus.publish(BLPBUSEvents); // publishing the PE for BLP API push
         }
     }
 
@@ -55,7 +71,7 @@ public class ProgramHandler extends TriggerHandler {
     }
 
     public override void afterUpdate() {
-
+        System.debug('after update');
         for (nu_dse__Program__c newProgram : (List<nu_dse__Program__c>)Trigger.New) {
             // Create Group Task for Which Program Cross Collateralized are true 
             createCCGroupTask(newProgram, oldProgramMap.get(newProgram.Id));   
@@ -68,15 +84,64 @@ public class ProgramHandler extends TriggerHandler {
             createGraduatedActivity(newProgram, oldProgramMap.get(newProgram.Id));
             // Create Group Task for Programs Status as Termination Pending
             createTermPendingGroupTask(newProgram, oldProgramMap.get(newProgram.Id)); 
+            // publishing Platform Event BLP Bus for triggering sync with BLP
+            system.debug('blp bus list');
+            createBLP_BusList(newProgram, oldProgramMap.get(newProgram.Id));
+            // Creating Loan Record based on Interested Status
+            createLoan(newProgram, oldProgramMap.get(newProgram.Id));
+            //updateLoanApplication(newProgram, oldProgramMap.get(newProgram.Id));
+            //Check if first payment has cleared 
+            checkPayment(newProgram, oldProgramMap.get(newProgram.Id));
+            //savings calculation based on Original_Enrolled_Program_Debt__c
+            collectProgramsForSavingsCalc(newProgram, oldProgramMap.get(newProgram.Id));
+
         }
         if(terminatedProgramIds.isEmpty() == false) {
             // Update Scheduled Payments as cancelled for Terminated Programs
             updatePaymentStatus();
         }
+
+        if (BLPBUSEvents.isEmpty() == false) {
+            EventBus.publish(BLPBUSEvents);
+        }
+
+        if (savingsCalcProgramIds.isEmpty() == false) {
+            calculateSavings(savingsCalcProgramIds);
+        }
+
         upsert groupTaskList nu_dse__Unique_Identifier__c; // Upsert Group Task based on unique Identifier
         upsert upsertTaskMap.values() Unique_Identifier__c; // Upsert Task based on unique Identifier
         update updatedProspectList; // Prospects to be updated 
         update updatePaymentsList; // Payments to be updated
+    }
+    
+    public void checkPayment(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram)
+    {
+        
+    }
+
+    //filters Programs that are to be synced with BLP
+    public void createBLP_BusList(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram) {
+        
+        /*system.debug(newProgram.BLP_Member_Type__c);
+        if (newProgram.BLP_Member_Type__c != oldProgram.BLP_Member_Type__c 
+        && newProgram.BLP_Member_Type__c =='Club Member' || newProgram.BLP_Member_Type__c == 'Flat Fee')
+        {
+            system.debug('added');
+            BLPBUSEvents.add(new BLP_Bus__e(action__c='create', program_id__c=newProgram.Id));
+        }*/
+        
+        if (String.isNotBlank(newProgram.nu_dse__Fee_Template__c) == true 
+                && newProgram.Legal_Plan_Included__c == true
+                && (newProgram.BLP_Member_Type__c =='Club Member' || newProgram.BLP_Member_Type__c == 'Flat Fee')) {
+            //create BLP Bus events and append to scope variable
+            if (newProgram.BLP_Client_Id__c == null) {
+                BLPBUSEvents.add(new BLP_Bus__e(action__c='create', program_id__c=newProgram.Id));
+            } else if (newProgram.nu_dse__Program_Status__c != oldProgram.nu_dse__Program_Status__c
+                        || newProgram.BLP_Member_Type__c != oldProgram.BLP_Member_Type__c) {
+                BLPBUSEvents.add(new BLP_Bus__e(action__c='update', program_id__c=newProgram.Id));
+            }
+        }
     }
     // Create Group Task for Termination Pending Programs based on Involuntary Termination
     public void createTermPendingGroupTask(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram) {
@@ -118,7 +183,7 @@ public class ProgramHandler extends TriggerHandler {
             
             nu_dse__Group_Task__c groupTask = new nu_dse__Group_Task__c(OwnerId = newProgram.Salesperson_ID__c, Subject_Pick_List__c = 'Cross Collateralized',
                                                                         nu_dse__ActivityDate__c = system.today().addDays(14), nu_dse__Related_To__c = newProgram.Id,
-                                                                        nu_dse__Status__c = 'Not Started', nu_dse__Unique_Identifier__c = newProgram.Id + 'Cross Collateralized');
+                                                                        nu_dse__Unique_Identifier__c = newProgram.Id + 'Cross Collateralized');
             groupTaskList.add(groupTask);
         }
     }
@@ -277,4 +342,92 @@ public class ProgramHandler extends TriggerHandler {
             }
         }
     }
+
+    // Create New Lender Application Data for Interested Program Enrolled Clients
+    // Uses Loan Interest Status = "Interested" to Run
+    public void createLoan(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram){
+        System.debug('It Works 1!');
+        if (oldProgram.Loan_Interest_Status__c != newProgram.Loan_Interest_Status__c){
+            System.debug('It Works! 2');
+            //To be Updated -> string.isNotBlank(newProgram.Loan_Interest_Status__c) == true -> To check if Interest Status not Blank
+            if(newProgram.Loan_Interest_Status__c != 'Not_Interested' || newProgram.Loan_Interest_Status__c != null){
+            System.debug('It Works! 3');
+                // A Check to Make Sure flow runs once, so multiple loan are not created
+                if(!newProgram.Flow_Started__c){
+                    System.debug('It Works! 4');
+                    futureCreateLoan(newProgram.Id);
+                }
+            }
+        } 
+    }
+
+    public void collectProgramsForSavingsCalc(nu_dse__Program__c newProgram, nu_dse__Program__c oldProgram) {
+        if(newProgram.Original_Enrolled_Program_Debt__c != null
+            && newProgram.Original_Enrolled_Program_Debt__c > 0 
+            && (Trigger.isInsert 
+                ||(newProgram.Original_Enrolled_Program_Debt__c != oldProgram.Original_Enrolled_Program_Debt__c))) {
+            savingsCalcProgramIds.add(newProgram.Id);
+        }
+    }
+    
+    @future(callout=true)
+    public static void futureCreateLoan(string ProgramId){
+        Map<String, Object> params = new Map<String, Object>();
+        params.put('ProgramId', ProgramId);
+        try {
+            Flow.Interview.Create_Loan Create_Loan = new Flow.Interview.Create_Loan(params);
+            Create_Loan.start();
+        } catch (Exception e){
+            system.debug('Exception caught: ' + e.getMessage());
+        }
+    }
+
+    @future(callout=true)
+    public static void calculateSavings(Set<Id> programIds) {
+        
+        PaymentsCalcService.SavingCalcSettings savingCalcSetting = PaymentsCalcService.getSavingCalcSettings();
+
+        /*Savings_Calculator_Microservice__c savingCalcSettings = Savings_Calculator_Microservice__c.getInstance(UserInfo.getUserId());
+        String endpoint;
+        Double interestRate;
+        Decimal minimumPaymentPercent;*/
+        
+        List<nu_dse__Program__c> programsToUpdateList = new List<nu_dse__Program__c>(); 
+
+        /*if (savingCalcSettings != null) {
+            if (String.isNotBlank(savingCalcSettings.Endpoint__c) ) {
+                endpoint = savingCalcSettings.Endpoint__c;
+
+                 endpoint = 'https://beyondfinance.com/api/v1/savings';
+            }
+            if (savingCalcSettings.InterestRate__c != null && savingCalcSettings.InterestRate__c > 0) {
+                interestRate = savingCalcSettings.InterestRate__c;
+            } else {
+                interestRate = 16.4;  
+            }
+            if (savingCalcSettings.Minimum_Payment__c != null && savingCalcSettings.Minimum_Payment__c > 0) {
+                minimumPaymentPercent = savingCalcSettings.Minimum_Payment__c/100;
+            } else {
+                minimumPaymentPercent = 0.02;
+            }
+        }*/
+
+        for (nu_dse__Program__c newProgram : [SELECT Id, Name, Original_Enrolled_Program_Debt__c
+                                                  FROM nu_dse__Program__c WHERE Id IN :programIds]) {
+            
+            Double debt = 0; 
+
+            if(newProgram.Original_Enrolled_Program_Debt__c != null && newProgram.Original_Enrolled_Program_Debt__c > 0) {
+                debt = newProgram.Original_Enrolled_Program_Debt__c;
+            }
+            
+            nu_dse__Program__c programToUpdate = (nu_dse__Program__c)PaymentsCalcService.savingsCalculatorExternalService(
+                                                                        savingCalcSetting, debt, 'nu_dse__Program__c');
+            programToUpdate.Id = newProgram.Id;
+            programsToUpdateList.add(programToUpdate);
+        }
+
+        update programsToUpdateList;
+    }
+
 }

@@ -112,7 +112,19 @@ public class TaskHandler extends TriggerHandler{
            prospectIdFive9DNISMap.put(newTask.whatId, newTask.Five9__Five9DNIS__c);
         }
     }
-    
+    public List<Sales_Disposition_for_Prospect_Owner_Upd__mdt> getSalesDispositionCMD() {
+
+        if(Test.isRunningTest() == true) {
+            return new List<Sales_Disposition_for_Prospect_Owner_Upd__mdt>{
+                            new Sales_Disposition_for_Prospect_Owner_Upd__mdt(MasterLabel = 'No Answer', QualifiedApiName = 'No_Answer', Active__c = true),
+                            new Sales_Disposition_for_Prospect_Owner_Upd__mdt(MasterLabel = 'Disqualified', QualifiedApiName = 'Disqualified', Active__c = true),
+                            new Sales_Disposition_for_Prospect_Owner_Upd__mdt(MasterLabel = '08 Not Interested', QualifiedApiName = 'X08_Not_Interested')
+                        };
+        } else {
+            return [SELECT MasterLabel, QualifiedApiName FROM Sales_Disposition_for_Prospect_Owner_Upd__mdt WHERE Active__c = true];
+            
+        }
+    }
     public void updateProspects(Task newTask) {
         // set of Call Disposition(Call results) that are to be removed from Five9 Campaign
         Set<String> removeCallDispoSet = new Set<String>{'Term Lost - Crossed Collateralized', 'Term Lost - No Reason Given', 'Term Lost - Misunderstood Program',
@@ -127,7 +139,11 @@ public class TaskHandler extends TriggerHandler{
                                                             '11 Service Call Handled', '12 Wrong Number', '13 Unsupported Language', '01 Undecided',
                                                             '02 Interested', 'Not Eligible - IAPDA', 'Lead Transferred to LT Lending', 'Lending Tree Failed Transfers'};
         //set of Call Disposition(Call results) that are to be removed from Five9 Campaign and updates prospect
-        Set<String> ownershipDispoSet = new Set<String>{'01 Undecided', '02 Interested'};
+        Set<String> ownershipDispoSet = new Set<String>();
+        List<Sales_Disposition_for_Prospect_Owner_Upd__mdt> salesDispositions_CMDList = getSalesDispositionCMD();
+        for (Sales_Disposition_for_Prospect_Owner_Upd__mdt salesDispo_CMD : salesDispositions_CMDList){
+            ownershipDispoSet.add(salesDispo_CMD.MasterLabel);                                                
+        }
         
         if(newTask.CallDisposition != null 
             && newTask.whatId != null
@@ -152,15 +168,18 @@ public class TaskHandler extends TriggerHandler{
                 updateProspectInst.CustomStop1__c = true;   
                 updateProspectInst.FIve9_Owner_ID__c = newTask.ownerId;
                 updateProspectInst.Has_Been_Assigned__c = true;  
+                
+                if (newTask.CallDisposition == '08 Not Interested') {
+                    updateProspectInst.Not_Interested__c = true;                 
+                }
             }
-            // Five9 Based Prospect Ownership Process
+            /*// Five9 Based Prospect Ownership Process
             if(newTask.CallDisposition == '08 Not Interested') {
                 updateProspectInst.Remove_from_Five9_Campaign__c = true;
                 updateProspectInst.CustomStop1__c = true;   
                 updateProspectInst.FIve9_Owner_ID__c = newTask.ownerId;
                 updateProspectInst.Has_Been_Assigned__c = true;
-                updateProspectInst.Not_Interested__c = true;     
-            }
+            }*/
             // F9CopyCallValuetoProspect
             if(newTask.Five9__Five9SessionId__c != null) {
                 updateProspectInst.F9LastDisposition__c = newTask.CallDisposition; // Copies value from Call Disposition(Call Result) to Prospect's F9LastDisposition

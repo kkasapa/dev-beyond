@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AuraDefinitionBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>46.0</apiVersion>
+    <description>A component that is used as a offer detail page button for updating all it&#39;s payment&#39;s Transaction Menthod</description>
+</AuraDefinitionBundle>

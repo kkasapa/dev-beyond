@@ -1,3 +1,15 @@
+/*
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+* Controller class for Approvals Page. 
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+* @author         Ashwin Bretto   <abretto@selastech.com>
+* @modifiedBy     Vignesh   <vsadhasivam@selastech.com>
+* @maintainedBy   Ashwin Bretto   <abretto@selastech.com>
+* @version        1.0
+* @created        2019-01-09
+* @modified       2019-10-16
+* ──────────────────────────────────────────────────────────────────────────────────────────────────
+*/
 public with sharing class ApprovalsController {
     
     public Id userId {get; set;}
@@ -5,28 +17,74 @@ public with sharing class ApprovalsController {
     public String namespace;
     public List<ApprovalSet> approvalSets {get; set;}
     public Set<Id> queueIdSet = new Set<Id>();
-    public static Set<Id> subordinatesOfCurrentUser;
+    public Set<Id> subordinatesOfCurrentUser;
     public String selectedRadio{get;set;}
-    
+    public ApprovalSet currentApproval {get; set;}
+    public Integer currentApprovalIndex {get;set;}
+    public Boolean reAssign {get; set;}
+    public Boolean modifyAllProspect {get; set;}
+    public Boolean modifyAllOffer {get; set;}
+
     public ApprovalsController() {
     
         this.userId = UserInfo.getUserId();
+        this.modifyAllProspect = false;
+        this.modifyAllOffer = false;
         namespace = 'nu_dse__';
         getsubordinatesOfCurrentUser();
         getUserMemberGroup();
+        getModifyAllPermisnofUser();
         selectedRadio = 'nu_dse__Prospect__c';
+        reAssign = false;
+        this.currentApproval = new ApprovalSet();
+    }
+
+    public void getModifyAllPermisnofUser() {
+
+        for (ObjectPermissions objpermission: [SELECT ParentId , SObjectType, Parent.Name
+                                                FROM ObjectPermissions 
+                                                WHERE PermissionsModifyAllRecords = true 
+                                                    AND ParentId IN (SELECT PermissionSetId 
+                                                            FROM PermissionSetAssignment
+                                                            WHERE AssigneeId = :this.userId)
+                                                    AND (SObjectType = 'nu_dse__Prospect__c' 
+                                                        OR SObjectType = 'nu_dse__Offer__c')]) {
+
+            if (objpermission.SObjectType == 'nu_dse__Prospect__c') {
+                modifyAllProspect = true;
+            } else if (objpermission.SObjectType == 'nu_dse__Offer__c') {
+                modifyAllOffer = true;
+            }                                     
+            //System.debug('objpermission.ParentId-->'+objpermission.ParentId);    
+            //System.debug('objpermission.Parent.Name-->'+objpermission.Parent.Name);    
+            //System.debug('objpermission.SObjectType-->'+objpermission.SObjectType);                            
+        }
     }
     
     public void getsubordinatesOfCurrentUser() {
         
+        subordinatesOfCurrentUser = new Set<Id>();
         for (User subUser : [SELECT Id, Name, ProfileId, Profile.Name, ManagerId FROM User WHERE ManagerId = :this.userId]) {   
             subordinatesOfCurrentUser.add(subUser.Id); 
         }
+        system.debug('subordinatesOfCurrentUser::'+subordinatesOfCurrentUser);
     }
     
     public void getUserMemberGroup() {
-    
-        for(GroupMember grpMember : [SELECT GroupId, Group.Name FROM GroupMember WHERE UserOrGroupId = :this.userId AND Group.Type = 'Queue']){
+        // Collect the groupIds which the current user added as member[SF-337]. 
+        Set<Id> currentUserGroupIds = new Set<Id>();
+
+        for(GroupMember grpMember : [SELECT GroupId, Group.Name FROM GroupMember 
+                                        WHERE UserOrGroupId = :this.userId]){
+            
+            if (String.isNotBlank(grpMember.GroupId)) {            
+                currentUserGroupIds.add(grpMember.GroupId);
+            }
+        }
+
+        for(GroupMember grpMember : [SELECT GroupId, Group.Name FROM GroupMember 
+                                     WHERE (UserOrGroupId = :this.userId OR UserOrGroupId IN :currentUserGroupIds)
+                                        AND Group.Type = 'Queue']){
         
             if (String.isNotBlank(grpMember.GroupId)) {            
                 queueIdSet.add(grpMember.GroupId);
@@ -37,7 +95,8 @@ public with sharing class ApprovalsController {
     public void onFilterChange() {
     
         String filterBy = ApexPages.currentPage().getParameters().get('filterBy');
-        
+        this.reAssign = false;
+
         if (filterBy == 'me') {
         
             List<ApprovalSet> assignedToMe = new List<ApprovalSet>();
@@ -76,6 +135,28 @@ public with sharing class ApprovalsController {
         }
     }
     
+    public void setCurrentApproval() {
+
+        this.currentApproval = this.approvalSets[this.currentApprovalIndex];
+        this.reAssign = true;
+    }
+
+    public void reAssignApproval() {
+
+        ProcessInstanceWorkItem updateWorkItem = new ProcessInstanceWorkItem();
+        updateWorkItem.Id = this.currentApproval.workItemId;
+        updateWorkItem.ActorId = UserInfo.getUserId();
+        update updateWorkItem;
+        this.reAssign = false;
+        this.currentApproval = new ApprovalSet();
+    }
+
+    public void cancelReAssignApproval() {
+
+        this.reAssign = false;
+        this.currentApproval = new ApprovalSet();
+    }
+
     public void renderApprovals() {
         
         getAllApprovals();
@@ -93,20 +174,21 @@ public with sharing class ApprovalsController {
         return approvalSets;
     }
     
-    public static List<ApprovalSet> getApprovals(String selectedValue, Id userId, Set<Id> queueIdSet) {
+    public List<ApprovalSet> getApprovals(String selectedValue, Id userId, Set<Id> queueIdSet) {
         
         Map<String, ApprovalSet> processInstApprovalsMap = new Map<String, ApprovalSet>();
         Set<Id> targetObjectIdSet = new Set<Id>();
-        
-        for(ProcessInstance procInstance : [SELECT Id,Status,LastActor.Name, CompletedDate, ElapsedTimeInDays, ElapsedTimeInHours, 
-                                            ElapsedTimeInMinutes,LastActorId, ProcessDefinitionId,ProcessDefinition.Name, TargetObjectId, 
-                                            TargetObject.Name,CreatedDate, SubmittedById, SubmittedBy.Name,
-                                            (SELECT Id, ActorId, ProcessInstanceId, OriginalActorId, OriginalActor.Name, Actor.Name,
-                                             ElapsedTimeInDays, ElapsedTimeInHours, ElapsedTimeInMinutes FROM Workitems ORDER By CreatedDate DESC)
+        // Reduced record limit to 500[SF-333]
+        for(ProcessInstance procInstance : [SELECT Id, ProcessDefinitionId, ProcessDefinition.Name, TargetObjectId, 
+                                                LastActorId, LastActor.Name, TargetObject.Name, CreatedDate, SubmittedById, SubmittedBy.Name,
+                                            (SELECT Actor.Name, ElapsedTimeInHours, ElapsedTimeInMinutes 
+                                                FROM Workitems ORDER By ElapsedTimeInMinutes DESC),
+                                            (SELECT StepStatus, ElapsedTimeInMinutes, ElapsedTimeInHours FROM StepsAndWorkitems 
+                                                WHERE StepStatus = 'Reassigned' ORDER By CreatedDate DESC LIMIT 1)
                                             FROM ProcessInstance 
                                             WHERE TargetObject.Type = :selectedValue
                                             AND Status = 'Pending'
-                                            ORDER By CreatedDate DESC LIMIT 1000]) {
+                                            ORDER By CreatedDate ASC LIMIT 500]) {
             
             ApprovalRecord appRec = new ApprovalRecord(procInstance, userId);
             if(procInstance.Workitems != null && procInstance.Workitems.isEmpty() == FALSE) {
@@ -117,15 +199,38 @@ public with sharing class ApprovalsController {
                 
                 if (procInstance.Workitems[0].ElapsedTimeInMinutes != null && appRec.elapsedHours != null) {
                     appRec.elapsedMins = getMinutes(procInstance.Workitems[0].ElapsedTimeInMinutes , appRec.elapsedHours);
+                    // Updated elapsedTotalMins for sorting Time in Queue[SF-339]
+                    appRec.elapsedTotalMins = Integer.valueOf(procInstance.Workitems[0].ElapsedTimeInMinutes);
+                }
+
+                if(procInstance.StepsAndWorkitems != null && procInstance.StepsAndWorkitems.isEmpty() == FALSE) {
+                
+                    if(procInstance.Workitems[0].ElapsedTimeInHours != null
+                        && procInstance.StepsAndWorkitems[0].ElapsedTimeInHours != null) {
+                        appRec.reAssignedElapsedHours = Integer.valueOf(procInstance.Workitems[0].ElapsedTimeInHours - procInstance.StepsAndWorkitems[0].ElapsedTimeInHours);
+                    }
+                    if (procInstance.Workitems[0].ElapsedTimeInMinutes != null && appRec.elapsedHours != null
+                        && procInstance.StepsAndWorkitems[0].ElapsedTimeInMinutes != null) {
+                        appRec.reAssignedElapsedMins = getMinutes(procInstance.Workitems[0].ElapsedTimeInMinutes - procInstance.StepsAndWorkitems[0].ElapsedTimeInMinutes , appRec.reAssignedElapsedHours);
+                        appRec.reAssignedElapsedTotalMins = Integer.valueOf(procInstance.Workitems[0].ElapsedTimeInMinutes - procInstance.StepsAndWorkitems[0].ElapsedTimeInMinutes);
+                    }
+                } else {
+                   
+                    appRec.reAssignedElapsedHours = 0;
+                    appRec.reAssignedElapsedMins = 0;
+                    appRec.reAssignedElapsedTotalMins = 0;
                 }
                 
             } else {
                 
                 appRec.elapsedHours = 0;
                 appRec.elapsedMins = 0;
-            
+                appRec.elapsedTotalMins = 0;
+                appRec.reAssignedElapsedHours = 0;
+                appRec.reAssignedElapsedMins = 0;
+                appRec.reAssignedElapsedTotalMins = 0;
             }
-            
+
             String targetObjId_ProcDefId = '';
             
             if (String.isNotBlank(procInstance.TargetObjectId) && String.isNotBlank(procInstance.ProcessDefinitionId)) {
@@ -164,12 +269,15 @@ public with sharing class ApprovalsController {
         }
 
         if(targetObjectIdSet.isEmpty() == false) {
-           
-            for(ProcessInstance procInstance : [SELECT ProcessDefinitionId, TargetObjectId 
+            // Added LastActor.Name, LastActorId in query to show last rejected user name in approval[SF-62]. 
+            Set<String> skipApprovedDefIds = new Set<String>(); 
+            Set<String> skipRejectedDefIds = new Set<String>();
+
+            for(ProcessInstance procInstance : [SELECT ProcessDefinitionId, TargetObjectId, LastActor.Name, LastActorId, Status
                                                 FROM ProcessInstance 
                                                 WHERE TargetObject.Type = :selectedValue
-                                                AND (Status = 'Rejected' OR Status = 'Removed')
-                                                AND TargetObjectId IN :targetObjectIdSet
+                                                    AND TargetObjectId IN :targetObjectIdSet
+                                                    AND (Status = 'Rejected' OR Status = 'Approved')
                                                 ORDER By CreatedDate DESC]){
 
                 String targetObjId_ProcDefId = '';
@@ -179,17 +287,61 @@ public with sharing class ApprovalsController {
                     targetObjId_ProcDefId = Id.valueOf(procInstance.TargetObjectId) + '_' + Id.valueOf(procInstance.ProcessDefinitionId);
                     if (processInstApprovalsMap.containsKey(targetObjId_ProcDefId)) {
                         
-                        processInstApprovalsMap.get(targetObjId_ProcDefId).approval.submitStatus = 'Resubmit';
+                        if((procInstance.Status == 'Rejected')
+                            && skipRejectedDefIds.contains(targetObjId_ProcDefId) == false) {
+                            
+                            processInstApprovalsMap.get(targetObjId_ProcDefId).approval.submitStatus = 'Resubmit';
+                            // Added rejectedBy, rejectedByName to show last rejected user name in approval[SF-62]. 
+                            processInstApprovalsMap.get(targetObjId_ProcDefId).approval.lastRejectedBy = procInstance.LastActorId;
+                            processInstApprovalsMap.get(targetObjId_ProcDefId).approval.lastRejectedByName = procInstance.LastActor.Name;
+                            skipRejectedDefIds.add(targetObjId_ProcDefId);
 
-                    }
+                        } else if(procInstance.Status == 'Approved'
+                                  && skipApprovedDefIds.contains(targetObjId_ProcDefId) == false) {
+
+                            processInstApprovalsMap.get(targetObjId_ProcDefId).approval.submitStatus = 'Resubmit';
+                            // Added ApprovedBy, ApprovedByName to show last rejected user name in approval[SF-333]. 
+                            processInstApprovalsMap.get(targetObjId_ProcDefId).approval.lastApprovedBy = procInstance.LastActorId;
+                            processInstApprovalsMap.get(targetObjId_ProcDefId).approval.lastApprovedByName = procInstance.LastActor.Name;
+                            skipApprovedDefIds.add(targetObjId_ProcDefId);
+                        }
+                    } 
                 }
 
+            }
+            String queryStr = '';
+            // Added query to get target object records created date[SF-62]
+            if(selectedValue != 'nu_dse__Offer__c') {
+                queryStr = 'SELECT Id, CreatedDate FROM '+ selectedValue + ' WHERE Id IN :targetObjectIdSet';
+            } else  {
+                queryStr = 'SELECT Id, CreatedDate, nu_dse__First_Payment_Date__c FROM '+ selectedValue + ' WHERE Id IN :targetObjectIdSet';
+            }
+
+            Map<Id, SObject> selectedObjectMap = new Map<Id, SObject>(Database.query(queryStr));
+            // Assign page showing approval record target object createdDate[SF-62]
+            for(String approvalId : processInstApprovalsMap.keySet()) {
+
+                if(processInstApprovalsMap.get(approvalId).approval.targetId != null
+                    && selectedObjectMap.containsKey(processInstApprovalsMap.get(approvalId).approval.targetId) == true) {
+                    
+                    DateTime createdDate  = DateTime.valueOf((selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('CreatedDate')));
+                    processInstApprovalsMap.get(approvalId).approval.CreatedDate = createdDate.format('MM-dd-yyyy');
+                    processInstApprovalsMap.get(approvalId).approval.CreatedDateInMs = createdDate.getTime();
+
+                    if(selectedValue == 'nu_dse__Offer__c' 
+                        && selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('nu_dse__First_Payment_Date__c') != null) {
+                        Date fistPaymentDate = Date.valueOf(selectedObjectMap.get(processInstApprovalsMap.get(approvalId).approval.targetId).get('nu_dse__First_Payment_Date__c'));
+                        DateTime firstPaymentDateTime = DateTime.newInstance(fistPaymentDate, Time.newInstance(0,0,0,0));
+                        processInstApprovalsMap.get(approvalId).approval.fistPaymentDate = firstPaymentDateTime.format('MM-dd-yyyy');
+                        processInstApprovalsMap.get(approvalId).approval.fistPaymentDateInMs = firstPaymentDateTime.getTime();
+                    }
+                }
             }
         }
         return processInstApprovalsMap.values();
     }
     
-    public static String toDateString(DateTime activityDate) {
+    /* public static String toDateString(DateTime activityDate) {
         String dateFormat = 'MM/dd/yyyy';
         
         if(activityDate != null) {
@@ -197,7 +349,7 @@ public with sharing class ApprovalsController {
             return activityDate.format(dateFormat);
         }
         return '';
-    }
+    } */
     
     public static Integer getMinutes(Decimal totalElapsedMinutes, Integer elapsedHours) {
     
@@ -221,9 +373,11 @@ public with sharing class ApprovalsController {
         public String tradelineid {get; set;}
         public String recordName {get; set;}
         public String recordId {get; set;}
-        public String status { get; set;}
+        // Removed status column in Approvals table [SF-62]
         public Id workItemId {get; set;}
         public ApprovalRecord approval {get; set;}
+
+        public ApprovalSet(){}
         
         public ApprovalSet(ApprovalRecord approval) {
             
@@ -231,7 +385,6 @@ public with sharing class ApprovalsController {
             this.objectTypeName = ApprovalsController.getObjectLabel(approval.targetId);
             this.recordName = approval.targetObjectName;
             this.recordId = approval.targetId;
-            this.status = approval.processStatus;
             
             if(approval.approvalType == 'WORKITEM') {
                 
@@ -249,22 +402,33 @@ public with sharing class ApprovalsController {
         public String submittedByName {get; set;}
         public Integer elapsedHours {get; set;}
         public Integer elapsedMins {get; set;}
-        public String processStatus {get; set;}
-        public String stepStatus {get; set;}
-        public Id workId {get; set;}
-        public String objectName {get; set;}
-        public String completedDate {get; set;}
+        // Added elapsedTotalMins for sorting Time in Queue[SF-339]
+        public Integer elapsedTotalMins {get; set;}
+        // Removed process status, completed date[SF-62]
+        // Removed Object name
         public Id targetId {get; set;}
         public Id approvalId {get; set;}
         public String approvalName { get; set;}
         public String targetObjectName {get; set;}
-        public DateTime createdDate {get; set;}
+        // Changed CompletedDate variable as TargetObject createdDate[SF-62]
+        public String createdDate {get; set;}
+        public Long CreatedDateInMs {get; set;}
+        public String fistPaymentDate {get; set;}
+        public Long fistPaymentDateInMs {get; set;}
         public Id workItemId {get; set;}
         public Id instanceId {get; set;}
         public String approvalType { get; set;}
         public String submitStatus { get; set;}
         public Boolean showActions {get; set;}
-        
+        // Added two variables to show last rejected user name in approval[SF-62]. 
+        public String lastRejectedBy { get; set;}
+        public String lastRejectedByName { get; set;}
+        public String lastApprovedBy { get; set;}
+        public String lastApprovedByName { get; set;}
+        public Integer reAssignedElapsedHours {get; set;}
+        public Integer reAssignedElapsedMins {get; set;}
+        public Integer reAssignedElapsedTotalMins {get; set;}
+
         public ApprovalRecord(ProcessInstance processInstance, Id userId) {
             this.approvalType = 'WORKITEM';
             
@@ -272,11 +436,10 @@ public with sharing class ApprovalsController {
             
                 this.asignedTo = processInstance.LastActor.Id;
                 this.asignedToName = processInstance.LastActor.Name;
-                this.processStatus = processInstance.Status;
-                this.objectName = processInstance.TargetObject.Name;
-                this.completedDate = ApprovalsController.toDateString(processInstance.CompletedDate);
+                // Removed process status, CompletedDate[SF-62]
+                // Removed object name 
                 this.targetId = processInstance.TargetObjectId;
-                this.createdDate = processInstance.CreatedDate;
+                // Removed CompletedDate value assignments[SF-62]
                 this.approvalId = processInstance.ProcessDefinitionId;
                 this.approvalName = processInstance.ProcessDefinition.Name;
                 this.instanceId = processInstance.Id;

@@ -1,0 +1,103 @@
+<aura:component controller="DashboardController" access="GLOBAL">
+
+    <aura:attribute name="programId" type="Id"/>
+    <aura:attribute name="showSpinner" type="Boolean"/>
+    <aura:attribute name="data" type="List" access="GLOBAL" description="data to be listed in the table"/>
+    <aura:attribute name="columns" type="List" access="GLOBAL" description="Columns of the datatable"/>
+    <aura:attribute name="cardActions" type="Aura.Component[]" access="GLOBAL" description="Header level actions to be passed to the card"/>
+    <aura:attribute name="cardFooter" type="Aura.Component[]" access="GLOBAL" description="Footer actions to be passed to the Card"/>
+
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+
+    <c:ApexActionService aura:id="apexService"/><!-- This is a service component that communicates with Apex -->
+    <c:CustomToast aura:id="toast"/><!-- This is a service component that displays toast message-->
+    <aura:if isTrue="{!v.showSpinner}">
+        <div >
+            <lightning:spinner alternativeText="Loading" variant="brand" size="medium" />
+        </div>
+    </aura:if>
+
+    <lightning:tabset>
+        <lightning:tab label="Tradelines With Settlements" onactive="{!c.doInit}">
+            <c:RelatedListTableComp 
+            columns="{!v.columns}" 
+            data="{!v.data}" 
+            iconName="standard:individual" 
+            cardTitle="Tradelines and Settlements">
+            <aura:set attribute="cardActions">
+                <lightning:buttonGroup>
+                        <lightning:button label="Action 1" />
+                        <lightning:button label="Action 2" />
+                        <lightning:button label="Action 3" />
+                    </lightning:buttonGroup>
+                </aura:set>    
+            <aura:set attribute="cardFooter">
+                <p class="slds-align_absolute-center">Pagination can be included</p>
+            </aura:set>
+        </c:RelatedListTableComp>
+        </lightning:tab>
+        <lightning:tab label="Tradelines With Pending Settlements" onactive="{!c.getNewSettlements}" title="Tradelines With Pending Settlements">
+        <aura:if isTrue="{!not(empty(v.data))}">
+            <c:RelatedListTableComp 
+                columns="{!v.columns}" 
+                data="{!v.data}" 
+                iconName="standard:individual" 
+                cardTitle="Tradelines With Pending Settlements">
+                <aura:set attribute="cardActions">
+                    <lightning:buttonGroup>
+                            <lightning:button label="Action 1" />
+                            <lightning:button label="Action 2" />
+                            <lightning:button label="Action 3" />
+                        </lightning:buttonGroup>
+                    </aura:set>    
+                <aura:set attribute="cardFooter">
+                    <p class="slds-align_absolute-center">Pagination can be included</p>
+                </aura:set>
+            </c:RelatedListTableComp>
+        </aura:if>
+        
+        </lightning:tab>
+        <lightning:tab label="Other Tradelines" onactive="{!c.doInit}">
+            <c:RelatedListTableComp 
+            columns="{!v.columns}" 
+            data="{!v.data}" 
+            iconName="standard:individual" 
+            cardTitle="Other Tradelines">
+            <aura:set attribute="cardActions">
+                <lightning:buttonGroup>
+                        <lightning:button label="Action 1" />
+                        <lightning:button label="Action 2" />
+                        <lightning:button label="Action 3" />
+                    </lightning:buttonGroup>
+                </aura:set>    
+            <aura:set attribute="cardFooter">
+                <p class="slds-align_absolute-center">Pagination can be included</p>
+            </aura:set>
+        </c:RelatedListTableComp>
+        </lightning:tab>
+    </lightning:tabset>
+
+    <!--<lightning:tabset variant="default">
+        <lightning:tab onactive="{!c.handleActive}" label="Tradelines With Settlements" id="tradelineSettlement" />
+        <lightning:tab onactive="{!c.handleActive}" label="Tradelines With Pending Settlements" id="tradelineSettlementsPending" />
+        <lightning:tab onactive="{!c.handleActive}" label="Other Tradelines" id="otherTradelines" />
+        <lightning:tab onactive="{!c.handleActive}" label="Tradelines Settlement Payments" id="tradelineSettlementPayments" />
+    </lightning:tabset>
+    This is a Re-useable componenet that can be used for displaying Datatable within a Card
+        <c:RelatedListTableComp 
+            columns="{!v.columns}" 
+            data="{!v.data}" 
+            iconName="standard:individual" 
+            cardTitle="Tradelines/Creditors">
+            <aura:set attribute="cardActions">
+                <lightning:buttonGroup>
+                        <lightning:button label="Action 1" />
+                        <lightning:button label="Action 2" />
+                        <lightning:button label="Action 3" />
+                    </lightning:buttonGroup>
+                </aura:set>    
+            <aura:set attribute="cardFooter">
+                <p class="slds-align_absolute-center">Pagination can be included</p>
+            </aura:set>
+        </c:RelatedListTableComp>-->
+</aura:component>

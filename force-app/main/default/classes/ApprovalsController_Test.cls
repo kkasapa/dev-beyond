@@ -26,7 +26,7 @@ public class ApprovalsController_Test {
         insert UserInstance;
         
         Group groupInstance = new Group();
-        groupInstance.Name = 'TestGroup'; 
+        groupInstance.Name = 'Beyond'; 
         groupInstance.Type = 'Queue';
         insert groupInstance;
         
@@ -63,10 +63,12 @@ public class ApprovalsController_Test {
     static testMethod void approvalProcess() {
     
         User userQueryInstance = [SELECT Id FROM User WHERE lastname='TTestUser' LIMIT 1];
+        Group queueInst = [SELECT Id FROM Group LIMIT 1];
         
         nu_dse__Prospect__c prospectInstance = new nu_dse__Prospect__c();
         prospectInstance.nu_dse__First_Name__c = 'Test Prospect';
         prospectInstance.nu_dse__Last_Name__c = 'Test Approval';
+        prospectInstance.nu_dse__State__c = 'AL';
         insert prospectInstance;
         
         Approval.ProcessSubmitRequest requestForSubmit = new Approval.ProcessSubmitRequest();
@@ -88,14 +90,35 @@ public class ApprovalsController_Test {
 
         Approval.ProcessSubmitRequest resubmitRequest = new Approval.ProcessSubmitRequest();
         resubmitRequest.setComments('Resubmit for Approve.');
-        resubmitRequest.setNextApproverIds(new Id[] {userQueryInstance.Id});
+        resubmitRequest.setNextApproverIds(new Id[] {UserInfo.getUserId()});
         resubmitRequest.setObjectId(prospectInstance.Id);
         resubmitRequest.setSkipEntryCriteria(true);
         Approval.ProcessResult resubmitResult = Approval.process(resubmitRequest);
 
+        List<ProcessInstanceWorkitem> newWorkItemList = [SELECT Id,ProcessInstanceId 
+                                                      FROM ProcessInstanceWorkitem LIMIT 1];
+
+        Approval.ProcessWorkitemRequest approveRequest = new Approval.ProcessWorkitemRequest();
+        approveRequest.setComments('Approving request.');
+        approveRequest.setAction('Approve');
+        approveRequest.setNextApproverIds(new Id[] {UserInfo.getUserId()});
+        approveRequest.setWorkitemId(newWorkItemList[0].Id);
+        Approval.ProcessResult approveResult =  Approval.process(approveRequest);
+
+        Approval.ProcessSubmitRequest resubmitRequest2 = new Approval.ProcessSubmitRequest();
+        resubmitRequest2.setComments('Resubmit for Approve.');
+        resubmitRequest2.setNextApproverIds(new Id[] {queueInst.Id});
+        resubmitRequest2.setObjectId(prospectInstance.Id);
+        resubmitRequest2.setSkipEntryCriteria(true);
+        Approval.ProcessResult resubmitResult2 = Approval.process(resubmitRequest2);
+
         Test.startTest();
             ApprovalsController approvalsCont = new ApprovalsController();
             approvalsCont.renderApprovals();
+            approvalsCont.currentApprovalIndex = 0;
+            approvalsCont.setCurrentApproval();
+            approvalsCont.reAssignApproval();
+            approvalsCont.cancelReAssignApproval();
             ApexPages.currentPage().getParameters().put('filterBy', 'me');
             approvalsCont.onFilterChange();
             ApexPages.currentPage().getParameters().put('filterBy', 'all');

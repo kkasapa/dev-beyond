@@ -39,6 +39,7 @@ public class TaskHandler_Test {
         insert feeTemp;
         nu_dse__Program__c program =  TestRecordCreator.createProgram(testAcc.Id, processor.Id);
         program.nu_dse__Fee_Template__c = feeTemp.Id;
+        program.nu_dse__Program_Status__c = 'Active';
         insert program;
     }
     

@@ -1,0 +1,31 @@
+<aura:component access="GLOBAL">
+
+    <aura:attribute name="data" type="List" access="GLOBAL"/>
+    <aura:attribute name="columns" type="List" access="GLOBAL"/>
+    <aura:attribute name="iconName" type="String" access="GLOBAL"/>
+    <aura:attribute name="cardTitle" type="String" access="GLOBAL"/>
+    <aura:attribute name="cardActions" type="Aura.Component[]" access="GLOBAL"/>
+    <aura:attribute name="cardFooter" type="Aura.Component[]" access="GLOBAL"/>
+
+    <aura:attribute name="sortedBy" type="String" access="GLOBAL"/>
+    <aura:attribute name="sortedDirection" type="String" access="GLOBAL"/>
+
+    <!--<aura:handler name="init" value="{!this}" action="{!c.doInit}"/>-->
+    <lightning:card variant="Narrow" iconName="{!v.iconName}" footer="Footer Action" title="{!v.cardTitle}">
+        <aura:set attribute="actions" value="{!v.cardActions}"/>
+        <div style="height: 250px">
+            <lightning:datatable
+            keyField="id"
+            data="{!v.data}"
+            sortedBy="{!v.sortedBy}"
+            defaultSortDirection="asc"
+            sortedDirection="{!v.sortedDirection}"
+			minColumnWidth="100"
+            maxColumnWidth="200"                     
+            onsort="{!c.updateColumnSorting}"
+            columns="{!v.columns}"
+            hideCheckboxColumn="true"/>
+        </div>
+        <aura:set attribute="footer" value="{!v.cardFooter}"/>
+    </lightning:card>
+</aura:component>
